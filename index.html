@@ -17,7 +17,7 @@
             color: #222;
             line-height: 1.3;
             padding: 40px 20px;
-            font-size: 8px;
+            font-size: 9.6px;
         }
         
         .wrapper {
@@ -28,7 +28,7 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
         
-        /* Header - Left Aligned with Arial */
+        /* Header - Right Aligned with Arial */
         .header {
             text-align: right;
             padding-bottom: 30px;
@@ -135,13 +135,10 @@
         }
         
         /* Contact */
-        /*.contact-box {
-            padding: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
+        .contact-info {
             font-size: 1em;
             line-height: 1.4;
-        }*/
+        }
         
         /* Field Work Items */
         .field-item {
@@ -159,22 +156,25 @@
         
         .field-description {
             font-size: 1em;
-            margin-left: 10px;
             line-height: 1.3;
         }
         
-        /* Experience Items with inline dates */
+        /* Experience Items with inline dates at end of title */
         .exp-item {
             margin-bottom: 15px;
         }
         
+        .exp-title-with-date {
+            font-weight: 600;
+            font-size: 1em;
+            color: #000;
+            line-height: 1.3;
+        }
+        
         .exp-date {
             font-size: 1em;
-            color: #555;
-            font-weight: 600;
-            margin-bottom: 3px;
-            display: block;
-            line-height: 1.3;
+            color: #000;
+            font-weight: normal;
         }
         
         .exp-title {
@@ -209,14 +209,11 @@
             line-height: 1.3;
         }
         
-        /* Publications */
+        /* Publications - No boxes */
         .publication {
             margin-bottom: 10px;
             font-size: 1em;
             line-height: 1.4;
-            padding: 8px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
         }
         
         .publication strong {
@@ -290,7 +287,7 @@
                 </ul>
                 
                 <h3>Contact</h3>
-                <div>
+                <div class="contact-info">
                     Nicolas Anderson<br>
                     nickanderson@caltech.edu<br>
                     California Institute of Technology<br>
@@ -350,8 +347,9 @@
                 <h3>Education</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2023 – Present</span>
-                    <div class="exp-title">Graduate Student – Geology and Planetary Science</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Graduate Student – Geology and Planetary Science</span> <span class="exp-date">(2023 – Present)</span>
+                    </div>
                     <div class="exp-institution">California Institute of Technology – Pasadena, CA</div>
                     <div class="exp-description">
                         Using field observation, paleomagnetism, geochemistry, geochronology, and petrology to better develop our understanding of igneous intrusions, magma evolution and Earth's magnetic field.
@@ -366,8 +364,9 @@
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2020 – 2022</span>
-                    <div class="exp-title">B.A. in Geology with Honors</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">B.A. in Geology with Honors</span> <span class="exp-date">(2020 – 2022)</span>
+                    </div>
                     <div class="exp-institution">University of California, Berkeley – Berkeley, CA</div>
                     <div class="exp-description">
                         <strong>Honors Thesis:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em><br>
@@ -376,15 +375,17 @@
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2016 – 2022</span>
-                    <div class="exp-institution">City College of San Francisco – San Francisco, CA</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">City College of San Francisco – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
                 </div>
                 
                 <h3>Teaching Experience</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2023</span>
-                    <div class="exp-title">Co-instructor for Advanced Field Course – Eastern California</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Co-instructor for Advanced Field Course – Eastern California</span> <span class="exp-date">(2023)</span>
+                    </div>
                     <div class="exp-description">
                         Taught and guided 20 geology students from Nanyang Technical University, Singapore on a 3-week camping field geology campaign in eastern California focused on: complex fold and thrust structural mapping in Cerro Gordo, glacial geomorphology mapping and fault scarp offset surveying in Lundy Canyon, and sighting, surveying, and topographic map generation in the Alabama Hills.
                     </div>
@@ -393,8 +394,9 @@
                 <h3>Work Experience</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2023</span>
-                    <div class="exp-title">Research Assistant</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Research Assistant</span> <span class="exp-date">(2023)</span>
+                    </div>
                     <div class="exp-institution">Earth Surface Dynamics Laboratory (Mike Lamb), Caltech – Pasadena, CA</div>
                     <div class="exp-description">
                         Design, fabricate and test clay and sediment flocculating devices for use in projects conducted by SURF and WAVE undergraduate fellows. Rewire and setup defunct lab equipment.
@@ -402,8 +404,9 @@
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2022 – 2023</span>
-                    <div class="exp-title">Exploration Geologist</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Exploration Geologist</span> <span class="exp-date">(2022 – 2023)</span>
+                    </div>
                     <div class="exp-institution">Brimstone Energy – Oakland, CA</div>
                     <div class="exp-description">
                         Use geoscientific datasets to identify and prioritize exploration targets. Mapping, sample collection and report synthesis for mafic intrusions and metamorphic belts across the US for production of carbon neutral Portland cement substrates.
@@ -411,8 +414,9 @@
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2020 – 2023</span>
-                    <div class="exp-title">Undergraduate Research Assistant</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Undergraduate Research Assistant</span> <span class="exp-date">(2020 – 2023)</span>
+                    </div>
                     <div class="exp-institution">Swanson-Hysell Lab Group, UC Berkeley – Berkeley, CA</div>
                     <div class="exp-description">
                         Cutting, drilling, orienting, and measuring paleomagnetic samples on SQUID DC2 for plate reconstructions. Magnetic and heavy liquid mineral separation, picking and mounting of zircons. SEM and XRD to determine mineral phases.
@@ -422,24 +426,21 @@
                 <h3>Presentations</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2022</span>
-                    <div class="exp-institution">GSA 2022 – Joint Section Cordilleran/Rocky Mountain Meeting – Las Vegas, NV</div>
+                    <div class="exp-institution">GSA 2022 – Joint Section Cordilleran/Rocky Mountain Meeting – Las Vegas, NV <span class="exp-date">(2022)</span></div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
                     </div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2022</span>
-                    <div class="exp-institution">EPS Undergraduate Honors Symposium – Berkeley, CA</div>
+                    <div class="exp-institution">EPS Undergraduate Honors Symposium – Berkeley, CA <span class="exp-date">(2022)</span></div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
                     </div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2021</span>
-                    <div class="exp-institution">Summer Undergraduate Research Fellowship Conference – Berkeley, CA</div>
+                    <div class="exp-institution">Summer Undergraduate Research Fellowship Conference – Berkeley, CA <span class="exp-date">(2021)</span></div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Testing the hypothesis of a bifurcating mantle plume 1.1 billion years ago with geochronology and paleomagnetism of the Southwestern Laurentia large igneous province</em>
                     </div>
@@ -448,14 +449,12 @@
                 <h3>Publications</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2024</span>
                     <div class="publication">
                         Zhang, Y., <strong>Anderson, N.S.</strong>, Mohr, M.T., Schmitz, M.D., Macdonald, F.A., Nelson, L.L., Thurston, O.G., Guenthner, W.R., Karlstrom, K.E., Swanson-Hysell, N.L. (2024). Paleomagnetic Records From Pulsed Magmatism in the Southwestern Laurentia Large Igneous Province and Cardenas Basalt Support Rapid Late Mesoproterozoic Plate Motion. <em>JGR: Solid Earth</em>. doi: 10.1029/2024JB029036
                     </div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2024</span>
                     <div class="publication">
                         Mohr, M.T., Schmitz, M.D., Swanson-Hysell, N.L., Karlstrom, K.E., Macdonald, F.A., Holland, M., Zhang, Y., <strong>Anderson, N.S.</strong> (2024). High-Precision U-Pb geochronology links magmatism in the SW Laurentia Large Igneous Province and Midcontinent Rift
                     </div>
@@ -464,62 +463,60 @@
                 <h3>Funding</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2024</span>
-                    <div>NSF GRFP</div>
+                    <div>NSF GRFP <span class="exp-date">(2024)</span></div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2023</span>
-                    <div>GSA Shoemaker Impact Cratering Award</div>
+                    <div>GSA Shoemaker Impact Cratering Award <span class="exp-date">(2023)</span></div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2023</span>
-                    <div>Caltech Geological & Planetary Sciences Internal Grant</div>
+                    <div>Caltech Geological & Planetary Sciences Internal Grant <span class="exp-date">(2023)</span></div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2021</span>
-                    <div>Caltech Provost Diversity Fellowship</div>
+                    <div>Caltech Provost Diversity Fellowship <span class="exp-date">(2021)</span></div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2021</span>
-                    <div>Summer Undergraduate Research Fellowship</div>
+                    <div>Summer Undergraduate Research Fellowship <span class="exp-date">(2021)</span></div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2021</span>
-                    <div>Charles H. Ramsden Endowed Scholarship</div>
+                    <div>Charles H. Ramsden Endowed Scholarship <span class="exp-date">(2021)</span></div>
                 </div>
                 
                 <h3>Service & Outreach</h3>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2016 – 2022</span>
-                    <div class="exp-title">San Francisco Bike Coalition – San Francisco, CA</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">San Francisco Bike Coalition – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
                     <div class="exp-description">
                         Encourage Bay Area residents to advocate for bicycle legislature. Provide bike parking valet services at large events with cycling attendees & offer bike mechanic services for community bike builds.
                     </div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2016 – 2022</span>
-                    <div class="exp-title">Bay Area Ridge Trail – San Francisco, CA</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Bay Area Ridge Trail – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
                     <div class="exp-description">Trail maintenance and restoration</div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2008 – 2016</span>
-                    <div class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</span> <span class="exp-date">(2008 – 2016)</span>
+                    </div>
                     <div class="exp-description">
                         Oyster reintroduction to NYC waterways, invasive tree species removal, watershed, and habitat restoration
                     </div>
                 </div>
                 
                 <div class="exp-item">
-                    <span class="exp-date">2016 – 2022</span>
-                    <div class="exp-title">Earth Science Tutor – San Francisco, CA</div>
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Earth Science Tutor – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
                     <div class="exp-description">
                         City College of San Francisco, Subjects: Oceanography, Geography, Geology
                     </div>
