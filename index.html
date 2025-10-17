@@ -12,11 +12,12 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Guyot', Georgia, serif;
             background: #FFD700;
             color: #222;
             line-height: 1.6;
             padding: 20px;
+            font-size: 16px;
         }
         
         .wrapper {
@@ -24,31 +25,31 @@
             margin: 0 auto;
         }
         
-        /* Header */
+        /* Header - Left Aligned */
         .header {
-            text-align: center;
+            text-align: left;
             padding: 40px 20px;
             margin-bottom: 40px;
         }
         
         .header h1 {
-            font-size: 3em;
+            font-size: 2.5em;
             font-weight: 700;
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #000;
         }
         
         .header h2 {
-            font-size: 1.3em;
+            font-size: 1.2em;
             color: #333;
             font-weight: normal;
         }
         
-        /* Three Column Grid */
+        /* Two Column Grid (removed date column) */
         .cv-grid {
             display: grid;
-            grid-template-columns: 1fr 2fr 0.4fr;
+            grid-template-columns: 1fr 2fr;
             gap: 30px;
             margin-top: 40px;
         }
@@ -66,19 +67,14 @@
             border-radius: 8px;
         }
         
-        .date-column {
-            padding: 30px 15px;
-            font-size: 0.9em;
-            color: #555;
-        }
-        
-        /* Section Headers */
+        /* Section Headers - Consistent sizing */
         h3 {
-            font-size: 1.4em;
+            font-size: 1.3em;
             margin: 25px 0 15px 0;
             color: #000;
             border-bottom: 2px solid #000;
             padding-bottom: 5px;
+            font-weight: 700;
         }
         
         .left-column h3:first-of-type {
@@ -89,25 +85,26 @@
             margin-top: 0;
         }
         
-        /* Bio */
+        /* Bio - Consistent font size */
         .bio {
-            font-size: 0.95em;
-            line-height: 1.7;
+            font-size: 1em;
+            line-height: 1.6;
             margin-bottom: 25px;
         }
         
         /* Quote */
         .quote {
             font-style: italic;
-            font-size: 1.05em;
+            font-size: 1em;
             padding: 15px;
             background: rgba(255, 255, 255, 0.4);
             border-left: 4px solid #000;
             margin: 20px 0;
+            line-height: 1.6;
         }
         
         .quote-author {
-            font-size: 0.9em;
+            font-size: 1em;
             margin-top: 5px;
         }
         
@@ -119,6 +116,7 @@
         
         .links-list li {
             margin-bottom: 8px;
+            font-size: 1em;
         }
         
         .links-list a {
@@ -136,7 +134,7 @@
             background: rgba(255, 255, 255, 0.5);
             padding: 15px;
             border-radius: 6px;
-            font-size: 0.9em;
+            font-size: 1em;
             line-height: 1.8;
         }
         
@@ -150,22 +148,31 @@
             font-style: italic;
             color: #000;
             margin-bottom: 5px;
+            font-size: 1em;
         }
         
         .field-description {
-            font-size: 0.95em;
+            font-size: 1em;
             margin-left: 15px;
             line-height: 1.6;
         }
         
-        /* Experience Items */
+        /* Experience Items with inline dates */
         .exp-item {
             margin-bottom: 25px;
         }
         
+        .exp-date {
+            font-size: 1em;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
         .exp-title {
             font-weight: 600;
-            font-size: 1.05em;
+            font-size: 1em;
             color: #000;
         }
         
@@ -173,10 +180,11 @@
             font-style: italic;
             color: #333;
             margin: 5px 0;
+            font-size: 1em;
         }
         
         .exp-description {
-            font-size: 0.95em;
+            font-size: 1em;
             line-height: 1.6;
             margin-top: 8px;
         }
@@ -188,13 +196,13 @@
         
         .projects-list li {
             margin-bottom: 8px;
-            font-size: 0.95em;
+            font-size: 1em;
         }
         
         /* Publications */
         .publication {
             margin-bottom: 15px;
-            font-size: 0.95em;
+            font-size: 1em;
             line-height: 1.7;
             padding: 12px;
             background: rgba(255, 255, 255, 0.4);
@@ -212,26 +220,10 @@
         
         .simple-list li {
             margin-bottom: 8px;
-            font-size: 0.95em;
-        }
-        
-        /* Date Column Entries */
-        .date-entry {
-            margin-bottom: 15px;
-            font-weight: 500;
+            font-size: 1em;
         }
         
         /* Responsive */
-        @media (max-width: 1100px) {
-            .cv-grid {
-                grid-template-columns: 1fr 2fr;
-            }
-            
-            .date-column {
-                display: none;
-            }
-        }
-        
         @media (max-width: 768px) {
             .cv-grid {
                 grid-template-columns: 1fr;
@@ -340,6 +332,7 @@
                 <h3>Education</h3>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2023 – Present</span>
                     <div class="exp-title">Graduate Student – Geology and Planetary Science</div>
                     <div class="exp-institution">California Institute of Technology – Pasadena, CA</div>
                     <div class="exp-description">
@@ -355,6 +348,7 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2020 – 2022</span>
                     <div class="exp-title">B.A. in Geology with Honors</div>
                     <div class="exp-institution">University of California, Berkeley – Berkeley, CA</div>
                     <div class="exp-description">
@@ -364,12 +358,14 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2016 – 2022</span>
                     <div class="exp-institution">City College of San Francisco – San Francisco, CA</div>
                 </div>
                 
                 <h3>Teaching Experience</h3>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2023</span>
                     <div class="exp-title">Co-instructor for Advanced Field Course – Eastern California</div>
                     <div class="exp-description">
                         Taught and guided 20 geology students from Nanyang Technical University, Singapore on a 3-week camping field geology campaign in eastern California focused on: complex fold and thrust structural mapping in Cerro Gordo, glacial geomorphology mapping and fault scarp offset surveying in Lundy Canyon, and sighting, surveying, and topographic map generation in the Alabama Hills.
@@ -379,6 +375,7 @@
                 <h3>Work Experience</h3>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2023</span>
                     <div class="exp-title">Research Assistant</div>
                     <div class="exp-institution">Earth Surface Dynamics Laboratory (Mike Lamb), Caltech – Pasadena, CA</div>
                     <div class="exp-description">
@@ -387,6 +384,7 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2022 – 2023</span>
                     <div class="exp-title">Exploration Geologist</div>
                     <div class="exp-institution">Brimstone Energy – Oakland, CA</div>
                     <div class="exp-description">
@@ -395,6 +393,7 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2020 – 2023</span>
                     <div class="exp-title">Undergraduate Research Assistant</div>
                     <div class="exp-institution">Swanson-Hysell Lab Group, UC Berkeley – Berkeley, CA</div>
                     <div class="exp-description">
@@ -405,6 +404,7 @@
                 <h3>Presentations</h3>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2022</span>
                     <div class="exp-institution">GSA 2022 – Joint Section Cordilleran/Rocky Mountain Meeting – Las Vegas, NV</div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
@@ -412,6 +412,7 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2022</span>
                     <div class="exp-institution">EPS Undergraduate Honors Symposium – Berkeley, CA</div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
@@ -419,6 +420,7 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2021</span>
                     <div class="exp-institution">Summer Undergraduate Research Fellowship Conference – Berkeley, CA</div>
                     <div class="exp-description">
                         <strong>Oral Presentation:</strong> <em>Testing the hypothesis of a bifurcating mantle plume 1.1 billion years ago with geochronology and paleomagnetism of the Southwestern Laurentia large igneous province</em>
@@ -427,28 +429,56 @@
                 
                 <h3>Publications</h3>
                 
-                <div class="publication">
-                    Zhang, Y., <strong>Anderson, N.S.</strong>, Mohr, M.T., Schmitz, M.D., Macdonald, F.A., Nelson, L.L., Thurston, O.G., Guenthner, W.R., Karlstrom, K.E., Swanson-Hysell, N.L. (2024). Paleomagnetic Records From Pulsed Magmatism in the Southwestern Laurentia Large Igneous Province and Cardenas Basalt Support Rapid Late Mesoproterozoic Plate Motion. <em>JGR: Solid Earth</em>. doi: 10.1029/2024JB029036
+                <div class="exp-item">
+                    <span class="exp-date">2024</span>
+                    <div class="publication">
+                        Zhang, Y., <strong>Anderson, N.S.</strong>, Mohr, M.T., Schmitz, M.D., Macdonald, F.A., Nelson, L.L., Thurston, O.G., Guenthner, W.R., Karlstrom, K.E., Swanson-Hysell, N.L. (2024). Paleomagnetic Records From Pulsed Magmatism in the Southwestern Laurentia Large Igneous Province and Cardenas Basalt Support Rapid Late Mesoproterozoic Plate Motion. <em>JGR: Solid Earth</em>. doi: 10.1029/2024JB029036
+                    </div>
                 </div>
                 
-                <div class="publication">
-                    Mohr, M.T., Schmitz, M.D., Swanson-Hysell, N.L., Karlstrom, K.E., Macdonald, F.A., Holland, M., Zhang, Y., <strong>Anderson, N.S.</strong> (2024). High-Precision U-Pb geochronology links magmatism in the SW Laurentia Large Igneous Province and Midcontinent Rift
+                <div class="exp-item">
+                    <span class="exp-date">2024</span>
+                    <div class="publication">
+                        Mohr, M.T., Schmitz, M.D., Swanson-Hysell, N.L., Karlstrom, K.E., Macdonald, F.A., Holland, M., Zhang, Y., <strong>Anderson, N.S.</strong> (2024). High-Precision U-Pb geochronology links magmatism in the SW Laurentia Large Igneous Province and Midcontinent Rift
+                    </div>
                 </div>
                 
                 <h3>Funding</h3>
                 
-                <ul class="simple-list">
-                    <li>NSF GRFP</li>
-                    <li>GSA Shoemaker Impact Cratering Award</li>
-                    <li>Caltech Geological & Planetary Sciences Internal Grant</li>
-                    <li>Caltech Provost Diversity Fellowship</li>
-                    <li>Summer Undergraduate Research Fellowship</li>
-                    <li>Charles H. Ramsden Endowed Scholarship</li>
-                </ul>
+                <div class="exp-item">
+                    <span class="exp-date">2024</span>
+                    <div>NSF GRFP</div>
+                </div>
+                
+                <div class="exp-item">
+                    <span class="exp-date">2023</span>
+                    <div>GSA Shoemaker Impact Cratering Award</div>
+                </div>
+                
+                <div class="exp-item">
+                    <span class="exp-date">2023</span>
+                    <div>Caltech Geological & Planetary Sciences Internal Grant</div>
+                </div>
+                
+                <div class="exp-item">
+                    <span class="exp-date">2021</span>
+                    <div>Caltech Provost Diversity Fellowship</div>
+                </div>
+                
+                <div class="exp-item">
+                    <span class="exp-date">2021</span>
+                    <div>Summer Undergraduate Research Fellowship</div>
+                </div>
+                
+                <div class="exp-item">
+                    <span class="exp-date">2021</span>
+                    <div>Charles H. Ramsden Endowed Scholarship</div>
+                </div>
                 
                 <h3>Service & Outreach</h3>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2016 – 2022</span>
                     <div class="exp-title">San Francisco Bike Coalition – San Francisco, CA</div>
                     <div class="exp-description">
                         Encourage Bay Area residents to advocate for bicycle legislature. Provide bike parking valet services at large events with cycling attendees & offer bike mechanic services for community bike builds.
@@ -456,11 +486,13 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2016 – 2022</span>
                     <div class="exp-title">Bay Area Ridge Trail – San Francisco, CA</div>
                     <div class="exp-description">Trail maintenance and restoration</div>
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2008 – 2016</span>
                     <div class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</div>
                     <div class="exp-description">
                         Oyster reintroduction to NYC waterways, invasive tree species removal, watershed, and habitat restoration
@@ -468,78 +500,12 @@
                 </div>
                 
                 <div class="exp-item">
+                    <span class="exp-date">2016 – 2022</span>
                     <div class="exp-title">Earth Science Tutor – San Francisco, CA</div>
                     <div class="exp-description">
                         City College of San Francisco, Subjects: Oceanography, Geography, Geology
                     </div>
                 </div>
-            </div>
-            
-            <!-- DATE COLUMN -->
-            <div class="date-column">
-                <div style="margin-bottom: 30px;"><strong>Date</strong></div>
-                
-                <!-- Education dates -->
-                <div class="date-entry">2023 –</div>
-                <div style="height: 280px;"></div>
-                
-                <div class="date-entry">2020-2022</div>
-                <div style="height: 100px;"></div>
-                
-                <div class="date-entry">2016-2022</div>
-                <div style="height: 80px;"></div>
-                
-                <!-- Teaching dates -->
-                <div class="date-entry">2023</div>
-                <div style="height: 100px;"></div>
-                
-                <!-- Work dates -->
-                <div class="date-entry">2023</div>
-                <div style="height: 80px;"></div>
-                
-                <div class="date-entry">2022-2023</div>
-                <div style="height: 80px;"></div>
-                
-                <div class="date-entry">2020-2023</div>
-                <div style="height: 100px;"></div>
-                
-                <!-- Presentation dates -->
-                <div class="date-entry">2022</div>
-                <div style="height: 70px;"></div>
-                
-                <div class="date-entry">2022</div>
-                <div style="height: 70px;"></div>
-                
-                <div class="date-entry">2021</div>
-                <div style="height: 90px;"></div>
-                
-                <!-- Publications -->
-                <div class="date-entry">2024</div>
-                <div style="height: 50px;"></div>
-                
-                <div class="date-entry">2024</div>
-                <div style="height: 80px;"></div>
-                
-                <!-- Funding -->
-                <div class="date-entry">2024</div>
-                <div class="date-entry">2023</div>
-                <div class="date-entry">2023</div>
-                <div class="date-entry">2021</div>
-                <div class="date-entry">2021</div>
-                <div class="date-entry">2021</div>
-                <div style="height: 100px;"></div>
-                
-                <!-- Service dates -->
-                <div class="date-entry">2016-2022</div>
-                <div style="height: 70px;"></div>
-                
-                <div class="date-entry">2016-2022</div>
-                <div style="height: 40px;"></div>
-                
-                <div class="date-entry">2008-2016</div>
-                <div style="height: 70px;"></div>
-                
-                <div class="date-entry">2016-2022</div>
             </div>
         </div>
     </div>
