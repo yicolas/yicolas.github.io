@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nicolas Anderson - CV</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #FFD700;
+            color: #222;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        
+        .header h2 {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: normal;
+        }
+        
+        /* Three Column Grid */
+        .cv-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 0.4fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        /* Column Styling */
+        .left-column {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 8px;
+        }
+        
+        .main-column {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 8px;
+        }
+        
+        .date-column {
+            padding: 30px 15px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        /* Section Headers */
+        h3 {
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+            color: #000;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .left-column h3:first-of-type {
+            margin-top: 0;
+        }
+        
+        .main-column h3:first-of-type {
+            margin-top: 0;
+        }
+        
+        /* Bio */
+        .bio {
+            font-size: 0.95em;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+        
+        /* Quote */
+        .quote {
+            font-style: italic;
+            font-size: 1.05em;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.4);
+            border-left: 4px solid #000;
+            margin: 20px 0;
+        }
+        
+        .quote-author {
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        /* Links */
+        .links-list {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+        
+        .links-list li {
+            margin-bottom: 8px;
+        }
+        
+        .links-list a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .links-list a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Contact */
+        .contact-box {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+        
+        /* Field Work Items */
+        .field-item {
+            margin-bottom: 18px;
+        }
+        
+        .field-location {
+            font-weight: 600;
+            font-style: italic;
+            color: #000;
+            margin-bottom: 5px;
+        }
+        
+        .field-description {
+            font-size: 0.95em;
+            margin-left: 15px;
+            line-height: 1.6;
+        }
+        
+        /* Experience Items */
+        .exp-item {
+            margin-bottom: 25px;
+        }
+        
+        .exp-title {
+            font-weight: 600;
+            font-size: 1.05em;
+            color: #000;
+        }
+        
+        .exp-institution {
+            font-style: italic;
+            color: #333;
+            margin: 5px 0;
+        }
+        
+        .exp-description {
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-top: 8px;
+        }
+        
+        .projects-list {
+            margin-top: 10px;
+            margin-left: 20px;
+        }
+        
+        .projects-list li {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        /* Publications */
+        .publication {
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            line-height: 1.7;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 6px;
+        }
+        
+        .publication strong {
+            font-weight: 700;
+        }
+        
+        /* Simple Lists */
+        .simple-list {
+            list-style: none;
+        }
+        
+        .simple-list li {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        /* Date Column Entries */
+        .date-entry {
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .cv-grid {
+                grid-template-columns: 1fr 2fr;
+            }
+            
+            .date-column {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .cv-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .left-column,
+            .main-column {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>Nicolas Anderson CV</h1>
+            <h2>Caltech Geology PhD 2028</h2>
+        </div>
+        
+        <div class="cv-grid">
+            <!-- LEFT COLUMN -->
+            <div class="left-column">
+                <div class="bio">
+                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better develop our understanding of igneous intrusions, meteorite impacts and Earth's magnetic field.
+                </div>
+                
+                <div class="quote">
+                    "History is a vast Early Warning System"
+                    <div class="quote-author">– The Norman Brothers</div>
+                </div>
+                
+                <h3>Links</h3>
+                <ul class="links-list">
+                    <li><a href="#">3D Prints</a></li>
+                    <li><a href="#">Photos</a></li>
+                    <li><a href="#">Sediment Mill</a></li>
+                    <li><a href="https://github.com/yicolas">Github/yicolas</a></li>
+                </ul>
+                
+                <h3>Contact</h3>
+                <div class="contact-box">
+                    <strong>Nicolas Anderson</strong><br>
+                    nickanderson@caltech.edu<br><br>
+                    California Institute of Technology<br>
+                    1200 East California Blvd<br>
+                    Pasadena, CA 91125
+                </div>
+                
+                <h3>Field Work</h3>
+                
+                <div class="field-item">
+                    <div class="field-location">Iquitos, Peru</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Barstow, CA</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Cobalt, ON, Canada</div>
+                    <div class="field-description">Used paleomagnetic studies to develop a model of the timing of folding and carbonate vein intrusion associated with 5-element vein deposits for economic geology.</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Columbia River Gorge, OR</div>
+                    <div class="field-description">Investigated post-rainstorm, fire-prone, high-slope regions to better quantify debris flow quantity and frequency along high-risk Columbia River Gorge catchments. Scouted for potential landing zones for 1m resolution drone LIDAR.</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Point Lobos, CA</div>
+                    <div class="field-description">Determined the relationship, tectonic history, and post-deposition deformation between outcropping Salinian igneous rock and the overlying sediment using field relationships and sedimentary lithofacies stratigraphic sections.</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Benton, CA</div>
+                    <div class="field-description">Large scale mapping of the Benton Range to constrain the tempo of dike emplacement and subsequent tectonic folding as it pertains to crustal stresses and magmatism associated with the Nevadan orogeny along Laurentia's western coastline.</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Mono, CA</div>
+                    <div class="field-description">Surficial glacial geomorphology mapping to characterize landscape evolution and extent of glaciation since the LGM. Slope surveys of fault scarps of well-dated Sierran moraines to determine average rate and direction of slip for Hilton Creek Fault since the LGM.</div>
+                </div>
+                
+                <div class="field-item">
+                    <div class="field-location">Death Valley, CA</div>
+                    <div class="field-description">Field mapping, section measurement, and sample collection to develop stratigraphic, geochronologic and paleomagnetic data for Southwestern Laurentia large igneous province.</div>
+                </div>
+                
+                <h3>Memberships</h3>
+                <ul class="simple-list">
+                    <li>Geological Society of America</li>
+                    <li>American Geophysical Union</li>
+                </ul>
+            </div>
+            
+            <!-- MAIN COLUMN -->
+            <div class="main-column">
+                <h3>Education</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Graduate Student – Geology and Planetary Science</div>
+                    <div class="exp-institution">California Institute of Technology – Pasadena, CA</div>
+                    <div class="exp-description">
+                        Using field observation, paleomagnetism, geochemistry, geochronology, and petrology to better develop our understanding of igneous intrusions, magma evolution and Earth's magnetic field.
+                        
+                        <div><strong>Projects:</strong></div>
+                        <ol class="projects-list">
+                            <li>Paleomagnetism of Lao Basalt Flows and their relationship with the Australasian Impactor</li>
+                            <li>Rapid Polar Wander of North America During the Early Cambrian: Paleomagnetic and magnetostratigraphic constraints from the Cerro Rajón Volcanics of Caborca, Mexico, and the Tapeats Sandstone and Bright Angel Shale of the Grand Canyon, Arizona</li>
+                            <li>Magnetostratigraphic dating of lagerstätten Miocene sediments from the Peruvian Amazon</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">B.A. in Geology with Honors</div>
+                    <div class="exp-institution">University of California, Berkeley – Berkeley, CA</div>
+                    <div class="exp-description">
+                        <strong>Honors Thesis:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em><br>
+                        Advised by: Swanson-Hysell, PhD & Blake Hodgin, PhD
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-institution">City College of San Francisco – San Francisco, CA</div>
+                </div>
+                
+                <h3>Teaching Experience</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Co-instructor for Advanced Field Course – Eastern California</div>
+                    <div class="exp-description">
+                        Taught and guided 20 geology students from Nanyang Technical University, Singapore on a 3-week camping field geology campaign in eastern California focused on: complex fold and thrust structural mapping in Cerro Gordo, glacial geomorphology mapping and fault scarp offset surveying in Lundy Canyon, and sighting, surveying, and topographic map generation in the Alabama Hills.
+                    </div>
+                </div>
+                
+                <h3>Work Experience</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Research Assistant</div>
+                    <div class="exp-institution">Earth Surface Dynamics Laboratory (Mike Lamb), Caltech – Pasadena, CA</div>
+                    <div class="exp-description">
+                        Design, fabricate and test clay and sediment flocculating devices for use in projects conducted by SURF and WAVE undergraduate fellows. Rewire and setup defunct lab equipment.
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Exploration Geologist</div>
+                    <div class="exp-institution">Brimstone Energy – Oakland, CA</div>
+                    <div class="exp-description">
+                        Use geoscientific datasets to identify and prioritize exploration targets. Mapping, sample collection and report synthesis for mafic intrusions and metamorphic belts across the US for production of carbon neutral Portland cement substrates.
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Undergraduate Research Assistant</div>
+                    <div class="exp-institution">Swanson-Hysell Lab Group, UC Berkeley – Berkeley, CA</div>
+                    <div class="exp-description">
+                        Cutting, drilling, orienting, and measuring paleomagnetic samples on SQUID DC2 for plate reconstructions. Magnetic and heavy liquid mineral separation, picking and mounting of zircons. SEM and XRD to determine mineral phases.
+                    </div>
+                </div>
+                
+                <h3>Presentations</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-institution">GSA 2022 – Joint Section Cordilleran/Rocky Mountain Meeting – Las Vegas, NV</div>
+                    <div class="exp-description">
+                        <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-institution">EPS Undergraduate Honors Symposium – Berkeley, CA</div>
+                    <div class="exp-description">
+                        <strong>Oral Presentation:</strong> <em>Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province</em>
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-institution">Summer Undergraduate Research Fellowship Conference – Berkeley, CA</div>
+                    <div class="exp-description">
+                        <strong>Oral Presentation:</strong> <em>Testing the hypothesis of a bifurcating mantle plume 1.1 billion years ago with geochronology and paleomagnetism of the Southwestern Laurentia large igneous province</em>
+                    </div>
+                </div>
+                
+                <h3>Publications</h3>
+                
+                <div class="publication">
+                    Zhang, Y., <strong>Anderson, N.S.</strong>, Mohr, M.T., Schmitz, M.D., Macdonald, F.A., Nelson, L.L., Thurston, O.G., Guenthner, W.R., Karlstrom, K.E., Swanson-Hysell, N.L. (2024). Paleomagnetic Records From Pulsed Magmatism in the Southwestern Laurentia Large Igneous Province and Cardenas Basalt Support Rapid Late Mesoproterozoic Plate Motion. <em>JGR: Solid Earth</em>. doi: 10.1029/2024JB029036
+                </div>
+                
+                <div class="publication">
+                    Mohr, M.T., Schmitz, M.D., Swanson-Hysell, N.L., Karlstrom, K.E., Macdonald, F.A., Holland, M., Zhang, Y., <strong>Anderson, N.S.</strong> (2024). High-Precision U-Pb geochronology links magmatism in the SW Laurentia Large Igneous Province and Midcontinent Rift
+                </div>
+                
+                <h3>Funding</h3>
+                
+                <ul class="simple-list">
+                    <li>NSF GRFP</li>
+                    <li>GSA Shoemaker Impact Cratering Award</li>
+                    <li>Caltech Geological & Planetary Sciences Internal Grant</li>
+                    <li>Caltech Provost Diversity Fellowship</li>
+                    <li>Summer Undergraduate Research Fellowship</li>
+                    <li>Charles H. Ramsden Endowed Scholarship</li>
+                </ul>
+                
+                <h3>Service & Outreach</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-title">San Francisco Bike Coalition – San Francisco, CA</div>
+                    <div class="exp-description">
+                        Encourage Bay Area residents to advocate for bicycle legislature. Provide bike parking valet services at large events with cycling attendees & offer bike mechanic services for community bike builds.
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Bay Area Ridge Trail – San Francisco, CA</div>
+                    <div class="exp-description">Trail maintenance and restoration</div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</div>
+                    <div class="exp-description">
+                        Oyster reintroduction to NYC waterways, invasive tree species removal, watershed, and habitat restoration
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title">Earth Science Tutor – San Francisco, CA</div>
+                    <div class="exp-description">
+                        City College of San Francisco, Subjects: Oceanography, Geography, Geology
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DATE COLUMN -->
+            <div class="date-column">
+                <div style="margin-bottom: 30px;"><strong>Date</strong></div>
+                
+                <!-- Education dates -->
+                <div class="date-entry">2023 –</div>
+                <div style="height: 280px;"></div>
+                
+                <div class="date-entry">2020-2022</div>
+                <div style="height: 100px;"></div>
+                
+                <div class="date-entry">2016-2022</div>
+                <div style="height: 80px;"></div>
+                
+                <!-- Teaching dates -->
+                <div class="date-entry">2023</div>
+                <div style="height: 100px;"></div>
+                
+                <!-- Work dates -->
+                <div class="date-entry">2023</div>
+                <div style="height: 80px;"></div>
+                
+                <div class="date-entry">2022-2023</div>
+                <div style="height: 80px;"></div>
+                
+                <div class="date-entry">2020-2023</div>
+                <div style="height: 100px;"></div>
+                
+                <!-- Presentation dates -->
+                <div class="date-entry">2022</div>
+                <div style="height: 70px;"></div>
+                
+                <div class="date-entry">2022</div>
+                <div style="height: 70px;"></div>
+                
+                <div class="date-entry">2021</div>
+                <div style="height: 90px;"></div>
+                
+                <!-- Publications -->
+                <div class="date-entry">2024</div>
+                <div style="height: 50px;"></div>
+                
+                <div class="date-entry">2024</div>
+                <div style="height: 80px;"></div>
+                
+                <!-- Funding -->
+                <div class="date-entry">2024</div>
+                <div class="date-entry">2023</div>
+                <div class="date-entry">2023</div>
+                <div class="date-entry">2021</div>
+                <div class="date-entry">2021</div>
+                <div class="date-entry">2021</div>
+                <div style="height: 100px;"></div>
+                
+                <!-- Service dates -->
+                <div class="date-entry">2016-2022</div>
+                <div style="height: 70px;"></div>
+                
+                <div class="date-entry">2016-2022</div>
+                <div style="height: 40px;"></div>
+                
+                <div class="date-entry">2008-2016</div>
+                <div style="height: 70px;"></div>
+                
+                <div class="date-entry">2016-2022</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
