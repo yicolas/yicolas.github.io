@@ -1,7 +1,5 @@
 # yicolas.github.io
-website hosting my CV, 3d prints and photos
-
-# Nicolas Anderson
+# Nick Anderson
 
 **Caltech Geology PhD 2028**
 
