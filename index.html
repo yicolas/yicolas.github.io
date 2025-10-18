@@ -256,6 +256,112 @@
             .header h1 {
                 font-size: 2em;
             }
+            
+            .section-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* 3D Prints Section */
+        .section-wrapper {
+            max-width: 900px;
+            margin: 30px auto 0 auto;
+            background: #00FFFF;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-header {
+            text-align: right;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #000;
+        }
+        
+        .section-header h2 {
+            font-family: Arial, sans-serif;
+            font-size: 2.5em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #000;
+            line-height: 1.2;
+        }
+        
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .section-left {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px dashed #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #000;
+            font-weight: 600;
+        }
+        
+        .section-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .section-right h3 {
+            font-size: 1.3em;
+            margin: 0 0 10px 0;
+            color: #000;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        .section-content {
+            font-size: 1em;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        /* Color variations for different sections */
+        .section-wrapper.green {
+            background: #00FF00;
+        }
+        
+        .section-wrapper.pink {
+            background: #FF1493;
+        }
+        
+        /* Thesis PDF Section */
+        .thesis-container {
+            width: 100%;
+            height: 800px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid #000;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #000;
+            font-weight: 600;
+        }
+        
+        .thesis-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
@@ -263,13 +369,12 @@
     <div class="wrapper">
         <div class="header">
             <h1>NICOLAS ANDERSON CV</h1>
-            <h2>CALTECH GEOLOGY PhD 2028</h2>
+            <h2>Caltech Geology PhD 2028</h2>
         </div>
         
         <div class="cv-grid">
             <!-- LEFT COLUMN -->
             <div class="left-column">
-                <h3>About Me</h3>
                 <div class="bio">
                     I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better develop our understanding of igneous intrusions, meteorite impacts and Earth's magnetic field.
                 </div>
@@ -281,9 +386,10 @@
                 
                 <h3>Links</h3>
                 <ul class="links-list">
-                    <li><a href="#">3D Prints</a></li>
-                    <li><a href="#">Photos</a></li>
-                    <li><a href="#">Sediment Mill</a></li>
+                    <li><a href="#3d-prints">3D Prints</a></li>
+                    <li><a href="#photos">Photos</a></li>
+                    <li><a href="#sediment-mill">Sediment Mill</a></li>
+                    <li><a href="#thesis">Undergraduate Honors Thesis</a></li>
                     <li><a href="https://github.com/yicolas">Github/yicolas</a></li>
                 </ul>
                 
@@ -335,43 +441,12 @@
                     <div class="field-location">Death Valley, CA</div>
                     <div class="field-description">Field mapping, section measurement, and sample collection to develop stratigraphic, geochronologic and paleomagnetic data for Southwestern Laurentia large igneous province.</div>
                 </div>
-
-<h3>Service & Outreach</h3>
                 
-                <div class="exp-item">
-                    <div class="exp-title-with-date">
-                        <span class="exp-title">San Francisco Bike Coalition – San Francisco, CA</span> <BR><span class="exp-date">(2016 – 2022)</span>
-                    </div>
-                    <div class="exp-description">
-                        Encourage Bay Area residents to advocate for bicycle legislature. Provide bike parking valet services at large events with cycling attendees & offer bike mechanic services for community bike builds.
-                    </div>
-                </div>
-                
-                <div class="exp-item">
-                    <div class="exp-title-with-date">
-                        <span class="exp-title">Bay Area Ridge Trail – San Francisco, CA</span> <BR><span class="exp-date">(2016 – 2022)</span>
-                    </div>
-                    <div class="exp-description">Trail maintenance and restoration</div>
-                </div>
-                
-                <div class="exp-item">
-                    <div class="exp-title-with-date">
-                        <span class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</span> <BR><span class="exp-date">(2008 – 2016)</span>
-                    </div>
-                    <div class="exp-description">
-                        Oyster reintroduction to NYC waterways, invasive tree species removal, watershed, and habitat restoration
-                    </div>
-                </div>
-                
-                <div class="exp-item">
-                    <div class="exp-title-with-date">
-                        <span class="exp-title">Earth Science Tutor – San Francisco, CA</span> <BR><span class="exp-date">(2016 – 2022)</span>
-                    </div>
-                    <div class="exp-description">
-                        City College of San Francisco, Subjects: Oceanography, Geography, Geology
-                    </div>
-                </div>
-                
+                <h3>Memberships</h3>
+                <ul class="simple-list">
+                    <li>Geological Society of America</li>
+                    <li>American Geophysical Union</li>
+                </ul>
             </div>
             
             <!-- MAIN COLUMN -->
@@ -384,7 +459,7 @@
                     </div>
                     <div class="exp-institution">California Institute of Technology – Pasadena, CA</div>
                     <div class="exp-description">
-                        Using field observation, paleomagnetism, geochemistry, geochronology, and petrology to better develop our understanding of igneous intrusions, magma evolution and Earth's magnetic field. <BR><BR>
+                        Using field observation, paleomagnetism, geochemistry, geochronology, and petrology to better develop our understanding of igneous intrusions, magma evolution and Earth's magnetic field.
                         
                         <div><strong>Projects:</strong></div>
                         <ol class="projects-list">
@@ -416,9 +491,8 @@
                 
                 <div class="exp-item">
                     <div class="exp-title-with-date">
-                        <span class="exp-title">Co-instructor for California Advanced Field Course</span> <span class="exp-date">(2023)</span>
+                        <span class="exp-title">Co-instructor for Advanced Field Course – Eastern California</span> <span class="exp-date">(2023)</span>
                     </div>
-                    <div class="exp-institution">Nanyang Technical University, Singapore</div>
                     <div class="exp-description">
                         Taught and guided 20 geology students from Nanyang Technical University, Singapore on a 3-week camping field geology campaign in eastern California focused on: complex fold and thrust structural mapping in Cerro Gordo, glacial geomorphology mapping and fault scarp offset surveying in Lundy Canyon, and sighting, surveying, and topographic map generation in the Alabama Hills.
                     </div>
@@ -496,22 +570,152 @@
                 <h3>Funding</h3>
                 
                 <div class="exp-item">
-                    <div>Ian Campbell Award for Excellence in Field Geology Courses (2025) <span class="exp-date">(2021)</span></div>
                     <div>NSF GRFP <span class="exp-date">(2024)</span></div>
+                </div>
+                
+                <div class="exp-item">
                     <div>GSA Shoemaker Impact Cratering Award <span class="exp-date">(2023)</span></div>
+                </div>
+                
+                <div class="exp-item">
                     <div>Caltech Geological & Planetary Sciences Internal Grant <span class="exp-date">(2023)</span></div>
+                </div>
+                
+                <div class="exp-item">
                     <div>Caltech Provost Diversity Fellowship <span class="exp-date">(2021)</span></div>
+                </div>
+                
+                <div class="exp-item">
                     <div>Summer Undergraduate Research Fellowship <span class="exp-date">(2021)</span></div>
+                </div>
+                
+                <div class="exp-item">
                     <div>Charles H. Ramsden Endowed Scholarship <span class="exp-date">(2021)</span></div>
                 </div>
-
-                <h3>Memberships</h3>
-                <ul class="simple-list">
-                    <li>Geological Society of America</li>
-                    <li>American Geophysical Union</li>
-                </ul>
                 
+                <h3>Service & Outreach</h3>
+                
+                <div class="exp-item">
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">San Francisco Bike Coalition – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
+                    <div class="exp-description">
+                        Encourage Bay Area residents to advocate for bicycle legislature. Provide bike parking valet services at large events with cycling attendees & offer bike mechanic services for community bike builds.
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Bay Area Ridge Trail – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
+                    <div class="exp-description">Trail maintenance and restoration</div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Billion Oyster Project / Million Trees NYC – Brooklyn, NY</span> <span class="exp-date">(2008 – 2016)</span>
+                    </div>
+                    <div class="exp-description">
+                        Oyster reintroduction to NYC waterways, invasive tree species removal, watershed, and habitat restoration
+                    </div>
+                </div>
+                
+                <div class="exp-item">
+                    <div class="exp-title-with-date">
+                        <span class="exp-title">Earth Science Tutor – San Francisco, CA</span> <span class="exp-date">(2016 – 2022)</span>
+                    </div>
+                    <div class="exp-description">
+                        City College of San Francisco, Subjects: Oceanography, Geography, Geology
+                    </div>
+                </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- 3D PRINTS SECTION -->
+    <div id="3d-prints" class="section-wrapper">
+        <div class="section-header">
+            <h2>3D Prints</h2>
+        </div>
+        
+        <div class="section-grid">
+            <!-- LEFT COLUMN - Images -->
+            <div class="section-left">
+                <div class="image-placeholder">
+                    Image 1
+                </div>
+                <div class="image-placeholder">
+                    Image 2
+                </div>
+            </div>
+            
+            <!-- RIGHT COLUMN - Description -->
+            <div class="section-right">
+                <h3>Project Overview</h3>
+                <div class="section-content">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                </div>
+                
+                <h3>Technical Details</h3>
+                <div class="section-content">
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+                
+                <h3>Applications</h3>
+                <div class="section-content">
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SEDIMENT MILL SECTION -->
+    <div id="sediment-mill" class="section-wrapper green">
+        <div class="section-header">
+            <h2>Sediment Mill</h2>
+        </div>
+        
+        <div class="section-grid">
+            <!-- LEFT COLUMN - Images -->
+            <div class="section-left">
+                <div class="image-placeholder">
+                    Image 1
+                </div>
+                <div class="image-placeholder">
+                    Image 2
+                </div>
+            </div>
+            
+            <!-- RIGHT COLUMN - Description -->
+            <div class="section-right">
+                <h3>Overview</h3>
+                <div class="section-content">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                </div>
+                
+                <h3>Design & Construction</h3>
+                <div class="section-content">
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+                
+                <h3>Research Applications</h3>
+                <div class="section-content">
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- UNDERGRADUATE HONORS THESIS SECTION -->
+    <div id="thesis" class="section-wrapper pink">
+        <div class="section-header">
+            <h2>Undergraduate Honors Thesis</h2>
+        </div>
+        
+        <div class="thesis-container">
+            <!-- Replace with actual PDF path -->
+            <!-- <iframe src="path/to/your/thesis.pdf"></iframe> -->
+            PDF Viewer Placeholder - Upload your thesis PDF and replace the iframe src
         </div>
     </div>
 </body>
