@@ -262,11 +262,10 @@
             }
         }
         
-        /* 3D Prints Section */
+        /* Section Styles */
         .section-wrapper {
             max-width: 900px;
             margin: 30px auto 0 auto;
-            background: #00FFFF;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
@@ -334,13 +333,25 @@
             color: #000;
         }
         
-        /* Color variations for different sections */
-        .section-wrapper.green {
-            background: #00FF00;
+        /* Pastel Color variations for different sections */
+        .section-wrapper.pastel-pink {
+            background: #FFB6D9;
         }
         
-        .section-wrapper.pink {
-            background: #FF1493;
+        .section-wrapper.pastel-blue {
+            background: #B4D4FF;
+        }
+        
+        .section-wrapper.pastel-green {
+            background: #B4E7CE;
+        }
+        
+        .section-wrapper.pastel-purple {
+            background: #E0BBE4;
+        }
+        
+        .section-wrapper.pastel-orange {
+            background: #FFD5B5;
         }
         
         /* Thesis PDF Section */
@@ -387,13 +398,14 @@
                 
                 <h3>Links</h3>
                 <ul class="links-list">
+                    <li><a href="#thesis">Undergraduate Honors Thesis</a></li>
+                    <li><a href="#maps">Maps</a></li>
+                    <li><a href="#sediment-mill">Sediment Mill</a></li>
                     <li><a href="#3d-prints">3D Prints</a></li>
+                    <li><a href="#photos">Photos</a></li>
                     <li><a href="https://github.com/yicolas">Github Repositories</a></li>
                     <li><a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">Google Scholar</a></li>
                     <li>ORCID</li>
-                    <li><a href="#photos">Photos</a></li>
-                    <li><a href="#sediment-mill">Sediment Mill</a></li>
-                    <li><a href="#thesis">Undergraduate Honors Thesis</a></li>
                 </ul>
                 
                 <h3>Contact</h3>
@@ -626,36 +638,47 @@
         </div>
     </div>
     
-    <!-- 3D PRINTS SECTION -->
-    <div id="3d-prints" class="section-wrapper">
+    <!-- UNDERGRADUATE HONORS THESIS SECTION -->
+    <div id="thesis" class="section-wrapper pastel-pink">
         <div class="section-header">
-            <h2>3D Prints</h2>
+            <h2>GSA 2022 Presentation/Honors Thesis</h2>
+        </div>
+        
+        <div class="thesis-container">
+            <iframe src="SWLLIP-GSA-Anderson-github.pdf"></iframe>
+        </div>
+    </div>
+    
+    <!-- MAPS SECTION -->
+    <div id="maps" class="section-wrapper pastel-blue">
+        <div class="section-header">
+            <h2>Maps</h2>
         </div>
         
         <div class="section-grid">
             <!-- LEFT COLUMN - Images -->
             <div class="section-left">
                 <div class="image-placeholder">
-                    Image 1
+                    Map Image 1
                 </div>
                 <div class="image-placeholder">
-                    Image 2
+                    Map Image 2
                 </div>
             </div>
             
             <!-- RIGHT COLUMN - Description -->
             <div class="section-right">
-                <h3>Project Overview</h3>
+                <h3>Field Mapping Projects</h3>
                 <div class="section-content">
                     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
                 </div>
                 
-                <h3>Technical Details</h3>
+                <h3>Cartographic Methods</h3>
                 <div class="section-content">
                     <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
                 </div>
                 
-                <h3>Applications</h3>
+                <h3>Regional Studies</h3>
                 <div class="section-content">
                     <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
                 </div>
@@ -664,7 +687,7 @@
     </div>
     
     <!-- SEDIMENT MILL SECTION -->
-    <div id="sediment-mill" class="section-wrapper green">
+    <div id="sediment-mill" class="section-wrapper pastel-green">
         <div class="section-header">
             <h2>Sediment Mill</h2>
         </div>
@@ -700,15 +723,77 @@
         </div>
     </div>
     
-    <!-- UNDERGRADUATE HONORS THESIS SECTION -->
-    <div id="thesis" class="section-wrapper pink">
+    <!-- 3D PRINTS SECTION -->
+    <div id="3d-prints" class="section-wrapper pastel-purple">
         <div class="section-header">
-            <h2>GSA 2022 Presentation/Honors Thesis</h2>
+            <h2>3D Prints</h2>
         </div>
         
-        <div class="thesis-container">
-            <!-- Replace with actual PDF path -->
-            <iframe src="SWLLIP-GSA-Anderson-github.pdf"></iframe>
+        <div class="section-grid">
+            <!-- LEFT COLUMN - Images -->
+            <div class="section-left">
+                <div class="image-placeholder">
+                    Image 1
+                </div>
+                <div class="image-placeholder">
+                    Image 2
+                </div>
+            </div>
+            
+            <!-- RIGHT COLUMN - Description -->
+            <div class="section-right">
+                <h3>Project Overview</h3>
+                <div class="section-content">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                </div>
+                
+                <h3>Technical Details</h3>
+                <div class="section-content">
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+                
+                <h3>Applications</h3>
+                <div class="section-content">
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PHOTOS SECTION -->
+    <div id="photos" class="section-wrapper pastel-orange">
+        <div class="section-header">
+            <h2>Photos</h2>
+        </div>
+        
+        <div class="section-grid">
+            <!-- LEFT COLUMN - Images -->
+            <div class="section-left">
+                <div class="image-placeholder">
+                    Photo 1
+                </div>
+                <div class="image-placeholder">
+                    Photo 2
+                </div>
+            </div>
+            
+            <!-- RIGHT COLUMN - Description -->
+            <div class="section-right">
+                <h3>Field Photography</h3>
+                <div class="section-content">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+                </div>
+                
+                <h3>Geological Features</h3>
+                <div class="section-content">
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </div>
+                
+                <h3>Expeditions</h3>
+                <div class="section-content">
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+            </div>
         </div>
     </div>
 </body>
