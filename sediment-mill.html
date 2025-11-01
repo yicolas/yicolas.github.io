@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sediment Mill - Nicolas Anderson</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Guyot', Georgia, serif;
+            background: #ffffff;
+            color: #222;
+            line-height: 1.3;
+            padding: 40px 20px;
+            font-size: 9.6px;
+        }
+        
+        .section-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            background: #B4E7CE;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+        
+        .header-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .header-links a {
+            color: #0066cc;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .header-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .header-right {
+            text-align: right;
+        }
+        
+        .header-right h2 {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            color: #333;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+        
+        .section-header {
+            text-align: right;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #000;
+        }
+        
+        .section-header h1 {
+            font-family: Arial, sans-serif;
+            font-size: 2.5em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #000;
+            line-height: 1.2;
+        }
+        
+        .sediment-images-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px dashed #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #000;
+            font-weight: 600;
+        }
+        
+        .sediment-content-section {
+            margin-bottom: 20px;
+        }
+        
+        .sediment-content-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        h3 {
+            font-size: 1.3em;
+            margin: 0 0 10px 0;
+            color: #000;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        .section-content {
+            font-size: 1em;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        @media (max-width: 768px) {
+            .sediment-images-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="section-wrapper">
+        <div class="header-top">
+            <div class="header-links">
+                <a href="index.html">HOME</a>
+                <a href="cv.html">CV</a>
+                <a href="thesis.html">GSA 2022</a>
+                <a href="stuff.html">STUFF</a>
+                <a href="sediment-press.html">SEDIMENT PRESS</a>
+                <a href="https://github.com/yicolas">GITHUB</a>
+                <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
+            </div>
+            <div class="header-right">
+                <h2>CALTECH GEOLOGY PHD 2028</h2>
+            </div>
+        </div>
+        
+        <div class="section-header">
+            <h1>SEDIMENT MILL</h1>
+        </div>
+        
+        <!-- Images side by side at top -->
+        <div class="sediment-images-row">
+            <div class="image-placeholder">
+                Image 1
+            </div>
+            <div class="image-placeholder">
+                Image 2
+            </div>
+        </div>
+        
+        <!-- Text content below -->
+        <div class="sediment-content-section">
+            <h3>Overview</h3>
+            <div class="section-content">
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Design & Construction</h3>
+            <div class="section-content">
+                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Research Applications</h3>
+            <div class="section-content">
+                <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
