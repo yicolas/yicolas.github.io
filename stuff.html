@@ -20,12 +20,19 @@
             font-size: 9.6px;
         }
         
-        .section-wrapper {
+        .wrapper {
             max-width: 900px;
             margin: 0 auto;
+            background: #B4D4FF;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            background: #B4D4FF;
+        }
+        
+        /* Header */
+        .header {
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #000;
         }
         
         .header-top {
@@ -40,7 +47,6 @@
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
-            margin-bottom: 20px;
         }
         
         .header-links a {
@@ -60,27 +66,21 @@
             text-align: right;
         }
         
-        .header-right h2 {
-            font-family: Arial, sans-serif;
-            font-size: 1.2em;
-            color: #333;
-            font-weight: normal;
-            line-height: 1.2;
-        }
-        
-        .section-header {
-            text-align: right;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #000;
-        }
-        
-        .section-header h1 {
+        .header h1 {
             font-family: Arial, sans-serif;
             font-size: 2.5em;
             font-weight: 700;
             text-transform: uppercase;
+            margin-bottom: 5px;
             color: #000;
+            line-height: 1.2;
+        }
+        
+        .header h2 {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            color: #333;
+            font-weight: normal;
             line-height: 1.2;
         }
         
@@ -107,23 +107,25 @@
     </style>
 </head>
 <body>
-    <div class="section-wrapper">
-        <div class="header-top">
-            <div class="header-links">
-                <a href="index.html">HOME</a>
-                <a href="cv.html">CV</a>
-                <a href="thesis.html">GSA 2022</a>
-                <a href="sediment-mill.html">SEDIMENT MILL</a>
-                <a href="sediment-press.html">SEDIMENT PRESS</a>
-                <a href="https://github.com/yicolas">GITHUB</a>
-                <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-links">
+                    <a href="index.html">HOME</a>
+                    <a href="cv.html">CV</a>
+                    <a href="thesis.html">GSA 2022</a>
+                    <a href="sediment-mill.html">SEDIMENT MILL</a>
+                    <a href="sediment-press.html">SEDIMENT PRESS</a>
+                    <a href="https://github.com/yicolas">GITHUB</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
+                </div>
+                <div class="header-right">
+                    <h2>CALTECH GEOLOGY PHD 2028</h2>
+                </div>
             </div>
             <div class="header-right">
-                <h2>CALTECH GEOLOGY PHD 2028</h2>
+                <h1>STUFF</h1>
             </div>
-        </div>
-        <div class="header-right">
-            <h1>STUFF</h1>
         </div>
         
         <div class="maps-container">
