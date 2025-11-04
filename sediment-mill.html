@@ -293,7 +293,13 @@
         const scrollSpeedInput = document.getElementById('scrollSpeed');
         const speedValueDisplay = document.getElementById('speedValue');
         
+        // Configuration constants
+        const SCROLL_AMOUNT = 2; // pixels per step
+        const INTERVAL_TIME = 50; // milliseconds
+        const RESUME_DELAY = 2000; // milliseconds
+        
         let scrollInterval;
+        let resumeTimeout;
         let currentSpeed = 50;
         let isScrolling = false;
         
@@ -313,18 +319,16 @@
         function startAutoScroll() {
             if (currentSpeed > 0) {
                 isScrolling = true;
-                const scrollAmount = 2; // pixels per step
-                const intervalTime = 50; // milliseconds
                 const speedMultiplier = currentSpeed / 50; // normalize to speed
                 
                 scrollInterval = setInterval(() => {
-                    imageReel.scrollLeft += scrollAmount * speedMultiplier;
+                    imageReel.scrollLeft += SCROLL_AMOUNT * speedMultiplier;
                     
                     // Loop back to start when reaching the end
                     if (imageReel.scrollLeft >= imageReel.scrollWidth - imageReel.clientWidth) {
                         imageReel.scrollLeft = 0;
                     }
-                }, intervalTime);
+                }, INTERVAL_TIME);
             }
         }
         
@@ -352,13 +356,13 @@
         imageReel.addEventListener('scroll', function(e) {
             if (isScrolling) {
                 stopAutoScroll();
-                // Resume after 2 seconds of no manual scrolling
-                clearTimeout(imageReel.resumeTimeout);
-                imageReel.resumeTimeout = setTimeout(() => {
+                // Resume after configured delay of no manual scrolling
+                clearTimeout(resumeTimeout);
+                resumeTimeout = setTimeout(() => {
                     if (currentSpeed > 0) {
                         startAutoScroll();
                     }
-                }, 2000);
+                }, RESUME_DELAY);
             }
         });
     </script>
