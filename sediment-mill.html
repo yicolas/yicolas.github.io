@@ -319,7 +319,8 @@
         function startAutoScroll() {
             if (currentSpeed > 0) {
                 isScrolling = true;
-                const speedMultiplier = currentSpeed / 50; // normalize to speed
+                // Speed multiplier: 50 = baseline (1x), <50 = slower, >50 = faster
+                const speedMultiplier = currentSpeed / 50;
                 
                 scrollInterval = setInterval(() => {
                     imageReel.scrollLeft += SCROLL_AMOUNT * speedMultiplier;
@@ -354,12 +355,16 @@
         
         // Pause auto-scroll when user manually scrolls
         imageReel.addEventListener('scroll', function(e) {
+            // Stop auto-scroll if it's currently running
             if (isScrolling) {
                 stopAutoScroll();
-                // Resume after configured delay of no manual scrolling
-                clearTimeout(resumeTimeout);
+            }
+            
+            // Resume auto-scroll after configured delay if speed is set
+            clearTimeout(resumeTimeout);
+            if (currentSpeed > 0) {
                 resumeTimeout = setTimeout(() => {
-                    if (currentSpeed > 0) {
+                    if (currentSpeed > 0 && !isScrolling) {
                         startAutoScroll();
                     }
                 }, RESUME_DELAY);
