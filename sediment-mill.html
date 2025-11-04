@@ -360,11 +360,13 @@
                 stopAutoScroll();
             }
             
-            // Resume auto-scroll after configured delay if speed is set
+            // Clear any pending resume timeout to prevent multiple timeouts
             clearTimeout(resumeTimeout);
+            
+            // Resume auto-scroll after configured delay if speed is set
             if (currentSpeed > 0) {
                 resumeTimeout = setTimeout(() => {
-                    if (currentSpeed > 0 && !isScrolling) {
+                    if (!isScrolling) {
                         startAutoScroll();
                     }
                 }, RESUME_DELAY);
