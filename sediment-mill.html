@@ -84,15 +84,46 @@
             line-height: 1.2;
         }
         
-        .sediment-images-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .image-reel-container {
             margin-bottom: 30px;
         }
         
+        .image-reel-wrapper {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .image-reel {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .image-reel::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .image-reel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
         .image-placeholder {
-            width: 100%;
+            flex: 0 0 auto;
+            width: 400px;
             aspect-ratio: 4/3;
             background: rgba(255, 255, 255, 0.3);
             border: 2px dashed #000;
@@ -102,6 +133,53 @@
             font-size: 1em;
             color: #000;
             font-weight: 600;
+        }
+        
+        .speed-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1em;
+        }
+        
+        .speed-controls label {
+            font-weight: 600;
+        }
+        
+        .speed-controls input[type="range"] {
+            flex: 1;
+            max-width: 300px;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            border-radius: 3px;
+        }
+        
+        .speed-controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #000;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        
+        .speed-controls input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #000;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+        
+        .speed-value {
+            font-weight: 600;
+            min-width: 30px;
+            text-align: right;
         }
         
         .sediment-content-section {
@@ -129,8 +207,17 @@
         }
         
         @media (max-width: 768px) {
-            .sediment-images-row {
-                grid-template-columns: 1fr;
+            .image-placeholder {
+                width: 300px;
+            }
+            
+            .speed-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .speed-controls input[type="range"] {
+                max-width: 100%;
             }
         }
     </style>
@@ -157,13 +244,22 @@
             </div>
         </div>
         
-        <!-- Images side by side at top -->
-        <div class="sediment-images-row">
-            <div class="image-placeholder">
-                <img_src="" alt="">
+        <!-- Horizontal scrolling image reel with speed control -->
+        <div class="image-reel-container">
+            <div class="image-reel-wrapper">
+                <div class="image-reel" id="imageReel">
+                    <div class="image-placeholder">Image 1</div>
+                    <div class="image-placeholder">Image 2</div>
+                    <div class="image-placeholder">Image 3</div>
+                    <div class="image-placeholder">Image 4</div>
+                    <div class="image-placeholder">Image 5</div>
+                    <div class="image-placeholder">Image 6</div>
+                </div>
             </div>
-            <div class="image-placeholder">
-                <img_src="" alt="">
+            <div class="speed-controls">
+                <label for="scrollSpeed">Scroll Speed:</label>
+                <input type="range" id="scrollSpeed" min="0" max="100" value="50">
+                <span class="speed-value" id="speedValue">50</span>
             </div>
         </div>
         
@@ -190,5 +286,81 @@
         </div>
         
     </div>
+    
+    <script>
+        // Horizontal scroll speed control
+        const imageReel = document.getElementById('imageReel');
+        const scrollSpeedInput = document.getElementById('scrollSpeed');
+        const speedValueDisplay = document.getElementById('speedValue');
+        
+        let scrollInterval;
+        let currentSpeed = 50;
+        let isScrolling = false;
+        
+        // Update speed display
+        scrollSpeedInput.addEventListener('input', function() {
+            currentSpeed = this.value;
+            speedValueDisplay.textContent = currentSpeed;
+            
+            // Restart scrolling with new speed if it was active
+            if (isScrolling) {
+                stopAutoScroll();
+                startAutoScroll();
+            }
+        });
+        
+        // Auto-scroll function
+        function startAutoScroll() {
+            if (currentSpeed > 0) {
+                isScrolling = true;
+                const scrollAmount = 2; // pixels per step
+                const intervalTime = 50; // milliseconds
+                const speedMultiplier = currentSpeed / 50; // normalize to speed
+                
+                scrollInterval = setInterval(() => {
+                    imageReel.scrollLeft += scrollAmount * speedMultiplier;
+                    
+                    // Loop back to start when reaching the end
+                    if (imageReel.scrollLeft >= imageReel.scrollWidth - imageReel.clientWidth) {
+                        imageReel.scrollLeft = 0;
+                    }
+                }, intervalTime);
+            }
+        }
+        
+        function stopAutoScroll() {
+            isScrolling = false;
+            if (scrollInterval) {
+                clearInterval(scrollInterval);
+            }
+        }
+        
+        // Start auto-scroll on page load if speed > 0
+        if (currentSpeed > 0) {
+            startAutoScroll();
+        }
+        
+        // Pause auto-scroll on hover
+        imageReel.addEventListener('mouseenter', stopAutoScroll);
+        imageReel.addEventListener('mouseleave', () => {
+            if (currentSpeed > 0) {
+                startAutoScroll();
+            }
+        });
+        
+        // Pause auto-scroll when user manually scrolls
+        imageReel.addEventListener('scroll', function(e) {
+            if (isScrolling) {
+                stopAutoScroll();
+                // Resume after 2 seconds of no manual scrolling
+                clearTimeout(imageReel.resumeTimeout);
+                imageReel.resumeTimeout = setTimeout(() => {
+                    if (currentSpeed > 0) {
+                        startAutoScroll();
+                    }
+                }, 2000);
+            }
+        });
+    </script>
 </body>
 </html>
