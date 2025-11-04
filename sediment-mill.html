@@ -84,15 +84,40 @@
             line-height: 1.2;
         }
         
-        .sediment-images-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .image-reel-container {
             margin-bottom: 30px;
         }
         
+        .image-reel {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .image-reel::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .image-reel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
         .image-placeholder {
-            width: 100%;
+            flex: 0 0 auto;
+            width: 400px;
             aspect-ratio: 4/3;
             background: rgba(255, 255, 255, 0.3);
             border: 2px dashed #000;
@@ -129,8 +154,8 @@
         }
         
         @media (max-width: 768px) {
-            .sediment-images-row {
-                grid-template-columns: 1fr;
+            .image-placeholder {
+                width: 300px;
             }
         }
     </style>
@@ -157,13 +182,15 @@
             </div>
         </div>
         
-        <!-- Images side by side at top -->
-        <div class="sediment-images-row">
-            <div class="image-placeholder">
-                <img_src="" alt="">
-            </div>
-            <div class="image-placeholder">
-                <img_src="" alt="">
+        <!-- Horizontal scrolling image reel -->
+        <div class="image-reel-container">
+            <div class="image-reel">
+                <div class="image-placeholder">Image 1</div>
+                <div class="image-placeholder">Image 2</div>
+                <div class="image-placeholder">Image 3</div>
+                <div class="image-placeholder">Image 4</div>
+                <div class="image-placeholder">Image 5</div>
+                <div class="image-placeholder">Image 6</div>
             </div>
         </div>
         
