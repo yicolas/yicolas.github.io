@@ -88,12 +88,6 @@
             margin-bottom: 30px;
         }
         
-        .image-reel-wrapper {
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        
         .image-reel {
             display: flex;
             gap: 20px;
@@ -135,53 +129,6 @@
             font-weight: 600;
         }
         
-        .speed-controls {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 1em;
-        }
-        
-        .speed-controls label {
-            font-weight: 600;
-        }
-        
-        .speed-controls input[type="range"] {
-            flex: 1;
-            max-width: 300px;
-            height: 6px;
-            -webkit-appearance: none;
-            appearance: none;
-            background: rgba(255, 255, 255, 0.3);
-            outline: none;
-            border-radius: 3px;
-        }
-        
-        .speed-controls input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #000;
-            cursor: pointer;
-            border-radius: 50%;
-        }
-        
-        .speed-controls input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #000;
-            cursor: pointer;
-            border-radius: 50%;
-            border: none;
-        }
-        
-        .speed-value {
-            font-weight: 600;
-            min-width: 30px;
-            text-align: right;
-        }
-        
         .sediment-content-section {
             margin-bottom: 20px;
         }
@@ -210,15 +157,6 @@
             .image-placeholder {
                 width: 300px;
             }
-            
-            .speed-controls {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .speed-controls input[type="range"] {
-                max-width: 100%;
-            }
         }
     </style>
 </head>
@@ -244,22 +182,15 @@
             </div>
         </div>
         
-        <!-- Horizontal scrolling image reel with speed control -->
+        <!-- Horizontal scrolling image reel -->
         <div class="image-reel-container">
-            <div class="image-reel-wrapper">
-                <div class="image-reel" id="imageReel">
-                    <div class="image-placeholder">Image 1</div>
-                    <div class="image-placeholder">Image 2</div>
-                    <div class="image-placeholder">Image 3</div>
-                    <div class="image-placeholder">Image 4</div>
-                    <div class="image-placeholder">Image 5</div>
-                    <div class="image-placeholder">Image 6</div>
-                </div>
-            </div>
-            <div class="speed-controls">
-                <label for="scrollSpeed">Scroll Speed:</label>
-                <input type="range" id="scrollSpeed" min="0" max="100" value="50">
-                <span class="speed-value" id="speedValue">50</span>
+            <div class="image-reel">
+                <div class="image-placeholder">Image 1</div>
+                <div class="image-placeholder">Image 2</div>
+                <div class="image-placeholder">Image 3</div>
+                <div class="image-placeholder">Image 4</div>
+                <div class="image-placeholder">Image 5</div>
+                <div class="image-placeholder">Image 6</div>
             </div>
         </div>
         
@@ -286,92 +217,5 @@
         </div>
         
     </div>
-    
-    <script>
-        // Horizontal scroll speed control
-        const imageReel = document.getElementById('imageReel');
-        const scrollSpeedInput = document.getElementById('scrollSpeed');
-        const speedValueDisplay = document.getElementById('speedValue');
-        
-        // Configuration constants
-        const SCROLL_AMOUNT = 2; // pixels per step
-        const INTERVAL_TIME = 50; // milliseconds
-        const RESUME_DELAY = 2000; // milliseconds
-        
-        let scrollInterval;
-        let resumeTimeout;
-        let currentSpeed = 50;
-        let isScrolling = false;
-        
-        // Update speed display
-        scrollSpeedInput.addEventListener('input', function() {
-            currentSpeed = this.value;
-            speedValueDisplay.textContent = currentSpeed;
-            
-            // Restart scrolling with new speed if it was active
-            if (isScrolling) {
-                stopAutoScroll();
-                startAutoScroll();
-            }
-        });
-        
-        // Auto-scroll function
-        function startAutoScroll() {
-            if (currentSpeed > 0) {
-                isScrolling = true;
-                // Speed multiplier: 50 = baseline (1x), <50 = slower, >50 = faster
-                const speedMultiplier = currentSpeed / 50;
-                
-                scrollInterval = setInterval(() => {
-                    imageReel.scrollLeft += SCROLL_AMOUNT * speedMultiplier;
-                    
-                    // Loop back to start when reaching the end
-                    if (imageReel.scrollLeft >= imageReel.scrollWidth - imageReel.clientWidth) {
-                        imageReel.scrollLeft = 0;
-                    }
-                }, INTERVAL_TIME);
-            }
-        }
-        
-        function stopAutoScroll() {
-            isScrolling = false;
-            if (scrollInterval) {
-                clearInterval(scrollInterval);
-            }
-        }
-        
-        // Start auto-scroll on page load if speed > 0
-        if (currentSpeed > 0) {
-            startAutoScroll();
-        }
-        
-        // Pause auto-scroll on hover
-        imageReel.addEventListener('mouseenter', stopAutoScroll);
-        imageReel.addEventListener('mouseleave', () => {
-            if (currentSpeed > 0) {
-                startAutoScroll();
-            }
-        });
-        
-        // Pause auto-scroll when user manually scrolls
-        imageReel.addEventListener('scroll', function(e) {
-            // Stop auto-scroll if it's currently running
-            if (isScrolling) {
-                stopAutoScroll();
-            }
-            
-            // Clear any pending resume timeout to prevent multiple timeouts
-            clearTimeout(resumeTimeout);
-            
-            // Resume auto-scroll after configured delay if speed is set
-            if (currentSpeed > 0) {
-                resumeTimeout = setTimeout(() => {
-                    if (!isScrolling) {
-                        startAutoScroll();
-                    }
-                }, RESUME_DELAY);
-            }
-        });
-    </script>
 </body>
 </html>
