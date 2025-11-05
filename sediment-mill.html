@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nicolas Anderson - Home</title>
+    <title>Sediment Mill - Nicolas Anderson</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: 'Guyot', Georgia, serif;
             background: #ffffff;
@@ -18,112 +18,37 @@
             line-height: 1.3;
             padding: 40px 20px;
             font-size: 9.6px;
-            transition: font-size 0.2s;
-            overflow-x: hidden; /* Prevent overflow on zoom */
         }
-
+        
         .wrapper {
             max-width: 900px;
             margin: 0 auto;
-            background: #bfe4bb;
+            background: #bbbfe4;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            /* Added for smooth scaling on zoom */
-            transition: transform 0.18s cubic-bezier(.52,.11,.4,.84);
         }
-
-        :root {
-            --zoom-btn-spacing: 32px;    /* Vertical spacing between buttons (edit as needed) */
-            --zoom-btn-to-wrapper-right: 400px;   /* Horizontal offset from wrapper */
-            --zoom-btn-to-wrapper-up: 800px;      /* Upward offset from wrapper center */
-        }
-
-        .zoom-btn-container {
-            position: absolute;
-            /* Anchor to right edge & center, then offset by CSS vars */
-            left: 100%;
-            top: 50%;
-            transform: translate(
-                var(--zoom-btn-to-wrapper-right), /* right offset */
-                calc(-50% - var(--zoom-btn-to-wrapper-up)) /* up offset */
-            );
-            display: flex;
-            flex-direction: column;
-            gap: var(--zoom-btn-spacing);
-            z-index: 100;
-            pointer-events: auto;
-        }
-
-        .zoom-btn {
-            font-family: Arial, sans-serif;
-            font-size: 1.2em;
-            font-weight: normal;
-            background: transparent;
-            border: 2px solid #000;
-            color: #222;
-            padding: 12px 22px;
-            cursor: pointer;
-            border-radius: 6px;
-            outline: none;
-            transition: background 0.2s, box-shadow 0.2s;
-            user-select: none;
-        }
-
-        .zoom-btn:hover,
-        .zoom-btn:focus {
-            background: rgba(0,0,0,0.05);
-            box-shadow: 0 0 0 2px #0002;
-        }
-
-        /* Hide buttons on mobile */
-        @media (max-width: 768px) {
-            .zoom-btn-container {
-                display: none !important;
-            }
-
-            body {
-                padding: 10px;
-            }
-
-            .wrapper {
-                padding: 20px;
-            }
-
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .right-column {
-                padding-left: 0;
-                border-left: none;
-                border-top: 1px solid rgba(0, 0, 0, 0.2);
-                padding-top: 20px;
-                margin-top: 20px;
-            }
-
-            .header h1 {
-                font-size: 2em;
-            }
-        }
-
-        /* Existing styles unchanged */
+        
+        /* Header */
         .header {
             padding-bottom: 30px;
             margin-bottom: 30px;
             border-bottom: 1px solid #000;
         }
+        
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 5px;
         }
+        
         .header-links {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
         }
+        
         .header-links a {
             color: #0066cc;
             text-decoration: none;
@@ -132,12 +57,15 @@
             font-weight: normal;
             white-space: nowrap;
         }
+        
         .header-links a:hover {
             text-decoration: underline;
         }
+        
         .header-right {
             text-align: right;
         }
+        
         .header h1 {
             font-family: Arial, sans-serif;
             font-size: 2.5em;
@@ -147,6 +75,7 @@
             color: #000;
             line-height: 1.2;
         }
+        
         .header h2 {
             font-family: Arial, sans-serif;
             font-size: 1.2em;
@@ -154,159 +83,155 @@
             font-weight: normal;
             line-height: 1.2;
         }
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
+        
+        .image-reel-container {
+            margin-bottom: 30px;
         }
-        .left-column {
-            padding-right: 20px;
+        
+        .image-reel {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
         }
-        .right-column {
-            padding-left: 20px;
-            border-left: 1px solid rgba(0, 0, 0, 0.2);
+        
+        .image-reel::-webkit-scrollbar {
+            height: 8px;
         }
-        .compass-image {
-            width: 100%;
+        
+        .image-reel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+        }
+        
+        .image-reel::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .image-placeholder {
+            flex: 0 0 auto;
+            height: 300px; /* Fixed height */
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px dashed #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #000;
+            font-weight: 600;
+            overflow: hidden;
+        }
+        .image-placeholder img {
+            height: 100%;
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .image-placeholder {
+                height: 200px; /* Adjust for mobile */
+            }
+        }
+        
+        .sediment-content-section {
             margin-bottom: 20px;
-            display: block;
         }
-        .compass-image img {
-            width: 100%;
-            height: auto;
-            display: block;
+        
+        .sediment-content-section:last-child {
+            margin-bottom: 0;
         }
+        
         h3 {
             font-size: 1.3em;
-            margin: 20px 0 10px 0;
+            margin: 0 0 10px 0;
             color: #000;
             border-bottom: 1px solid #000;
             padding-bottom: 3px;
             font-weight: 700;
             line-height: 1.2;
         }
-        .left-column h3:first-of-type {
-            margin-top: 0;
-        }
-        .right-column h3:first-of-type {
-            margin-top: 0;
-        }
-        .contact-info {
+        
+        .section-content {
             font-size: 1em;
             line-height: 1.4;
+            color: #000;
         }
-        .bio {
-            font-size: 1em;
-            line-height: 1.3;
-            margin-bottom: 20px;
-        }
-        .quote {
-            font-style: italic;
-            font-size: 1em;
-            padding: 10px;
-            border-left: 2px solid #000;
-            margin: 15px 0;
-            line-height: 1.3;
-        }
-        .quote-author {
-            font-size: 1em;
-            margin-top: 3px;
+        
+        @media (max-width: 768px) {
+            .image-placeholder {
+                width: 300px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="wrapper" id="wrapper">
+    <div class="wrapper">
         <div class="header">
             <div class="header-top">
                 <div class="header-links">
+                    <a href="index.html">HOME</a>
                     <a href="cv.html">CV</a>
                     <a href="thesis.html">GSA 2022</a>
                     <a href="stuff.html">STUFF</a>
-                    <a href="sediment-mill.html">SEDIMENT MILL</a>
                     <a href="sediment-press.html">SEDIMENT PRESS</a>
                     <a href="https://github.com/yicolas">GITHUB</a>
-                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55g[...]">SCHOLAR</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
                 </div>
                 <div class="header-right">
                     <h2>CALTECH GEOLOGY PHD 2028</h2>
                 </div>
             </div>
             <div class="header-right">
-                <h1>NICOLAS ANDERSON</h1>
+                <h1>SEDIMENT MILL</h1>
             </div>
         </div>
-
-        <div class="content-grid">
-            <!-- LEFT COLUMN -->
-            <div class="left-column">
-                <div class="compass-image">
-                    <img src="geo_compass.png" alt="Geological Compass">
-                </div>
-            </div>
-            <!-- RIGHT COLUMN -->
-            <div class="right-column">
-                <h3>About Me</h3>
-                <div class="bio">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better imporove our understanding of true[...]
-                </div>
-                <h3>Contact</h3>
-                <div class="contact-info">
-                    Nicolas Anderson<br>
-                    nickanderson@caltech.edu<br>
-                    California Institute of Technology<br>
-                    1200 East California Blvd MC 170-25<br>
-                    Pasadena, CA 91125
-                </div>
-                <div class="quote">
-                    "To be successful in unlocking the doors concealing nature's secrets, a person must have ingenuity. If he does not have the key for the lock, he must not hesitate to try to pick it[...]
-                    <div class="quote-author">– Hildebrand, 1957</div>
-                </div>
+        
+        <!-- Horizontal scrolling image reel -->
+        <div class="image-reel-container">
+            <div class="image-reel">
+                <div class="image-placeholder"><img src="kim_floc_outline_labels.svg" alt="outline svg drawing"></div>
+                <div class="image-placeholder"><img src="IMG_0819.JPG" alt="IMG_0819.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_0822.JPG" alt="IMG_0822.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_0823.JPG" alt="IMG_0823.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9366.JPG" alt="IMG_9366.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9553.JPG" alt="IMG_9553.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9569.JPG" alt="IMG_9569.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9584.JPG" alt="IMG_9584.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9600.JPG" alt="IMG_9600.JPG"></div>
+                <div class="image-placeholder"><img src="IMG_9816.JPG" alt="IMG_9816.JPG"></div>
             </div>
         </div>
-        <!-- Zoom Buttons Floating, positioned relative to wrapper -->
-        <div class="zoom-btn-container" aria-label="Page Zoom Controls" id="zoom-controls">
-            <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
-            <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
+        
+        <!-- Text content below -->
+        <div class="sediment-content-section">
+            <h3>Overview</h3>
+            <div class="section-content">
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            </div>
         </div>
+        
+        <div class="sediment-content-section">
+            <h3>Camera Build and Lens Info</h3>
+            <div class="section-content">
+                <p>Camera used is typical Nikon D750 with no special modifications. Lens and microscope build is from Ted Kinsman a optical engineer and photography MASTER from Rochester Institute of Technology. Here are links to a pdf of the <a href="lens_build.pdf">parts list and assembly</a> and a <a href="https://youtu.be/ue3mB6ektW8?si=AvWZU8-aA9zeerp9">youtube video</a> explaining the lens setup.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Sediment Mill Design and Usage</h3>
+            <div class="section-content">
+                <p>The mill consists of .</p>
+            </div>
+        </div>
+        
     </div>
-    <script>
-        // Zoom logic: scale .wrapper and its zoom controls container
-        let scale = 1.0;
-        const step = 1.2;
-        const minScale = 0.5;
-        const maxScale = 2.5;
-
-        const wrapper = document.getElementById('wrapper');
-        const zoomControls = document.getElementById('zoom-controls');
-
-        function setScale(newScale) {
-            scale = Math.max(Math.min(newScale, maxScale), minScale);
-            wrapper.style.transform = 'scale(' + scale + ')';
-            // Maintain button offset relative to scaled wrapper
-            zoomControls.style.transform =
-                `translate(
-                    var(--zoom-btn-to-wrapper-right),
-                    calc(-50% - var(--zoom-btn-to-wrapper-up))
-                ) scale(${scale})`;
-        }
-
-        document.getElementById('zoom-in-btn').addEventListener('click', function() {
-            setScale(scale * step);
-        });
-
-        document.getElementById('zoom-out-btn').addEventListener('click', function() {
-            setScale(scale / step);
-        });
-
-        // Optional: reset on double-click on wrapper
-        wrapper.addEventListener('dblclick', function() {
-            setScale(1.0);
-        });
-
-        // Initialize at scale 1 (default)
-        setScale(1.0);
-
-        // Optionally handle window resize for edge cases, not strictly needed unless wrapper goes offscreen at high scale
-    </script>
 </body>
 </html>
