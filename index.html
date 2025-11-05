@@ -18,6 +18,7 @@
             line-height: 1.3;
             padding: 40px 20px;
             font-size: 9.6px;
+            transition: font-size 0.2s;
         }
         
         .wrapper {
@@ -26,29 +27,86 @@
             background: #bfe4bb;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
-        
-        /* Header */
+
+        /* ZOOM BUTTONS */
+        :root {
+            --zoom-btn-spacing: 32px;    /* Vertical spacing between buttons (EDITABLE) */
+            --zoom-btn-to-wrapper: 28px; /* Horizontal space from wrapper edge (EDITABLE) */
+        }
+
+        .zoom-btn-container {
+            position: absolute;
+            top: 50%;
+            right: calc(-70px - var(--zoom-btn-to-wrapper)); /* Distance from wrapper edge */
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: var(--zoom-btn-spacing);
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            background: transparent;
+            border: 2px solid #000;
+            color: #222;
+            padding: 12px 22px;
+            cursor: pointer;
+            border-radius: 6px;
+            outline: none;
+            transition: background 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .zoom-btn:hover,
+        .zoom-btn:focus {
+            background: rgba(0,0,0,0.05);
+            box-shadow: 0 0 0 2px #0002;
+        }
+
+        @media (max-width: 1100px) {
+            .zoom-btn-container {
+                right: calc(-28px - var(--zoom-btn-to-wrapper));
+            }
+        }
+        @media (max-width: 768px) {
+            .zoom-btn-container {
+                right: 0;
+                top: auto;
+                bottom: 24px;
+                transform: none;
+                flex-direction: row;
+                gap: 12px;
+            }
+            .zoom-btn {
+                font-size: 1em;
+                padding: 8px 14px;
+            }
+        }
+
+        /* Existing styles unchanged below... */
+
         .header {
             padding-bottom: 30px;
             margin-bottom: 30px;
             border-bottom: 1px solid #000;
         }
-        
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 5px;
         }
-        
         .header-links {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
         }
-        
         .header-links a {
             color: #0066cc;
             text-decoration: none;
@@ -57,15 +115,12 @@
             font-weight: normal;
             white-space: nowrap;
         }
-        
         .header-links a:hover {
             text-decoration: underline;
         }
-        
         .header-right {
             text-align: right;
         }
-        
         .header h1 {
             font-family: Arial, sans-serif;
             font-size: 2.5em;
@@ -75,7 +130,6 @@
             color: #000;
             line-height: 1.2;
         }
-        
         .header h2 {
             font-family: Arial, sans-serif;
             font-size: 1.2em;
@@ -83,38 +137,28 @@
             font-weight: normal;
             line-height: 1.2;
         }
-        
-        /* Two Column Grid */
         .content-grid {
             display: grid;
             grid-template-columns: 1fr 2fr;
             gap: 30px;
         }
-        
-        /* Column Styling */
         .left-column {
             padding-right: 20px;
         }
-        
         .right-column {
             padding-left: 20px;
             border-left: 1px solid rgba(0, 0, 0, 0.2);
         }
-        
-        /* Compass Image */
         .compass-image {
             width: 100%;
             margin-bottom: 20px;
             display: block;
         }
-        
         .compass-image img {
             width: 100%;
             height: auto;
             display: block;
         }
-        
-        /* Contact */
         h3 {
             font-size: 1.3em;
             margin: 20px 0 10px 0;
@@ -124,28 +168,21 @@
             font-weight: 700;
             line-height: 1.2;
         }
-        
         .left-column h3:first-of-type {
             margin-top: 0;
         }
-        
         .right-column h3:first-of-type {
             margin-top: 0;
         }
-        
         .contact-info {
             font-size: 1em;
             line-height: 1.4;
         }
-        
-        /* Bio */
         .bio {
             font-size: 1em;
             line-height: 1.3;
             margin-bottom: 20px;
         }
-        
-        /* Quote */
         .quote {
             font-style: italic;
             font-size: 1em;
@@ -154,26 +191,20 @@
             margin: 15px 0;
             line-height: 1.3;
         }
-        
         .quote-author {
             font-size: 1em;
             margin-top: 3px;
         }
-        
-        /* Responsive */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
             }
-            
             .wrapper {
                 padding: 20px;
             }
-            
             .content-grid {
                 grid-template-columns: 1fr;
             }
-            
             .right-column {
                 padding-left: 0;
                 border-left: none;
@@ -181,7 +212,6 @@
                 padding-top: 20px;
                 margin-top: 20px;
             }
-            
             .header h1 {
                 font-size: 2em;
             }
@@ -199,7 +229,7 @@
                     <a href="sediment-mill.html">SEDIMENT MILL</a>
                     <a href="sediment-press.html">SEDIMENT PRESS</a>
                     <a href="https://github.com/yicolas">GITHUB</a>
-                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55g[...]">SCHOLAR</a>
                 </div>
                 <div class="header-right">
                     <h2>CALTECH GEOLOGY PHD 2028</h2>
@@ -212,22 +242,17 @@
         
         <div class="content-grid">
             <!-- LEFT COLUMN -->
-            
             <div class="left-column">
-                
                 <div class="compass-image">
                     <img src="geo_compass.png" alt="Geological Compass">
                 </div>
             </div>
-            
-            
             <!-- RIGHT COLUMN -->
             <div class="right-column">
                 <h3>About Me</h3>
                 <div class="bio">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better imporove our understanding of true polar wander events, meteorite impacts and sedimentation rates.
+                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better imporove our understanding of true[...]
                 </div>
-
                 <h3>Contact</h3>
                 <div class="contact-info">
                     Nicolas Anderson<br>
@@ -236,15 +261,37 @@
                     1200 East California Blvd MC 170-25<br>
                     Pasadena, CA 91125
                 </div>
-
                 <div class="quote">
-                    "To be successful in unlocking the doors concealing nature's secrets, a person must have ingenuity. If he does not have the key for the lock, he must not hesitate to try to pick it, to climb in a window, or even to kick in a panel."
+                    "To be successful in unlocking the doors concealing nature's secrets, a person must have ingenuity. If he does not have the key for the lock, he must not hesitate to try to pick it[...]
                     <div class="quote-author">– Hildebrand, 1957</div>
                 </div>
-
-            
             </div>
         </div>
+        <!-- Zoom Buttons Floating Outside the Wrapper -->
+        <div class="zoom-btn-container" aria-label="Page Zoom Controls">
+            <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
+            <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
+        </div>
     </div>
+    <script>
+        // BASIC ZOOM LOGIC: modifies body font-size
+        const zoomStep = 1.2; // 20% step
+        const zoomMin = 6;    // px
+        const zoomMax = 32;   // px
+        const body = document.body;
+        function getFontSize() {
+            return parseFloat(window.getComputedStyle(body).fontSize);
+        }
+        document.getElementById('zoom-in-btn').addEventListener('click', function() {
+            let newSize = getFontSize() * zoomStep;
+            if (newSize > zoomMax) newSize = zoomMax;
+            body.style.fontSize = newSize + 'px';
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', function() {
+            let newSize = getFontSize() / zoomStep;
+            if (newSize < zoomMin) newSize = zoomMin;
+            body.style.fontSize = newSize + 'px';
+        });
+    </script>
 </body>
 </html>
