@@ -117,8 +117,7 @@
 
         .image-placeholder {
             flex: 0 0 auto;
-            width: 400px;
-            aspect-ratio: 4/3;
+            height: 300px; /* Fixed height */
             background: rgba(255, 255, 255, 0.3);
             border: 2px dashed #000;
             display: flex;
@@ -127,14 +126,19 @@
             font-size: 1em;
             color: #000;
             font-weight: 600;
-            /* images must not spill out! */
             overflow: hidden;
         }
         .image-placeholder img {
-            max-width: 100%;
-            max-height: 100%;
+            height: 100%;
+            width: auto;
             object-fit: contain;
             display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .image-placeholder {
+                height: 200px; /* Adjust for mobile */
+            }
         }
         
         .sediment-content-section {
