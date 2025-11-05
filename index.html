@@ -28,6 +28,8 @@
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             position: relative;
+            transition: transform 0.2s;
+            transform-origin: top center; /* Added to keep top fixed when scaling */
         }
 
         /* ZOOM BUTTONS */
@@ -38,8 +40,8 @@
 
         .zoom-btn-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 5px;
+            right: 5px;
             display: flex;
             flex-direction: column;
             gap: var(--zoom-btn-spacing);
@@ -69,8 +71,8 @@
 
         @media (max-width: 768px) {
             .zoom-btn-container {
-                top: 10px;
-                right: 10px;
+                top: 5px;
+                right: 5px;
             }
             .zoom-btn {
                 font-size: 1em;
@@ -219,7 +221,7 @@
                     <a href="sediment-mill.html">SEDIMENT MILL</a>
                     <a href="sediment-press.html">SEDIMENT PRESS</a>
                     <a href="https://github.com/yicolas">GITHUB</a>
-                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55g[...]">SCHOLAR</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gXN2DKB-NjyOyzAKSB2xjs&gla=1">GOOGLE SCHOLAR</a>
                 </div>
                 <div class="header-right">
                     <h2>CALTECH GEOLOGY PHD 2028</h2>
@@ -241,7 +243,7 @@
             <div class="right-column">
                 <h3>About Me</h3>
                 <div class="bio">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better imporove our understanding of true[...]
+                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander (TPW) in deep time, especially across critical intervals in Earth history. My work focuses on integrating paleomagnetic data with robust field and laboratory studies, alongside geochemical and geochronological constraints, to answer questions about the movement of continents and the processes that drive tectonics on a planetary scale.
                 </div>
                 <h3>Contact</h3>
                 <div class="contact-info">
@@ -252,7 +254,7 @@
                     Pasadena, CA 91125
                 </div>
                 <div class="quote">
-                    "To be successful in unlocking the doors concealing nature's secrets, a person must have ingenuity. If he does not have the key for the lock, he must not hesitate to try to pick it[...]
+                    "To be successful in unlocking the doors concealing nature's secrets, a person must have ingenuity. If he does not have the key for the lock, he must not hesitate to try to pick it, and if he cannot pick it, he must try to blow it open by some other method."
                     <div class="quote-author">– Hildebrand, 1957</div>
                 </div>
             </div>
@@ -264,23 +266,53 @@
         <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
     </div>
     <script>
-        // BASIC ZOOM LOGIC: modifies body font-size
+        // ZOOM LOGIC: modifies body font-size AND wrapper scale
         const zoomStep = 1.2; // 20% step
         const zoomMin = 6;    // px
         const zoomMax = 32;   // px
+
         const body = document.body;
+        const wrapper = document.querySelector('.wrapper');
+
+        // Store current "zoom" scale for wrapper
+        let wrapperScale = 1;
+
         function getFontSize() {
             return parseFloat(window.getComputedStyle(body).fontSize);
         }
+
+        function setWrapperScale(scale) {
+            wrapper.style.transform = `scale(${scale})`;
+            wrapper.style.transformOrigin = 'top center'; // Ensure sticky top on zoom
+        }
+
         document.getElementById('zoom-in-btn').addEventListener('click', function() {
-            let newSize = getFontSize() * zoomStep;
-            if (newSize > zoomMax) newSize = zoomMax;
-            body.style.fontSize = newSize + 'px';
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize * zoomStep;
+            if (newFontSize > zoomMax) newFontSize = zoomMax;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
         });
+
         document.getElementById('zoom-out-btn').addEventListener('click', function() {
-            let newSize = getFontSize() / zoomStep;
-            if (newSize < zoomMin) newSize = zoomMin;
-            body.style.fontSize = newSize + 'px';
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize / zoomStep;
+            if (newFontSize < zoomMin) newFontSize = zoomMin;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+
+        // Initialize wrapper scale on load (to match initial font size)
+        document.addEventListener("DOMContentLoaded", function() {
+            const initialFontSize = getFontSize();
+            wrapperScale = initialFontSize / 9.6;
+            setWrapperScale(wrapperScale);
         });
     </script>
 </body>
