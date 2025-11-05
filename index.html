@@ -37,14 +37,13 @@
         }
 
         .zoom-btn-container {
-            position: absolute;
-            top: 50%;
-            right: calc(-70px - var(--zoom-btn-to-wrapper)); /* Distance from wrapper edge */
-            transform: translateY(-50%);
+            position: fixed;
+            top: 20px;
+            right: 20px;
             display: flex;
             flex-direction: column;
             gap: var(--zoom-btn-spacing);
-            z-index: 100;
+            z-index: 1000;
         }
 
         .zoom-btn {
@@ -68,19 +67,10 @@
             box-shadow: 0 0 0 2px #0002;
         }
 
-        @media (max-width: 1100px) {
-            .zoom-btn-container {
-                right: calc(-28px - var(--zoom-btn-to-wrapper));
-            }
-        }
         @media (max-width: 768px) {
             .zoom-btn-container {
-                right: 0;
-                top: auto;
-                bottom: 24px;
-                transform: none;
-                flex-direction: row;
-                gap: 12px;
+                top: 10px;
+                right: 10px;
             }
             .zoom-btn {
                 font-size: 1em;
@@ -267,11 +257,11 @@
                 </div>
             </div>
         </div>
-        <!-- Zoom Buttons Floating Outside the Wrapper -->
-        <div class="zoom-btn-container" aria-label="Page Zoom Controls">
-            <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
-            <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
-        </div>
+    </div>
+    <!-- Zoom Buttons Fixed to Top Right Corner -->
+    <div class="zoom-btn-container" aria-label="Page Zoom Controls">
+        <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
+        <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
     </div>
     <script>
         // BASIC ZOOM LOGIC: modifies body font-size
