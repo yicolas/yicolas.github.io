@@ -114,7 +114,7 @@
         .image-reel::-webkit-scrollbar-thumb:hover {
             background: rgba(0, 0, 0, 0.6);
         }
-        
+
         .image-placeholder {
             flex: 0 0 auto;
             width: 400px;
@@ -127,6 +127,14 @@
             font-size: 1em;
             color: #000;
             font-weight: 600;
+            /* images must not spill out! */
+            overflow: hidden;
+        }
+        .image-placeholder img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
         }
         
         .sediment-content-section {
