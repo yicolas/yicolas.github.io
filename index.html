@@ -28,7 +28,6 @@
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             position: relative;
-            transition: transform 0.2s;
         }
 
         /* ZOOM BUTTONS */
@@ -39,8 +38,8 @@
 
         .zoom-btn-container {
             position: fixed;
-            top: 5px;
-            right: 5px;
+            top: 20px;
+            right: 20px;
             display: flex;
             flex-direction: column;
             gap: var(--zoom-btn-spacing);
@@ -70,8 +69,8 @@
 
         @media (max-width: 768px) {
             .zoom-btn-container {
-                top: 5px;
-                right: 5px;
+                top: 10px;
+                right: 10px;
             }
             .zoom-btn {
                 font-size: 1em;
@@ -220,7 +219,7 @@
                     <a href="sediment-mill.html">SEDIMENT MILL</a>
                     <a href="sediment-press.html">SEDIMENT PRESS</a>
                     <a href="https://github.com/yicolas">GITHUB</a>
-                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55g[...]">GOOGLE SCHOLAR</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55g[...]">SCHOLAR</a>
                 </div>
                 <div class="header-right">
                     <h2>CALTECH GEOLOGY PHD 2028</h2>
@@ -265,52 +264,23 @@
         <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
     </div>
     <script>
-        // ZOOM LOGIC: modifies body font-size AND wrapper scale
+        // BASIC ZOOM LOGIC: modifies body font-size
         const zoomStep = 1.2; // 20% step
         const zoomMin = 6;    // px
         const zoomMax = 32;   // px
-
         const body = document.body;
-        const wrapper = document.querySelector('.wrapper');
-
-        // Store current "zoom" scale for wrapper
-        let wrapperScale = 1;
-
         function getFontSize() {
             return parseFloat(window.getComputedStyle(body).fontSize);
         }
-
-        function setWrapperScale(scale) {
-            wrapper.style.transform = `scale(${scale})`;
-        }
-
         document.getElementById('zoom-in-btn').addEventListener('click', function() {
-            let currentFontSize = getFontSize();
-            let newFontSize = currentFontSize * zoomStep;
-            if (newFontSize > zoomMax) newFontSize = zoomMax;
-            body.style.fontSize = newFontSize + 'px';
-
-            // Scale wrapper proportionally (relative to initial 9.6px)
-            wrapperScale = newFontSize / 9.6;
-            setWrapperScale(wrapperScale);
+            let newSize = getFontSize() * zoomStep;
+            if (newSize > zoomMax) newSize = zoomMax;
+            body.style.fontSize = newSize + 'px';
         });
-
         document.getElementById('zoom-out-btn').addEventListener('click', function() {
-            let currentFontSize = getFontSize();
-            let newFontSize = currentFontSize / zoomStep;
-            if (newFontSize < zoomMin) newFontSize = zoomMin;
-            body.style.fontSize = newFontSize + 'px';
-
-            // Scale wrapper proportionally (relative to initial 9.6px)
-            wrapperScale = newFontSize / 9.6;
-            setWrapperScale(wrapperScale);
-        });
-
-        // Initialize wrapper scale on load (to match initial font size)
-        document.addEventListener("DOMContentLoaded", function() {
-            const initialFontSize = getFontSize();
-            wrapperScale = initialFontSize / 9.6;
-            setWrapperScale(wrapperScale);
+            let newSize = getFontSize() / zoomStep;
+            if (newSize < zoomMin) newSize = zoomMin;
+            body.style.fontSize = newSize + 'px';
         });
     </script>
 </body>
