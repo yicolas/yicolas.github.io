@@ -18,6 +18,7 @@
             line-height: 1.3;
             padding: 40px 20px;
             font-size: 9.6px;
+            transition: font-size 0.2s;
         }
         
         .wrapper {
@@ -26,7 +27,60 @@
             background: #e4e0bb;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: transform 0.2s;
+            transform-origin: top center; /* Added to keep top fixed when scaling */
         }
+
+        /* ZOOM BUTTONS */
+        :root {
+            --zoom-btn-spacing: 32px;    /* Vertical spacing between buttons (EDITABLE) */
+            --zoom-btn-to-wrapper: 28px; /* Horizontal space from wrapper edge (EDITABLE) */
+        }
+
+        .zoom-btn-container {
+            position: fixed;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--zoom-btn-spacing);
+            z-index: 1000;
+        }
+
+        .zoom-btn {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            background: transparent;
+            border: 2px solid #000;
+            color: #222;
+            padding: 12px 22px;
+            cursor: pointer;
+            border-radius: 6px;
+            outline: none;
+            transition: background 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .zoom-btn:hover,
+        .zoom-btn:focus {
+            background: rgba(0,0,0,0.05);
+            box-shadow: 0 0 0 2px #0002;
+        }
+
+        @media (max-width: 768px) {
+            .zoom-btn-container {
+                top: 5px;
+                right: 5px;
+            }
+            .zoom-btn {
+                font-size: 1em;
+                padding: 8px 14px;
+            }
+        }
+
+        /* Existing styles unchanged below... */
         
         /* Header */
         .header {
@@ -225,5 +279,60 @@
         </div>
         
     </div>
+    <!-- Zoom Buttons Fixed to Top Right Corner -->
+    <div class="zoom-btn-container" aria-label="Page Zoom Controls">
+        <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
+        <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
+    </div>
+    <script>
+        // ZOOM LOGIC: modifies body font-size AND wrapper scale
+        const zoomStep = 1.2; // 20% step
+        const zoomMin = 6;    // px
+        const zoomMax = 32;   // px
+
+        const body = document.body;
+        const wrapper = document.querySelector('.wrapper');
+
+        // Store current "zoom" scale for wrapper
+        let wrapperScale = 1;
+
+        function getFontSize() {
+            return parseFloat(window.getComputedStyle(body).fontSize);
+        }
+
+        function setWrapperScale(scale) {
+            wrapper.style.transform = `scale(${scale})`;
+            wrapper.style.transformOrigin = 'top center'; // Ensure sticky top on zoom
+        }
+
+        document.getElementById('zoom-in-btn').addEventListener('click', function() {
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize * zoomStep;
+            if (newFontSize > zoomMax) newFontSize = zoomMax;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+
+        document.getElementById('zoom-out-btn').addEventListener('click', function() {
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize / zoomStep;
+            if (newFontSize < zoomMin) newFontSize = zoomMin;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+
+        // Initialize wrapper scale on load (to match initial font size)
+        document.addEventListener("DOMContentLoaded", function() {
+            const initialFontSize = getFontSize();
+            wrapperScale = initialFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+    </script>
 </body>
 </html>
