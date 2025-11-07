@@ -44,8 +44,8 @@
 
         .zoom-btn-container {
             position: fixed;
-            top: 5px;
-            right: 5px;
+            top: 40px;
+            right: calc((100vw - 900px) / 2 - 140px);
             display: flex;
             flex-direction: column;
             gap: var(--zoom-btn-spacing);
@@ -73,11 +73,14 @@
             box-shadow: 0 0 0 2px #0002;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1100px) {
             .zoom-btn-container {
                 top: 5px;
                 right: 5px;
             }
+        }
+        
+        @media (max-width: 768px) {
             .zoom-btn {
                 font-size: 1em;
                 padding: 8px 14px;
