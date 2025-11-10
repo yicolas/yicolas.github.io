@@ -28,7 +28,7 @@
         .wrapper {
             max-width: 900px;
             margin: 0 auto;
-            background: ##ddd8a9;
+            background: #ddd8a9;
             padding: 40px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             position: relative;
@@ -149,42 +149,22 @@
             margin-bottom: 30px;
         }
         
-        /* .image-placeholder {
+        .image-placeholder {
             width: 100%;
-            aspect-ratio: 4/3;
+            min-height: 50px; /* fallback height */
             background: rgba(255, 255, 255, 0.3);
             border: 2px dashed #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1em;
-            color: #000;
-            font-weight: 600;
             overflow: hidden;
         }
-        .image-placeholder img {
-            max-width: 100%;
-            max-height: 100%;
-            display: block;
-        } */
-
-        .image-placeholder {
-        width: 100%;
-        min-height: 50px; /* fallback height */
-        background: rgba(255, 255, 255, 0.3);
-        border: 2px dashed #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        }
-        .image-placeholder img {
-        width: 100%;
-        height: auto;
-        display: block;
-        }
-
         
+        .image-placeholder img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
         
         .sediment-content-section {
             margin-bottom: 20px;
@@ -208,6 +188,22 @@
             font-size: 1em;
             line-height: 1.4;
             color: #000;
+        }
+        
+        .section-content p {
+            margin-bottom: 10px;
+        }
+        
+        .section-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .numbered-item {
+            margin-bottom: 12px;
+        }
+        
+        .numbered-item:last-child {
+            margin-bottom: 0;
         }
         
         @media (max-width: 768px) {
@@ -253,25 +249,26 @@
         <div class="sediment-content-section">
             <h3>Overview</h3>
             <div class="section-content">
-                <p>Many attempts have been made across multiple groups to develop a portable and reliable in the field pellet press for protrable XRF and other gepchemical analyses. From carjacks to hydraulic presses most choices are cumbersome and time consuming. Here we introduce a cheap, reproducable, lightweight and durable pellet press for use by hand or caulk gun.<BR>
-                This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed and work best after drying.</p>
+                <p>Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.</p>
+                <p>This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.</p>
+                <p>Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface of pressed pellets ensures consistent X-ray penetration and reduces scatter, improving analytical precision and accuracy. Pellets are more stable and easier to handle than loose powders, particularly for hygroscopic samples or those prone to segregation. Unlike fusion methods, pellet pressing requires minimal additional chemicals, reducing contamination risk and making it a simple, cost-effective choice that requires less specialized equipment.</p>
             </div>
         </div>
         
         <div class="sediment-content-section">
             <h3>Usage</h3>
             <div class="section-content">
-                <p>Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects.<BR>The sediment press is composed of 5 pieces:<BR> 1) a base cylinder with a small circular relief that connects with the sediment holding cylinder<BR>2) the sediment holding cylinder<BR>3) a narrow dowel that compresses the homogenized sediment in the sediment chamber, <BR>4) a dowel topper that can be compressed either by hand or using caulk gun and 5) caulk gun if desired. <BR>
-                    Pieces are first assembled with sediment inside and then are entered into the cock gun as such: [1 2 <(sediment inside) 3 4]<BR>After pellets are pressed, thoroughly clean the equipment and leave the pellets out to dry out as water will increase matrix effects.</p>
+                <p>Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects.</p>
+                <p>The sediment press is composed of 5 pieces: 1) a base cylinder with a small circular relief that connects with the sediment holding cylinder, 2) the sediment holding cylinder, 3) a narrow dowel that compresses the homogenized sediment in the sediment chamber, 4) a dowel topper that can be compressed either by hand or using caulk gun, and 5) caulk gun if desired.</p>
+                <p>Pieces are first assembled with sediment inside and then are entered into the caulk gun as such: [1 2 &lt;(sediment inside) 3 4]</p>
+                <p>After pellets are pressed, thoroughly clean the equipment and leave the pellets out to dry as water will increase matrix effects.</p>
             </div>
         </div>
         
         <div class="sediment-content-section">
             <h3>Research Applications</h3>
             <div class="section-content">
-                <p>
-                    The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for applications such as environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy. The press is also adaptable for use in micro-XRF and other analytical techniques requiring compacted sample pellets, opening possibilities for high-resolution mapping and low-cost field campaigns. Pellets are sized a such for use on a XXX XRF machine.
-                </p>
+                <p>The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for applications such as environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy. The press is also adaptable for use in micro-XRF and other analytical techniques requiring compacted sample pellets, opening possibilities for high-resolution mapping and low-cost field campaigns.</p>
             </div>
         </div>
         
@@ -283,11 +280,13 @@
         </div>
         
     </div>
+    
     <!-- Zoom Buttons Fixed to Top Right Corner -->
     <div class="zoom-btn-container" aria-label="Page Zoom Controls">
         <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
         <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
     </div>
+    
     <script>
         // ZOOM LOGIC: modifies body font-size AND wrapper scale
         const zoomStep = 1.2; // 20% step
