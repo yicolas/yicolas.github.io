@@ -173,15 +173,15 @@ a:hover {
 }
 
 .project-image {
-    width: 100%;
+    width: 50%;
     aspect-ratio: 4/3;
     background: #f0f0f0;
     overflow: hidden;
-    grid-column: 2; /* Place image in second column */
+    grid-column: 1; /* Place image in second column */
 }
 
 .project-info {
-    grid-column: 1; /* Place info in first column */
+    grid-column: 2; /* Place info in first column */
 }
 
 .project-icon {
