@@ -3,247 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GSA 2022 - Nicolas Anderson</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        a {
-            color: #ffffff;
-        }
-        
-        body {
-            font-family: 'Guyot', Georgia, serif;
-            background: #ffffff;
-            color: #222;
-            line-height: 1.3;
-            padding: 40px 20px;
-            font-size: 9.6px;
-            transition: font-size 0.2s;
-        }
-        
-        .wrapper {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #e0bbe4;
-            padding: 40px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            position: relative;
-            transition: transform 0.2s;
-            transform-origin: top center; /* Added to keep top fixed when scaling */
-        }
-
-        /* ZOOM BUTTONS */
-        :root {
-            --zoom-btn-spacing: 32px;    /* Vertical spacing between buttons (EDITABLE) */
-            --zoom-btn-to-wrapper: 28px; /* Horizontal space from wrapper edge (EDITABLE) */
-        }
-
-        .zoom-btn-container {
-            position: fixed;
-            top: 5px;
-            right: 5px;
-            display: flex;
-            flex-direction: column;
-            gap: var(--zoom-btn-spacing);
-            z-index: 1000;
-        }
-
-        .zoom-btn {
-            font-family: Arial, sans-serif;
-            font-size: 1.2em;
-            font-weight: normal;
-            background: transparent;
-            border: 2px solid #000;
-            color: #222;
-            padding: 12px 22px;
-            cursor: pointer;
-            border-radius: 6px;
-            outline: none;
-            transition: background 0.2s, box-shadow 0.2s;
-            user-select: none;
-        }
-
-        .zoom-btn:hover,
-        .zoom-btn:focus {
-            background: rgba(0,0,0,0.05);
-            box-shadow: 0 0 0 2px #0002;
-        }
-
-        @media (max-width: 768px) {
-            .zoom-btn-container {
-                top: 5px;
-                right: 5px;
-            }
-            .zoom-btn {
-                font-size: 1em;
-                padding: 8px 14px;
-            }
-        }
-
-        /* Existing styles unchanged below... */
-        
-        /* Header */
-        .header {
-            padding-bottom: 30px;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #000;
-        }
-        
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 5px;
-        }
-        
-        .header-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .header-links a {
-            color: #ffffff;
-            text-decoration: none;
-            font-family: Arial, sans-serif;
-            font-size: 1.2em;
-            font-weight: normal;
-            white-space: nowrap;
-        }
-        
-        .header-links a:hover {
-            text-decoration: underline;
-        }
-        
-        .header-right {
-            text-align: right;
-        }
-        
-        .header h1 {
-            font-family: Arial, sans-serif;
-            font-size: 2.5em;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            color: #000;
-            line-height: 1.2;
-        }
-        
-        .header h2 {
-            font-family: Arial, sans-serif;
-            font-size: 1.2em;
-            color: #333;
-            font-weight: normal;
-            line-height: 1.2;
-        }
-        
-        .thesis-container {
-            width: 100%;
-            height: 450px;
-            background: #ffffff;
-            background-color: #ffffff !important;
-            border: 1px solid #000;
-            overflow: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1em;
-            color: #000;
-            font-weight: 600;
-        }
-        
-        .thesis-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
+    <title>2022 GSA Cordellerian Presentation - Nicolas Anderson</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="wrapper">
-        <div class="header">
-            <div class="header-top">
-                <div class="header-links">
-                    <a href="index.html">HOME</a>
-                    <a href="cv.html">CV</a>
-                    <a href="stuff.html">STUFF</a>
-                    <a href="sediment-mill.html">SEDIMENT MILL</a>
-                    <a href="sediment-press.html">SEDIMENT PRESS</a>
-                    <a href="https://github.com/yicolas">GITHUB</a>
-                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
-                </div>
-                <div class="header-right">
-                    <h2>CALTECH GEOLOGY PHD 2028</h2>
+    <div class="site-container">
+        <!-- Main Content Area (Full Width for Project Detail) -->
+        <main class="main-content" style="margin-right: 0; max-width: 100%;">
+            <div class="project-detail-header">
+                <div>
+                    <h1>2022 GSA CORDELLERIAN PRESENTATION <span class="subtitle">→ PALEOMAGNETISM</span></h1>
                 </div>
             </div>
-            <div class="header-right">
-                <h1>GSA 2022/HONORS THESIS</h1>
+
+            <!-- PDF Viewer -->
+            <div class="pdf-container">
+                <iframe src="SWLLIP-GSA-Anderson-github.pdf"></iframe>
             </div>
-        </div>
-        
-        <div class="thesis-container">
-            <iframe src="SWLLIP-GSA-Anderson-github.pdf"></iframe>
-        </div>
+
+            <!-- Project Details -->
+            <div class="project-content">
+                <div class="project-meta">
+                    <h4>2022 GSA CORDELLERIAN PRESENTATION</h4>
+                    <div class="meta-item">→ PALEOMAGNETISM & GEOCHRONOLOGY</div>
+                    <div class="meta-item"><br></div>
+                    <div class="meta-item">• Honors Thesis, UC Berkeley</div>
+                    <div class="meta-item"><em>• Advisor: Nicholas Swanson-Hysell</em></div>
+                    <div class="meta-item">• Co-Advisor: Eben Blake Hodgin</div>
+                    <div class="meta-item">• Year: 2022</div>
+                    <div class="meta-item"><em>• Field Location: Death Valley, California</em></div>
+                </div>
+                <div class="project-description">
+                    <h4>Abstract</h4>
+                    <p>
+                        Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province.
+                    </p>
+                    <p class="muted">
+                        This research investigates the Mesoproterozoic diabase sills in Death Valley, California, to test the bifurcating plume hypothesis for the Southwestern Laurentia Large Igneous Province (SWLLIP). Using paleomagnetic analysis and U-Pb geochronology, the study examines whether these intrusions represent a distinct pulse of magmatism related to a proposed mantle plume bifurcation event approximately 1.1 billion years ago.
+                    </p>
+                    <p class="muted">
+                        The work involved extensive field sampling, paleomagnetic measurements on a SQUID magnetometer, and geochronological analysis. Results contribute to understanding Late Mesoproterozoic plate tectonics and the dynamics of large igneous province emplacement. The research was presented at the 2022 GSA Joint Section Meeting in Las Vegas and contributed to subsequent publications in high-impact journals.
+                    </p>
+                    <p class="muted">
+                        This thesis was recognized with High Honors and contributed to my acceptance into the Caltech Geology PhD program, where I continue to investigate fundamental questions in Earth's deep-time geology using paleomagnetism, geochronology, and field-based approaches.
+                    </p>
+                </div>
+            </div>
+        </main>
     </div>
-    <!-- Zoom Buttons Fixed to Top Right Corner -->
-    <div class="zoom-btn-container" aria-label="Page Zoom Controls">
-        <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
-        <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
-    </div>
-    <script>
-        // ZOOM LOGIC: modifies body font-size AND wrapper scale
-        const zoomStep = 1.2; // 20% step
-        const zoomMin = 6;    // px
-        const zoomMax = 32;   // px
-
-        const body = document.body;
-        const wrapper = document.querySelector('.wrapper');
-
-        // Store current "zoom" scale for wrapper
-        let wrapperScale = 1;
-
-        function getFontSize() {
-            return parseFloat(window.getComputedStyle(body).fontSize);
-        }
-
-        function setWrapperScale(scale) {
-            wrapper.style.transform = `scale(${scale})`;
-            wrapper.style.transformOrigin = 'top center'; // Ensure sticky top on zoom
-        }
-
-        document.getElementById('zoom-in-btn').addEventListener('click', function() {
-            let currentFontSize = getFontSize();
-            let newFontSize = currentFontSize * zoomStep;
-            if (newFontSize > zoomMax) newFontSize = zoomMax;
-            body.style.fontSize = newFontSize + 'px';
-
-            // Scale wrapper proportionally (relative to initial 9.6px)
-            wrapperScale = newFontSize / 9.6;
-            setWrapperScale(wrapperScale);
-        });
-
-        document.getElementById('zoom-out-btn').addEventListener('click', function() {
-            let currentFontSize = getFontSize();
-            let newFontSize = currentFontSize / zoomStep;
-            if (newFontSize < zoomMin) newFontSize = zoomMin;
-            body.style.fontSize = newFontSize + 'px';
-
-            // Scale wrapper proportionally (relative to initial 9.6px)
-            wrapperScale = newFontSize / 9.6;
-            setWrapperScale(wrapperScale);
-        });
-
-        // Initialize wrapper scale on load (to match initial font size)
-        document.addEventListener("DOMContentLoaded", function() {
-            const initialFontSize = getFontSize();
-            wrapperScale = initialFontSize / 9.6;
-            setWrapperScale(wrapperScale);
-        });
-    </script>
 </body>
 </html>
