@@ -41,7 +41,7 @@ a:hover {
     height: 100vh;
     background: #ffffff;
     border-left: 0.1rem solid rgba(0, 0, 0, 0.15);
-    padding: 1rem 2rem;
+    padding: 2rem;
     overflow-y: auto;
     z-index: 100;
 }
