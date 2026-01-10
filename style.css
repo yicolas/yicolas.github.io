@@ -8,7 +8,7 @@
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: #ffffff;
-    color: #222;
+    color: #000000;
     line-height: 1.3;
     font-size: 9.6px;
     transition: font-size 0.2s;
@@ -16,12 +16,13 @@ body {
 }
 
 a {
-    color: #000000;
+    color: #0000EE;
     text-decoration: none;
 }
 
 a:hover {
     text-decoration: underline;
+    text-transform: uppercase;
 }
 
 /* Main Layout Container */
@@ -41,7 +42,7 @@ a:hover {
     height: 100vh;
     background: #ffffff;
     border-left: 0.1rem solid rgba(0, 0, 0, 0.15);
-    padding: 1rem 2rem;
+    padding: 2rem;
     overflow-y: auto;
     z-index: 100;
 }
@@ -64,11 +65,29 @@ a:hover {
 .right-panel .clock {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 1.2em;
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .right-panel .profile-section {
     margin-top: 2rem;
+}
+
+.right-panel .contact-info {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.right-panel .info-item {
+    margin-bottom: 0.3rem;
+}
+
+.right-panel .nav-links {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.right-panel .nav-links div {
+    margin-bottom: 0.5rem;
 }
 
 .right-panel h4 {
@@ -89,22 +108,31 @@ a:hover {
 }
 
 .right-panel .bio-text.muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Main Content Area */
 .main-content {
     flex: 1;
     margin-right: 30%;
-    padding: 2rem 3rem;
+    padding: 0;
     max-width: 70%;
+    overflow: hidden;
+}
+
+/* Iframe for content loading */
+.content-iframe {
+    width: 100%;
+    height: 100vh;
+    border: none;
+    display: block;
 }
 
 .content-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 1rem;
+    padding: 2rem 3rem 1rem 3rem;
     border-bottom: 1px solid #000;
     margin-bottom: 2rem;
 }
@@ -118,7 +146,7 @@ a:hover {
 
 .content-header .sort-icon {
     font-size: 1.2em;
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Project Grid Items */
@@ -126,12 +154,12 @@ a:hover {
     display: grid;
     grid-template-columns: 5fr 5fr 2fr;
     gap: 1rem;
-    padding: 2rem 0;
+    padding: 2rem 3rem;
     border-bottom: 1px solid #000;
 }
 
 .project-image {
-    width: 100%;
+    width: 50%;
     aspect-ratio: 4/3;
     background: #f0f0f0;
     overflow: hidden;
@@ -157,7 +185,7 @@ a:hover {
 }
 
 .project-info .project-description {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
     margin-bottom: 1rem;
     line-height: 1.5;
 }
@@ -183,7 +211,7 @@ a:hover {
 }
 
 .site-footer .copyright {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
     font-size: 1em;
 }
 
@@ -202,6 +230,7 @@ a:hover {
 /* CV Page Styles */
 .cv-container {
     max-width: 100%;
+    padding: 0 3rem 2rem 3rem;
 }
 
 .cv-section {
@@ -240,7 +269,7 @@ a:hover {
 }
 
 .cv-item-date {
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(0, 0, 0, 0.75);
     font-size: 0.95em;
 }
 
@@ -251,15 +280,12 @@ a:hover {
 
 .cv-item-description {
     line-height: 1.5;
-    color: rgba(0, 0, 0, 0.8);
+    color: #000000;
 }
 
 /* Project Detail Page */
 .project-detail-header {
-    display: grid;
-    grid-template-columns: 9fr 3fr;
-    gap: 2rem;
-    padding-bottom: 1rem;
+    padding: 2rem 3rem 1rem 3rem;
     border-bottom: 1px solid #000;
     margin-bottom: 2rem;
 }
@@ -275,7 +301,7 @@ a:hover {
 }
 
 .project-detail-header .subtitle {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .project-gallery {
@@ -283,14 +309,17 @@ a:hover {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-bottom: 2rem;
+    padding: 0 3rem;
 }
 
 .project-gallery.single-column {
     grid-template-columns: 1fr;
+    padding: 0 3rem;
 }
 
 .project-gallery.three-columns {
     grid-template-columns: repeat(3, 1fr);
+    padding: 0 3rem;
 }
 
 .gallery-image {
@@ -311,6 +340,7 @@ a:hover {
     grid-template-columns: 1fr 2fr;
     gap: 2rem;
     margin-bottom: 3rem;
+    padding: 0 3rem;
 }
 
 .project-meta h4 {
@@ -338,13 +368,14 @@ a:hover {
 }
 
 .project-description .muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Horizontal Image Reel */
 .image-reel-container {
     margin-bottom: 3rem;
     overflow-x: auto;
+    padding: 0 3rem;
 }
 
 .image-reel {
@@ -371,7 +402,7 @@ a:hover {
     height: 600px;
     background: #ffffff;
     border: 1px solid #000;
-    margin-bottom: 2rem;
+    margin: 0 3rem 2rem 3rem;
 }
 
 .pdf-container iframe {
@@ -492,7 +523,7 @@ a:hover {
 }
 
 .text-muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .border-bottom {
