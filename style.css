@@ -65,7 +65,7 @@ a:hover {
 .right-panel .clock {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 1.2em;
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .right-panel .profile-section {
@@ -108,7 +108,7 @@ a:hover {
 }
 
 .right-panel .bio-text.muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Main Content Area */
@@ -146,7 +146,7 @@ a:hover {
 
 .content-header .sort-icon {
     font-size: 1.2em;
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Project Grid Items */
@@ -185,7 +185,7 @@ a:hover {
 }
 
 .project-info .project-description {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
     margin-bottom: 1rem;
     line-height: 1.5;
 }
@@ -211,7 +211,7 @@ a:hover {
 }
 
 .site-footer .copyright {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
     font-size: 1em;
 }
 
@@ -269,7 +269,7 @@ a:hover {
 }
 
 .cv-item-date {
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(0, 0, 0, 0.75);
     font-size: 0.95em;
 }
 
@@ -280,7 +280,7 @@ a:hover {
 
 .cv-item-description {
     line-height: 1.5;
-    color: rgba(0, 0, 0, 0.8);
+    color: #000000;
 }
 
 /* Project Detail Page */
@@ -301,7 +301,7 @@ a:hover {
 }
 
 .project-detail-header .subtitle {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .project-gallery {
@@ -368,7 +368,7 @@ a:hover {
 }
 
 .project-description .muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 /* Horizontal Image Reel */
@@ -523,7 +523,7 @@ a:hover {
 }
 
 .text-muted {
-    color: rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .border-bottom {
