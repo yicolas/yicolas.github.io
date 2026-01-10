@@ -3,7 +3,7 @@
    Adjust --global-font-size to scale all text uniformly
    =================================== */
 :root {
-    --global-font-size: 13px;
+    --global-font-size: 12px;
 }
 
 /* Reset and Base Styles */
