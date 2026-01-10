@@ -21,6 +21,7 @@ a {
 }
 
 a:hover {
+    color: #000EE;
     text-decoration: underline;
     text-transform: uppercase;
 }
