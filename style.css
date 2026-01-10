@@ -1,9 +1,12 @@
 /* ===================================
    Global Font Scaling
-   Adjust --global-font-size to scale all text uniformly
+   Adjust --left-panel-font-size for main content area (left)
+   Adjust --right-panel-font-size for profile/bio panel (right)
    =================================== */
 :root {
     --global-font-size: 12px;
+    --left-panel-font-size: 12px;
+    --right-panel-font-size: 12px;
 }
 
 /* Reset and Base Styles */
@@ -53,6 +56,7 @@ a:hover {
     border-left: 0.1rem solid rgba(0, 0, 0, 0.15);
     padding: 2rem;
     overflow-y: auto;
+    font-size: var(--right-panel-font-size);
     z-index: 100;
 }
 
@@ -127,6 +131,7 @@ a:hover {
     padding: 0;
     max-width: 70%;
     overflow: hidden;
+    font-size: var(--left-panel-font-size);
 }
 
 /* Iframe for content loading */
@@ -168,7 +173,7 @@ a:hover {
 }
 
 .project-image {
-    width: 50%;
+    width: 100%;
     aspect-ratio: 4/3;
     background: #f0f0f0;
     overflow: hidden;
@@ -455,6 +460,7 @@ a:hover {
         display: block;
         padding: 1rem 2rem;
         border-bottom: 1px solid #000;
+        font-size: var(--left-panel-font-size);
     }
     
     .mobile-header .panel-header {
