@@ -4,78 +4,338 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sediment Press - Nicolas Anderson</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        a {
+            color: #ffffff;
+        }
+        
+        body {
+            font-family: 'Guyot', Georgia, serif;
+            background: #ffffff;
+            color: #222;
+            line-height: 1.3;
+            padding: 40px 20px;
+            font-size: 9.6px;
+            transition: font-size 0.2s;
+        }
+        
+        .wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #d6d097;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: transform 0.2s;
+            transform-origin: top center; /* Added to keep top fixed when scaling */
+        }
+
+        /* ZOOM BUTTONS */
+        :root {
+            --zoom-btn-spacing: 32px;    /* Vertical spacing between buttons (EDITABLE) */
+            --zoom-btn-to-wrapper: 28px; /* Horizontal space from wrapper edge (EDITABLE) */
+        }
+
+        .zoom-btn-container {
+            position: fixed;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--zoom-btn-spacing);
+            z-index: 1000;
+        }
+
+        .zoom-btn {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            background: transparent;
+            border: 2px solid #000;
+            color: #222;
+            padding: 12px 22px;
+            cursor: pointer;
+            border-radius: 6px;
+            outline: none;
+            transition: background 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .zoom-btn:hover,
+        .zoom-btn:focus {
+            background: rgba(0,0,0,0.05);
+            box-shadow: 0 0 0 2px #0002;
+        }
+
+        @media (max-width: 768px) {
+            .zoom-btn-container {
+                top: 5px;
+                right: 5px;
+            }
+            .zoom-btn {
+                font-size: 1em;
+                padding: 8px 14px;
+            }
+        }
+
+        /* Existing styles unchanged below... */
+        
+        /* Header */
+        .header {
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #000;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+        
+        .header-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .header-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .header-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .header-right {
+            text-align: right;
+        }
+        
+        .header h1 {
+            font-family: Arial, sans-serif;
+            font-size: 2.5em;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            color: #000;
+            line-height: 1.2;
+        }
+        
+        .header h2 {
+            font-family: Arial, sans-serif;
+            font-size: 1.2em;
+            color: #333;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+        
+        .sediment-images-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            min-height: 50px; /* fallback height */
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px dashed #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .image-placeholder img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .sediment-content-section {
+            margin-bottom: 20px;
+        }
+        
+        .sediment-content-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        h3 {
+            font-size: 1.3em;
+            margin: 0 0 10px 0;
+            color: #000;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        .section-content {
+            font-size: 1em;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        .section-content p {
+            margin-bottom: 10px;
+        }
+        
+        .section-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .numbered-item {
+            margin-bottom: 12px;
+        }
+        
+        .numbered-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .sediment-images-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="site-container">
-        <!-- Main Content Area (Full Width for Project Detail) -->
-        <main class="main-content" style="margin-right: 0; max-width: 100%;">
-            <div class="project-detail-header">
-                <div>
-                    <h1>SEDIMENT PELLET PRESS <span class="subtitle">→ FIELD INSTRUMENTATION</span></h1>
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-links">
+                    <a href="index.html">HOME</a>
+                    <a href="cv.html">CV</a>
+                    <a href="thesis.html">GSA 2022</a>
+                    <a href="stuff.html">STUFF</a>
+                    <a href="sediment-mill.html">SEDIMENT MILL</a>
+                    <a href="https://github.com/yicolas">GITHUB</a>
+                    <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson">SCHOLAR</a>
+                </div>
+                <div class="header-right">
+                    <h2>CALTECH GEOLOGY PHD 2028</h2>
                 </div>
             </div>
-
-            <!-- Project Images -->
-            <div class="project-gallery">
-                <div class="gallery-image">
-                    <img src="pill_press.png" alt="Successfully pressed pellet">
-                </div>
-                <div class="gallery-image">
-                    <img src="caulk_gun.png" alt="Pellet press loaded into caulk gun">
-                </div>
+            <div class="header-right">
+                <h1>SEDIMENT PELLET PRESS</h1>
             </div>
-
-            <!-- Project Details -->
-            <div class="project-content">
-                <div class="project-meta">
-                    <h4>SEDIMENT PELLET PRESS</h4>
-                    <div class="meta-item">→ FIELD INSTRUMENTATION</div>
-                    <div class="meta-item"><br></div>
-                    <div class="meta-item">• Portable XRF Sample Prep</div>
-                    <div class="meta-item"><em>• 3D Printed Design</em></div>
-                    <div class="meta-item">• Hand or Caulk Gun Operation</div>
-                    <div class="meta-item">• Lightweight & Durable</div>
-                    <div class="meta-item"><em>• Open Source Design</em></div>
-                </div>
-                <div class="project-description">
-                    <h4>Overview</h4>
-                    <p>
-                        Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.
-                    </p>
-                    <p class="muted">
-                        This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.
-                    </p>
-                    <p class="muted">
-                        Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface of pressed pellets ensures consistent X-ray penetration and reduces scatter, improving analytical precision and accuracy. Pellets are more stable and easier to handle than loose powders, particularly for hygroscopic samples or those prone to segregation. Unlike fusion methods, pellet pressing requires minimal additional chemicals, reducing contamination risk and making it a simple, cost-effective choice that requires less specialized equipment.
-                    </p>
-                    
-                    <h4>Usage</h4>
-                    <p>
-                        Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects.
-                    </p>
-                    <p class="muted">
-                        The sediment press is composed of 5 pieces: 1) a base cylinder with a small circular relief that connects with the sediment holding cylinder, 2) the sediment holding cylinder, 3) a narrow dowel that compresses the homogenized sediment in the sediment chamber, 4) a dowel topper that can be compressed either by hand or using caulk gun, and 5) caulk gun if desired.
-                    </p>
-                    <p class="muted">
-                        Pieces are first assembled with sediment inside and then are entered into the caulk gun as such: [1 2 &lt;(sediment inside) 3 4]
-                    </p>
-                    <p class="muted">
-                        After pellets are pressed, thoroughly clean the equipment and leave the pellets out to dry as water will increase matrix effects.
-                    </p>
-                    
-                    <h4>Research Applications</h4>
-                    <p class="muted">
-                        The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for applications such as environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy. The press is also adaptable for use in micro-XRF and other analytical techniques requiring compacted sample pellets, opening possibilities for high-resolution mapping and low-cost field campaigns.
-                    </p>
-                    
-                    <h4>Download</h4>
-                    <p>
-                        <a href="caulk_pill_press_v5.stl" download>Download .stl file here</a> - 3D printable file for sediment press
-                    </p>
-                </div>
+        </div>
+        
+        <!-- Images side by side at top -->
+        <div class="sediment-images-row">
+            <div class="image-placeholder">
+                <img src="pill_press.png" alt="Successfully pressed pellet">
             </div>
-        </main>
+            <div class="image-placeholder">
+                <img src="caulk_gun.png" alt="Pellet press loaded into caulk gun">
+            </div>
+        </div>
+        
+        <!-- Text content below -->
+        <div class="sediment-content-section">
+            <h3>Overview</h3>
+            <div class="section-content">
+                <p>Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.</p>
+                <p>This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.</p>
+                <p>Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface of pressed pellets ensures consistent X-ray penetration and reduces scatter, improving analytical precision and accuracy. Pellets are more stable and easier to handle than loose powders, particularly for hygroscopic samples or those prone to segregation. Unlike fusion methods, pellet pressing requires minimal additional chemicals, reducing contamination risk and making it a simple, cost-effective choice that requires less specialized equipment.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Usage</h3>
+            <div class="section-content">
+                <p>Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects.</p>
+                <p>The sediment press is composed of 5 pieces: 1) a base cylinder with a small circular relief that connects with the sediment holding cylinder, 2) the sediment holding cylinder, 3) a narrow dowel that compresses the homogenized sediment in the sediment chamber, 4) a dowel topper that can be compressed either by hand or using caulk gun, and 5) caulk gun if desired.</p>
+                <p>Pieces are first assembled with sediment inside and then are entered into the caulk gun as such: [1 2 &lt;(sediment inside) 3 4]</p>
+                <p>After pellets are pressed, thoroughly clean the equipment and leave the pellets out to dry as water will increase matrix effects.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Research Applications</h3>
+            <div class="section-content">
+                <p>The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for applications such as environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy. The press is also adaptable for use in micro-XRF and other analytical techniques requiring compacted sample pellets, opening possibilities for high-resolution mapping and low-cost field campaigns.</p>
+            </div>
+        </div>
+        
+        <div class="sediment-content-section">
+            <h3>Download</h3>
+            <div class="section-content">
+                <p><a href="caulk_pill_press_v5.stl" download>Download .stl file here</a></p>
+            </div>
+        </div>
+        
     </div>
+    
+    <!-- Zoom Buttons Fixed to Top Right Corner -->
+    <div class="zoom-btn-container" aria-label="Page Zoom Controls">
+        <button class="zoom-btn" id="zoom-in-btn" type="button">ZOOM IN</button>
+        <button class="zoom-btn" id="zoom-out-btn" type="button">ZOOM OUT</button>
+    </div>
+    
+    <script>
+        // ZOOM LOGIC: modifies body font-size AND wrapper scale
+        const zoomStep = 1.2; // 20% step
+        const zoomMin = 6;    // px
+        const zoomMax = 32;   // px
+
+        const body = document.body;
+        const wrapper = document.querySelector('.wrapper');
+
+        // Store current "zoom" scale for wrapper
+        let wrapperScale = 1;
+
+        function getFontSize() {
+            return parseFloat(window.getComputedStyle(body).fontSize);
+        }
+
+        function setWrapperScale(scale) {
+            wrapper.style.transform = `scale(${scale})`;
+            wrapper.style.transformOrigin = 'top center'; // Ensure sticky top on zoom
+        }
+
+        document.getElementById('zoom-in-btn').addEventListener('click', function() {
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize * zoomStep;
+            if (newFontSize > zoomMax) newFontSize = zoomMax;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+
+        document.getElementById('zoom-out-btn').addEventListener('click', function() {
+            let currentFontSize = getFontSize();
+            let newFontSize = currentFontSize / zoomStep;
+            if (newFontSize < zoomMin) newFontSize = zoomMin;
+            body.style.fontSize = newFontSize + 'px';
+
+            // Scale wrapper proportionally (relative to initial 9.6px)
+            wrapperScale = newFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+
+        // Initialize wrapper scale on load (to match initial font size)
+        document.addEventListener("DOMContentLoaded", function() {
+            const initialFontSize = getFontSize();
+            wrapperScale = initialFontSize / 9.6;
+            setWrapperScale(wrapperScale);
+        });
+    </script>
 </body>
 </html>
