@@ -421,7 +421,7 @@ a:hover {
 
 /* PDF Viewer Container */
 .pdf-container {
-    width: 90%;
+    width: 100%;
     height: 600px;
     background: #ffffff;
     border: 1px solid #000;
