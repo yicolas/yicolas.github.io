@@ -167,7 +167,8 @@ a:hover {
 .project-item {
     display: grid;
     grid-template-columns: 5fr 5fr 2fr;
-    gap: 1rem;
+    column-gap: 0.9375rem; /* 15px */
+    row-gap: 1rem;
     padding: 1rem 3rem;
     border-bottom: 1px solid #000;
 }
