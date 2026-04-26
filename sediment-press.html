@@ -5,10 +5,226 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sediment Press - Nicolas Anderson</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Model Viewer for 3D STL -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        /* Improved layout styles */
+        .press-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 0 3rem 2rem 3rem;
+        }
+        
+        .model-section {
+            position: sticky;
+            top: 2rem;
+        }
+        
+        .model-viewer-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: linear-gradient(180deg, #1a1f22 0%, #0f1214 100%);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        .model-viewer-container model-viewer {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .model-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 12px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .download-card {
+            background: #f0f4ff;
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(0, 0, 238, 0.15);
+        }
+        
+        .download-info {
+            font-size: 0.95em;
+        }
+        
+        .download-title {
+            color: #0000EE;
+            font-weight: 500;
+        }
+        
+        .download-meta {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.9em;
+            margin-top: 2px;
+        }
+        
+        .download-btn {
+            background: #0000EE;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.95em;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        
+        .download-btn:hover {
+            background: #0000BB;
+            color: white;
+            text-transform: none;
+        }
+        
+        /* Image gallery below model */
+        .press-images {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .press-images img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        .specs-section {
+            padding-top: 0;
+        }
+        
+        .steps-panel {
+            background: #f8f8f8;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .steps-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(0, 0, 0, 0.6);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .step-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-num {
+            width: 24px;
+            height: 24px;
+            background: #e8e8e8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(0, 0, 0, 0.7);
+            flex-shrink: 0;
+        }
+        
+        .step-row.active .step-num {
+            background: #0000EE;
+            color: white;
+        }
+        
+        .step-text {
+            font-size: 0.95em;
+            line-height: 1.4;
+            padding-top: 3px;
+        }
+        
+        .step-text strong {
+            font-weight: 600;
+        }
+        
+        .step-text span {
+            color: rgba(0, 0, 0, 0.6);
+        }
+        
+        .specs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .spec-chip {
+            background: #f8f8f8;
+            padding: 10px 12px;
+        }
+        
+        .spec-chip-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .spec-chip-value {
+            font-size: 1em;
+            font-weight: 500;
+            margin-top: 3px;
+        }
+        
+        .desc-block {
+            margin-bottom: 1.5rem;
+        }
+        
+        .desc-block h4 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .desc-block p {
+            line-height: 1.6;
+            color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .desc-block p.muted {
+            color: rgba(0, 0, 0, 0.65);
+        }
+        
+        @media (max-width: 900px) {
+            .press-layout {
+                grid-template-columns: 1fr;
+                padding: 0 2rem 2rem 2rem;
+            }
+            .model-section {
+                position: static;
+            }
+            .specs-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="site-container">
-        <!-- Main Content Area (Full Width for Project Detail) -->
         <main class="main-content" style="margin-right: 0; max-width: 100%;">
             <div class="project-detail-header">
                 <div>
@@ -16,63 +232,115 @@
                 </div>
             </div>
 
-            <!-- Project Images -->
-            <div class="project-gallery">
-                <div class="gallery-image">
-                    <img src="pill_press.png" alt="Successfully pressed pellet">
+            <div class="press-layout">
+                <!-- Left: 3D Model + Download -->
+                <div class="model-section">
+                    <div class="model-viewer-container">
+                        <model-viewer 
+                            id="press-model"
+                            src="caulk_pill_press_v5.stl" 
+                            alt="Pellet press 3D model"
+                            camera-controls
+                            auto-rotate
+                            shadow-intensity="1"
+                            camera-orbit="45deg 55deg 2.5m"
+                            style="width: 100%; height: 100%; background: transparent;">
+                        </model-viewer>
+                        <div class="model-hint">Drag to rotate · Scroll to zoom</div>
+                    </div>
+                    
+                    <div class="download-card">
+                        <div class="download-info">
+                            <div class="download-title">Download STL file</div>
+                            <div class="download-meta">caulk_pill_press_v5.stl · 3D printable</div>
+                        </div>
+                        <a href="caulk_pill_press_v5.stl" download class="download-btn">Download ↓</a>
+                    </div>
+                    
+                    <div class="press-images">
+                        <img src="pill_press.png" alt="Pressed pellet result">
+                        <img src="caulk_gun.png" alt="Press loaded in caulk gun">
+                    </div>
                 </div>
-                <div class="gallery-image">
-                    <img src="caulk_gun.png" alt="Pellet press loaded into caulk gun">
-                </div>
-            </div>
 
-            <!-- Project Details -->
-            <div class="project-content">
-                <div class="project-meta">
-                    <h4>SEDIMENT PELLET PRESS</h4>
-                    <div class="meta-item">→ FIELD INSTRUMENTATION</div>
-                    <div class="meta-item"><br></div>
-                    <div class="meta-item">• Portable XRF Sample Prep</div>
-                    <div class="meta-item"><em>• 3D Printed Design</em></div>
-                    <div class="meta-item">• Hand or Caulk Gun Operation</div>
-                    <div class="meta-item">• Lightweight & Durable</div>
-                    <div class="meta-item"><em>• Open Source Design</em></div>
-                </div>
-                <div class="project-description">
-                    <h4>Overview</h4>
-                    <p>
-                        Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.
-                    </p>
-                    <p class="muted">
-                        This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.
-                    </p>
-                    <p class="muted">
-                        Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface of pressed pellets ensures consistent X-ray penetration and reduces scatter, improving analytical precision and accuracy. Pellets are more stable and easier to handle than loose powders, particularly for hygroscopic samples or those prone to segregation. Unlike fusion methods, pellet pressing requires minimal additional chemicals, reducing contamination risk and making it a simple, cost-effective choice that requires less specialized equipment.
-                    </p>
+                <!-- Right: Steps + Specs + Description -->
+                <div class="specs-section">
+                    <div class="steps-panel">
+                        <div class="steps-title">Assembly (5 parts)</div>
+                        <div class="step-row active">
+                            <div class="step-num">1</div>
+                            <div class="step-text"><strong>Base cylinder</strong> <span>— circular relief connects to sediment chamber</span></div>
+                        </div>
+                        <div class="step-row">
+                            <div class="step-num">2</div>
+                            <div class="step-text"><strong>Sediment cylinder</strong> <span>— holds the sample material</span></div>
+                        </div>
+                        <div class="step-row">
+                            <div class="step-num">3</div>
+                            <div class="step-text"><strong>Compression dowel</strong> <span>— presses sediment into pellet</span></div>
+                        </div>
+                        <div class="step-row">
+                            <div class="step-num">4</div>
+                            <div class="step-text"><strong>Dowel topper</strong> <span>— interface for hand or caulk gun</span></div>
+                        </div>
+                        <div class="step-row">
+                            <div class="step-num">5</div>
+                            <div class="step-text"><strong>Caulk gun</strong> <span>— optional, for consistent pressure</span></div>
+                        </div>
+                    </div>
                     
-                    <h4>Usage</h4>
-                    <p>
-                        Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects.
-                    </p>
-                    <p class="muted">
-                        The sediment press is composed of 5 pieces: 1) a base cylinder with a small circular relief that connects with the sediment holding cylinder, 2) the sediment holding cylinder, 3) a narrow dowel that compresses the homogenized sediment in the sediment chamber, 4) a dowel topper that can be compressed either by hand or using caulk gun, and 5) caulk gun if desired.
-                    </p>
-                    <p class="muted">
-                        Pieces are first assembled with sediment inside and then are entered into the caulk gun as such: [1 2 &lt;(sediment inside) 3 4]
-                    </p>
-                    <p class="muted">
-                        After pellets are pressed, thoroughly clean the equipment and leave the pellets out to dry as water will increase matrix effects.
-                    </p>
+                    <div class="specs-grid">
+                        <div class="spec-chip">
+                            <div class="spec-chip-label">Material</div>
+                            <div class="spec-chip-value">PLA / PETG</div>
+                        </div>
+                        <div class="spec-chip">
+                            <div class="spec-chip-label">Print time</div>
+                            <div class="spec-chip-value">~3 hours</div>
+                        </div>
+                        <div class="spec-chip">
+                            <div class="spec-chip-label">Pellet size</div>
+                            <div class="spec-chip-value">25mm diameter</div>
+                        </div>
+                        <div class="spec-chip">
+                            <div class="spec-chip-label">Weight</div>
+                            <div class="spec-chip-value">~45g total</div>
+                        </div>
+                    </div>
                     
-                    <h4>Research Applications</h4>
-                    <p class="muted">
-                        The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for applications such as environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy. The press is also adaptable for use in micro-XRF and other analytical techniques requiring compacted sample pellets, opening possibilities for high-resolution mapping and low-cost field campaigns.
-                    </p>
+                    <div class="desc-block">
+                        <h4>Overview</h4>
+                        <p>
+                            Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.
+                        </p>
+                    </div>
                     
-                    <h4>Download</h4>
-                    <p>
-                        <a href="caulk_pill_press_v5.stl" download>Download .stl file here</a> - 3D printable file for sediment press
-                    </p>
+                    <div class="desc-block">
+                        <p class="muted">
+                            This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.
+                        </p>
+                    </div>
+                    
+                    <div class="desc-block">
+                        <h4>Usage</h4>
+                        <p class="muted">
+                            Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects. Pieces are assembled with sediment inside and then entered into the caulk gun as: [1 2 &lt;(sediment inside) 3 4]. After pressing, thoroughly clean equipment and leave pellets to dry.
+                        </p>
+                    </div>
+                    
+                    <div class="desc-block">
+                        <h4>Why Pellet Pressing?</h4>
+                        <p class="muted">
+                            Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface ensures consistent X-ray penetration and reduces scatter, improving analytical precision.
+                        </p>
+                    </div>
+                    
+                    <div class="desc-block">
+                        <h4>Research Applications</h4>
+                        <p class="muted">
+                            The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy.
+                        </p>
+                    </div>
                 </div>
             </div>
         </main>
