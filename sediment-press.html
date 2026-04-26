@@ -3,96 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sediment Press - Nicolas Anderson</title>
+    <title>Pellet Press — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Model Viewer for 3D STL -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
-        /* Improved layout styles */
-        .press-layout {
+        body { overflow: hidden; }
+        .press-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            padding: 0 3rem 2rem 3rem;
+            gap: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            height: calc(100vh - 50px);
+            overflow: hidden;
         }
-        
-        .model-section {
-            position: sticky;
-            top: 2rem;
+        .project-detail-header {
+            padding: 0.5rem 1.5rem;
+            border-bottom: 1px solid #000;
+            margin-bottom: 0;
         }
+        .project-detail-header h1 { font-size: 1.1em; }
         
+        /* Model column */
+        .model-col { display: flex; flex-direction: column; gap: 0.5rem; }
         .model-viewer-container {
-            width: 100%;
-            aspect-ratio: 4/3;
+            flex: 1;
+            min-height: 0;
             background: linear-gradient(180deg, #1a1f22 0%, #0f1214 100%);
             position: relative;
+            border-radius: 4px;
             overflow: hidden;
-            margin-bottom: 1rem;
         }
-        
-        .model-viewer-container model-viewer {
-            width: 100%;
-            height: 100%;
-        }
-        
+        .model-viewer-container model-viewer { width: 100%; height: 100%; }
         .model-hint {
             position: absolute;
-            bottom: 10px;
-            right: 12px;
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.5);
+            bottom: 6px;
+            right: 8px;
+            font-size: 9px;
+            color: rgba(255,255,255,0.4);
         }
-        
         .download-card {
             background: #f0f4ff;
-            padding: 1rem 1.25rem;
+            padding: 0.5rem 0.75rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid rgba(0, 0, 238, 0.15);
+            border: 1px solid rgba(0,0,238,0.15);
+            flex-shrink: 0;
         }
-        
-        .download-info {
-            font-size: 0.95em;
-        }
-        
-        .download-title {
-            color: #0000EE;
-            font-weight: 500;
-        }
-        
-        .download-meta {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.9em;
-            margin-top: 2px;
-        }
-        
+        .download-info { font-size: 10px; }
+        .download-title { color: #0000EE; font-weight: 500; }
+        .download-meta { color: rgba(0,0,0,0.5); font-size: 9px; }
         .download-btn {
             background: #0000EE;
             color: white;
             border: none;
-            padding: 0.6rem 1.25rem;
-            font-size: 0.95em;
+            padding: 0.4rem 0.8rem;
+            font-size: 10px;
             font-weight: 500;
-            cursor: pointer;
             text-decoration: none;
-            transition: background 0.15s;
         }
-        
-        .download-btn:hover {
-            background: #0000BB;
-            color: white;
-            text-transform: none;
-        }
-        
-        /* Image gallery below model */
+        .download-btn:hover { background: #0000BB; color: white; text-transform: none; }
         .press-images {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-top: 1rem;
+            gap: 0.5rem;
+            flex-shrink: 0;
         }
-        
         .press-images img {
             width: 100%;
             aspect-ratio: 4/3;
@@ -100,126 +76,82 @@
             background: #f0f0f0;
         }
         
-        .specs-section {
-            padding-top: 0;
+        /* Info column */
+        .info-col {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            overflow-y: auto;
+            font-size: 11px;
         }
-        
         .steps-panel {
             background: #f8f8f8;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
+            padding: 0.5rem 0.75rem;
         }
-        
         .steps-title {
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(0, 0, 0, 0.6);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            letter-spacing: 0.08em;
+            color: rgba(0,0,0,0.5);
+            margin-bottom: 0.4rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
-        
         .step-row {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: flex-start;
-            margin-bottom: 10px;
+            margin-bottom: 0.3rem;
+            font-size: 10px;
         }
-        
-        .step-row:last-child {
-            margin-bottom: 0;
-        }
-        
         .step-num {
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             background: #e8e8e8;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 600;
-            color: rgba(0, 0, 0, 0.7);
             flex-shrink: 0;
         }
-        
-        .step-row.active .step-num {
-            background: #0000EE;
-            color: white;
-        }
-        
-        .step-text {
-            font-size: 0.95em;
-            line-height: 1.4;
-            padding-top: 3px;
-        }
-        
-        .step-text strong {
-            font-weight: 600;
-        }
-        
-        .step-text span {
-            color: rgba(0, 0, 0, 0.6);
-        }
+        .step-row.active .step-num { background: #0000EE; color: white; }
+        .step-text { line-height: 1.3; padding-top: 2px; }
+        .step-text strong { font-weight: 600; }
+        .step-text span { color: rgba(0,0,0,0.5); }
         
         .specs-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
         }
-        
         .spec-chip {
             background: #f8f8f8;
-            padding: 10px 12px;
+            padding: 6px 8px;
+            text-align: center;
         }
-        
         .spec-chip-label {
-            font-size: 10px;
+            font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: rgba(0, 0, 0, 0.5);
+            color: rgba(0,0,0,0.4);
         }
-        
         .spec-chip-value {
-            font-size: 1em;
+            font-size: 10px;
             font-weight: 500;
-            margin-top: 3px;
-        }
-        
-        .desc-block {
-            margin-bottom: 1.5rem;
+            margin-top: 1px;
         }
         
         .desc-block h4 {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 1.1em;
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.2rem;
         }
-        
         .desc-block p {
-            line-height: 1.6;
-            color: rgba(0, 0, 0, 0.8);
-        }
-        
-        .desc-block p.muted {
-            color: rgba(0, 0, 0, 0.65);
-        }
-        
-        @media (max-width: 900px) {
-            .press-layout {
-                grid-template-columns: 1fr;
-                padding: 0 2rem 2rem 2rem;
-            }
-            .model-section {
-                position: static;
-            }
-            .specs-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+            line-height: 1.4;
+            color: rgba(0,0,0,0.7);
+            font-size: 10px;
         }
     </style>
 </head>
@@ -227,119 +159,95 @@
     <div class="site-container">
         <main class="main-content" style="margin-right: 0; max-width: 100%;">
             <div class="project-detail-header">
-                <div>
-                    <h1>SEDIMENT PELLET PRESS <span class="subtitle">→ FIELD INSTRUMENTATION</span></h1>
-                </div>
+                <h1>PELLET PRESS <span class="subtitle">→ FIELD INSTRUMENTATION</span></h1>
             </div>
 
-            <div class="press-layout">
-                <!-- Left: 3D Model + Download -->
-                <div class="model-section">
+            <div class="press-container">
+                <div class="model-col">
                     <div class="model-viewer-container">
                         <model-viewer 
                             id="press-model"
-                            src="caulk_pill_press_v5.stl" 
+                            src="caulk_pill_press_v5.glb" 
                             alt="Pellet press 3D model"
                             camera-controls
                             auto-rotate
                             shadow-intensity="1"
-                            camera-orbit="45deg 55deg 2.5m"
+                            camera-orbit="45deg 55deg 105%"
+                            field-of-view="45deg"
                             style="width: 100%; height: 100%; background: transparent;">
                         </model-viewer>
                         <div class="model-hint">Drag to rotate · Scroll to zoom</div>
                     </div>
-                    
                     <div class="download-card">
                         <div class="download-info">
-                            <div class="download-title">Download STL file</div>
+                            <div class="download-title">Download STL</div>
                             <div class="download-meta">caulk_pill_press_v5.stl · 3D printable</div>
                         </div>
                         <a href="caulk_pill_press_v5.stl" download class="download-btn">Download ↓</a>
                     </div>
-                    
                     <div class="press-images">
-                        <img src="pill_press.png" alt="Pressed pellet result">
-                        <img src="caulk_gun.png" alt="Press loaded in caulk gun">
+                        <img src="pill_press.png" alt="Pressed pellet">
+                        <img src="caulk_gun.png" alt="Caulk gun setup">
                     </div>
                 </div>
 
-                <!-- Right: Steps + Specs + Description -->
-                <div class="specs-section">
+                <div class="info-col">
                     <div class="steps-panel">
                         <div class="steps-title">Assembly (5 parts)</div>
                         <div class="step-row active">
                             <div class="step-num">1</div>
-                            <div class="step-text"><strong>Base cylinder</strong> <span>— circular relief connects to sediment chamber</span></div>
+                            <div class="step-text"><strong>Base cylinder</strong> <span>— connects to sediment chamber</span></div>
                         </div>
                         <div class="step-row">
                             <div class="step-num">2</div>
-                            <div class="step-text"><strong>Sediment cylinder</strong> <span>— holds the sample material</span></div>
+                            <div class="step-text"><strong>Sediment cylinder</strong> <span>— holds sample</span></div>
                         </div>
                         <div class="step-row">
                             <div class="step-num">3</div>
-                            <div class="step-text"><strong>Compression dowel</strong> <span>— presses sediment into pellet</span></div>
+                            <div class="step-text"><strong>Compression dowel</strong> <span>— presses pellet</span></div>
                         </div>
                         <div class="step-row">
                             <div class="step-num">4</div>
-                            <div class="step-text"><strong>Dowel topper</strong> <span>— interface for hand or caulk gun</span></div>
+                            <div class="step-text"><strong>Dowel topper</strong> <span>— hand/gun interface</span></div>
                         </div>
                         <div class="step-row">
                             <div class="step-num">5</div>
-                            <div class="step-text"><strong>Caulk gun</strong> <span>— optional, for consistent pressure</span></div>
+                            <div class="step-text"><strong>Caulk gun</strong> <span>— optional</span></div>
                         </div>
                     </div>
                     
                     <div class="specs-grid">
                         <div class="spec-chip">
                             <div class="spec-chip-label">Material</div>
-                            <div class="spec-chip-value">PLA / PETG</div>
+                            <div class="spec-chip-value">PLA/PETG</div>
                         </div>
                         <div class="spec-chip">
-                            <div class="spec-chip-label">Print time</div>
-                            <div class="spec-chip-value">~3 hours</div>
+                            <div class="spec-chip-label">Print</div>
+                            <div class="spec-chip-value">~3 hrs</div>
                         </div>
                         <div class="spec-chip">
-                            <div class="spec-chip-label">Pellet size</div>
-                            <div class="spec-chip-value">25mm diameter</div>
+                            <div class="spec-chip-label">Pellet</div>
+                            <div class="spec-chip-value">25mm</div>
                         </div>
                         <div class="spec-chip">
                             <div class="spec-chip-label">Weight</div>
-                            <div class="spec-chip-value">~45g total</div>
+                            <div class="spec-chip-value">~45g</div>
                         </div>
                     </div>
                     
                     <div class="desc-block">
                         <h4>Overview</h4>
-                        <p>
-                            Many attempts have been made across multiple groups to develop a portable and reliable in-field pellet press for portable XRF and other geochemical analyses. From car jacks to hydraulic presses, most choices are cumbersome and time consuming. Here we introduce a cheap, reproducible, lightweight and durable pellet press for use by hand or caulk gun.
-                        </p>
-                    </div>
-                    
-                    <div class="desc-block">
-                        <p class="muted">
-                            This model was made specifically for pXRF measurements of fresh clays and fine sands, and will extrude and drain water as the pellets are pressed. Pellets work best after drying.
-                        </p>
+                        <p>Cheap, reproducible, lightweight pellet press for portable XRF and geochemical analyses. Works by hand or with standard caulk gun. Made for pXRF measurements of fresh clays and fine sands — extrudes and drains water as pellets are pressed.</p>
                     </div>
                     
                     <div class="desc-block">
                         <h4>Usage</h4>
-                        <p class="muted">
-                            Sediments to be used in the press should first be homogenized to a consistent grain size using a mortar and pestle to reduce matrix effects. Pieces are assembled with sediment inside and then entered into the caulk gun as: [1 2 &lt;(sediment inside) 3 4]. After pressing, thoroughly clean equipment and leave pellets to dry.
-                        </p>
+                        <p>Homogenize sediments with mortar/pestle first. Assemble with sediment inside: [1 2 &lt;sediment&gt; 3 4]. Enter into caulk gun and press. Clean thoroughly after use; let pellets dry before analysis.</p>
                     </div>
                     
                     <div class="desc-block">
-                        <h4>Why Pellet Pressing?</h4>
-                        <p class="muted">
-                            Pellet pressing is widely adopted for XRF sample preparation because it produces homogeneous, stable, and accurate samples efficiently and cost-effectively. Pulverizing samples into fine powder (&lt;100 µm) and pressing them into dense pellets mitigates matrix effects from grain size and texture variations. The smooth, flat surface ensures consistent X-ray penetration and reduces scatter, improving analytical precision.
-                        </p>
-                    </div>
-                    
-                    <div class="desc-block">
-                        <h4>Research Applications</h4>
-                        <p class="muted">
-                            The sediment press is especially useful for producing consistent XRF tablets from unconsolidated sediments with minimal sample preparation. This allows rapid geochemical analysis in the field for environmental monitoring, sediment provenance studies, real-time stratigraphic logging during coring or drilling, and quick assessment of clay/sand mineralogy.
-                        </p>
+                        <h4>Applications</h4>
+                        <p>Environmental monitoring, sediment provenance, real-time stratigraphic logging, clay/sand mineralogy assessment. Produces consistent XRF tablets with minimal sample preparation.</p>
                     </div>
                 </div>
             </div>

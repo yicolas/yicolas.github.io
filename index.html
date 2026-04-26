@@ -3,15 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nicolas Anderson - Home</title>
+    <title>Nick Anderson - Geology PhD</title>
     <link rel="stylesheet" href="style.css">
-<style>:is([id*='google_ads_iframe'],[id*='taboola-'],.taboolaHeight,.taboola-placeholder,#top-ad,#credential_picker_container,#credentials-picker-container,#credential_picker_iframe,[id*='google-one-tap-iframe'],#google-one-tap-popup-container,.google-one-tap__module,.google-one-tap-modal-div,#amp_floatingAdDiv,#ez-content-blocker-container) {display:none!important;min-height:0!important;height:0!important;}</style></head>
+    <style>
+        /* Resizable layout */
+        .site-container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .main-content {
+            flex: 1;
+            min-width: 200px;
+            overflow: hidden;
+        }
+        
+        .resize-handle {
+            width: 5px;
+            cursor: col-resize;
+            background: transparent;
+            position: relative;
+            flex-shrink: 0;
+            z-index: 101;
+        }
+        
+        .resize-handle:hover,
+        .resize-handle.dragging {
+            background: rgba(0, 0, 238, 0.15);
+        }
+        
+        .resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 2px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        
+        .resize-handle:hover::after {
+            opacity: 1;
+        }
+        
+        .right-panel {
+            position: relative;
+            width: 320px;
+            min-width: 250px;
+            max-width: 500px;
+            height: 100vh;
+            background: #ffffff;
+            border-left: none;
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
 <body>
     <!-- Mobile Header (visible on mobile only) -->
     <div class="mobile-header">
         <div class="panel-header">
             <div class="site-title">
-                <a href="index.html">NICOLAS ANDERSON</a>
+                <a href="index.html">NICK ANDERSON</a>
             </div>
             <div class="clock">
                 <span id="mobile-clock">16:34:21</span>
@@ -23,7 +82,7 @@
                 <h4>Geology PhD Candidate</h4>
                 <a href="mailto:nickanderson@caltech.edu">nickanderson@caltech.edu</a><br>
                 <a href="https://github.com/yicolas" target="_blank">GitHub</a><br>
-                <a href="https://scholar.google.com/citations?hl=en&amp;user=gCFHsx8AAAAJ&amp;view_op=list_works&amp;gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&amp;iaan=N.S.+Anderson" target="_blank">Google Scholar</a>
+                <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ" target="_blank">Google Scholar</a>
             </div>
             <div class="profile-bio">
                 <p class="text-muted">
@@ -37,15 +96,19 @@
     </div>
 
     <div class="site-container">
+        <!-- Main Content Area with Iframe -->
+        <main class="main-content">
+            <iframe name="content-frame" src="index-content.html" class="content-iframe"></iframe>
+        </main>
+
+        <!-- Resizable Handle -->
+        <div class="resize-handle" id="resize-handle"></div>
+
         <!-- Right Side Panel (Desktop Profile/Bio) -->
-        <aside class="right-panel">
+        <aside class="right-panel" id="right-panel">
             <div class="panel-header">
-                <div class="site-title">
-                    NICOLAS ANDERSON
-                </div>
-                <div class="clock">
-                    <span id="desktop-clock">16:34:21</span>
-                </div>
+                <div class="site-title">NICK ANDERSON</div>
+                <div class="clock"><span id="desktop-clock">16:34:21</span></div>
             </div>
             
             <div class="profile-section">
@@ -64,56 +127,54 @@
                     <div><a href="index-content.html" target="content-frame">Home</a></div>
                     <div><a href="cv.html" target="content-frame">CV</a></div>
                     <div><a href="https://github.com/yicolas" target="_blank">GitHub</a></div>
-                    <div><a href="https://scholar.google.com/citations?hl=en&amp;user=gCFHsx8AAAAJ&amp;view_op=list_works&amp;gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&amp;iaan=N.S.+Anderson" target="_blank">Google Scholar</a></div>
+                    <div><a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ" target="_blank">Google Scholar</a></div>
                 </div>
 
                 <h4><b>PAPERS</b></h4>
                 <div class="nav-links">
-                    <div><a href="zhang-paper.html" target="content-frame">Paleomagnetic records from pulsed magmatism in the southwestern Laurentia large igneous province and Cardenas Basalt support rapid late Mesoproterozoic plate motion</a></div>
-                    <div><a href="mohr-paper.html" target="content-frame">High-precision U-Pb geochronology links magmatism in the Southwestern Laurentia large igneous province and Midcontinent Rift</a></div>
+                    <div><a href="zhang-paper.html" target="content-frame">Paleomagnetic Records from Pulsed Magmatism (Zhang et al. 2024)</a></div>
+                    <div><a href="mohr-paper.html" target="content-frame">High-Precision U-Pb Geochronology (Mohr et al. 2024)</a></div>
+                </div>
+
+                <h4><b>INTERACTIVE MODELS</b></h4>
+                <div class="nav-links">
+                    <div><a href="inundation.html" target="content-frame">Pliocene Sea Level Inundation Model</a></div>
+                    <div><a href="flume.html" target="content-frame">Half-Channel Flume Erosion Model</a></div>
                 </div>
                 
                 <h4><b>TOOLS</b></h4>
                 <div class="nav-links">
-                    <div><a href="pyrockmag.html" target="content-frame">pyRockmag — Rock Magnetic Analysis</a></div>
-                    <div><a href="flume.html" target="content-frame">Half-Channel Flume Erosion Model</a></div>
-                    <div><a href="sediment-mill.html" target="content-frame">Sediment Abrasion Mill and Particle Tracking Optics</a></div>
-                    <div><a href="sediment-press.html" target="content-frame">Portable Pellet Press for pXRF</a></div>
+                    <div><a href="pyrockmag.html" target="content-frame">pyRockmag</a></div>
+                    <div><a href="sediment-mill.html" target="content-frame">Sediment Mill</a></div>
+                    <div><a href="sediment-press.html" target="content-frame">Pellet Press</a></div>
                 </div>
 
                 <h4><b>PROJECTS</b></h4>
                 <div class="nav-links">
-                    <div><a href="thesis.html" target="content-frame">2022 GSA Cordellerian Presentation</a></div>
+                    <div><a href="thesis.html" target="content-frame">2022 GSA Cordilleran Presentation</a></div>
                     <div><a href="stuff.html" target="content-frame">Geologic Maps &amp; Cross Sections</a></div>
+                </div>
+
+                <h4><b>FIELD GUIDES</b></h4>
+                <div class="nav-links">
+                    <div><a href="fieldtrip-owens-valley.html" target="content-frame">Fall 2025 — Owens Valley</a></div>
+                    <div><a href="fieldtrip-san-diego.html" target="content-frame">Winter 2025 — San Diego &amp; Salton Sea</a></div>
+                    <div><a href="fieldtrip-central-arizona.html" target="content-frame">Spring 2025 — Central Arizona</a></div>
+                    <div><a href="fieldtrip-san-bernardino.html" target="content-frame">Fall 2025 — San Bernardino</a></div>
+                    <div><a href="fieldtrip-saline-valley.html" target="content-frame">Winter 2026 — Saline Valley</a></div>
                 </div>
 
                 <h4><b>RANDOM</b></h4>
                 <div class="nav-links">
-                    <div><a href="kirschvink-thesis.html" target="content-frame">Kirschvink PhD Thesis Original Scans</a></div>
-                    <div><a href="lowenstam-bio.html" target="content-frame">Hienz Lowenstam Biography - Kirschvink</a></div>
+                    <div><a href="kirschvink-thesis.html" target="content-frame">Kirschvink PhD Thesis Scans</a></div>
+                    <div><a href="lowenstam-bio.html" target="content-frame">Lowenstam Biography</a></div>
                 </div>
-
-                <h4><b>GEOLOGY FIELD TRIPS/GUIDES</b></h4>
-                <div class="nav-links">
-                    <div><a href="fieldtrip-owens-valley.html" target="content-frame">Fall 2025 - Owens Valley and CA-395</a></div>
-                    <div><a href="fieldtrip-san-diego.html" target="content-frame">Winter 2025 - Eastern San Diego Peninsular Range, Anza Borrego Desert and the Salton Sea</a></div>
-                    <div><a href="fieldtrip-central-arizona.html" target="content-frame">Spring 2025 - Central Arizona</a></div>
-                    <div><a href="fieldtrip-san-bernardino.html" target="content-frame">Fall 2025 - San Bernardino National Forest and Southern Death Valley</a></div>
-                    <div><a href="fieldtrip-saline-valley.html" target="content-frame">Winter 2026 - Saline Valley</a></div>
-                </div>
-
-                
             </div>
         </aside>
 
-        <!-- Main Content Area with Iframe -->
-        <main class="main-content">
-            <iframe name="content-frame" src="index-content.html" class="content-iframe"></iframe>
-        </main>
-
         <!-- Footer (Desktop) -->
         <footer class="site-footer">
-            <div class="copyright">©2025 NICOLAS ANDERSON</div>
+            <div class="copyright">©2025 NICK ANDERSON</div>
         </footer>
     </div>
 
@@ -127,7 +188,34 @@
     </div>
 
     <script src="clock.js"></script>
+    <script>
+        // Resizable panel
+        const handle = document.getElementById('resize-handle');
+        const panel = document.getElementById('right-panel');
+        let isResizing = false;
 
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            handle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
 
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const containerWidth = document.querySelector('.site-container').offsetWidth;
+            const newWidth = containerWidth - e.clientX;
+            if (newWidth >= 250 && newWidth <= 500) {
+                panel.style.width = newWidth + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            handle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+    </script>
 </body>
 </html>

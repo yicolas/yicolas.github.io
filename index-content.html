@@ -3,225 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nicolas Anderson - Home</title>
+    <title>Nick Anderson - Home</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Hide mobile header and footer in iframe content */
-        .mobile-header,
-        .mobile-footer {
-            display: none !important;
+        .mobile-header, .mobile-footer { display: none !important; }
+        
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .ascii-welcome {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 6px;
+            line-height: 1.0;
+            white-space: pre;
+            color: #000;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0;
+        }
+        
+        .welcome-text {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            color: rgba(0, 0, 0, 0.7);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 600px) {
+            .ascii-welcome {
+                font-size: 6px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Mobile Header (visible on mobile only) -->
-    <div class="mobile-header">
-        <div class="panel-header">
-            <div class="site-title">
-                <a href="index.html">NICOLAS ANDERSON</a>
-            </div>
-            <div class="clock">
-                <span id="mobile-clock">00:00:00</span>
-            </div>
-        </div>
-        <hr>
-        <div class="profile-grid">
-            <div class="profile-labels">
-                <h4>Geology PhD Candidate</h4>
-                <a href="mailto:nickanderson@caltech.edu">nickanderson@caltech.edu</a><br>
-                <a href="https://github.com/yicolas" target="_blank">GitHub</a><br>
-                <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ&view_op=list_works&gmla=AH8HC4xTK7vrDyzyYDBRsT3VLykodMkLBP2HJntOM9quukQRvFtgiJtNuj4evkVgHaoaTkz73JunEUldXZj55gB-d1RPCKP5zr39YIy6neZDjaYRGXuanNiX0XdBBeFeg8yQaIF1dW11dNzLuZzzxdw&iaan=N.S.+Anderson" target="_blank">Google Scholar</a>
-            </div>
-            <div class="profile-bio">
-                <p class="text-muted">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
-                </p>
-                <p class="mt-2">
-                    <a href="cv.html">CV →</a>
-                </p>
-            </div>
-        </div>
+    <div class="welcome-container">
+        <pre class="ascii-welcome">
+:::       ::: :::::::::: :::        ::::::::   ::::::::  ::::    ::::  :::::::::: 
+:+:       :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        
++:+       +:+ +:+        +:+       +:+        +:+    +:+ +:+ +:+:+ +:+ +:+        
++#+  +:+  +#+ +#++:++#   +#+       +#+        +#+    +:+ +#+  +:+  +#+ +#++:++#   
++#+ +#+#+ +#+ +#+        +#+       +#+        +#+    +#+ +#+       +#+ +#+        
+ #+#+# #+#+#  #+#        #+#       #+#    #+# #+#    #+# #+#       #+# #+#        
+  ###   ###   ########## ########## ########   ########  ###       ### ########## 
+
+::::::::::: ::::::::                                                              
+    :+:    :+:    :+:                                                             
+    +:+    +:+    +:+                                                             
+    +#+    +#+    +:+                                                             
+    +#+    +#+    +#+                                                             
+    #+#    #+#    #+#                                                             
+    ###     ########                                                              
+
+::::    ::: ::::::::::: ::::::::  :::    ::: ::: ::::::::                         
+:+:+:   :+:     :+:    :+:    :+: :+:   :+:  :+: :+:    :+:                        
+:+:+:+  +:+     +:+    +:+        +:+  +:+   +:+ +:+                               
++#+ +:+ +#+     +#+    +#+        +#++:++    +#+ +#++:++#++                        
++#+  +#+#+#     +#+    +#+        +#+  +#+   +#+        +#+                        
+#+#   #+#+#     #+#    #+#    #+# #+#   #+#  #+# #+#    #+#                        
+###    ####     ###     ########  ###    ### ###  ########                         
+
+ ::::::::  :::::::::: ::::::::  :::        ::::::::   ::::::::  :::   :::         
+:+:    :+: :+:       :+:    :+: :+:       :+:    :+: :+:    :+: :+:   :+:         
++:+        +:+       +:+    +:+ +:+       +:+    +:+ +:+         +:+ +:+          
+:#:        +#++:++#  +#+    +:+ +#+       +#+    +:+ :#:          +#++:           
++#+   +#+# +#+       +#+    +#+ +#+       +#+    +#+ +#+   +#+#    +#+            
+#+#    #+# #+#       #+#    #+# #+#       #+#    #+# #+#    #+#    #+#            
+ ########  ########## ########  ########## ########   ########     ###            
+
+:::       ::: :::::::::: :::::::::   ::::::::  ::::::::::: ::::::::::: :::::::::: 
+:+:       :+: :+:        :+:    :+: :+:    :+:     :+:         :+:     :+:        
++:+       +:+ +:+        +:+    +:+ +:+            +:+         +:+     +:+        
++#+  +:+  +#+ +#++:++#   +#++:++#+  +#++:++#++     +#+         +#+     +#++:++#   
++#+ +#+#+ +#+ +#+        +#+    +#+        +#+     +#+         +#+     +#+        
+ #+#+# #+#+#  #+#        #+#    #+# #+#    #+#     #+#         #+#     #+#        
+  ###   ###   ########## #########   ########  ###########     ###     ########## 
+        </pre>
+        <p class="welcome-text">
+            Use the navigation panel on the right to browse my research, publications, 
+            interactive models, tools, and field guides. Click any link to load content here.
+        </p>
     </div>
-
-    <div class="site-container">
-        <!-- Main Content Area -->
-        <main class="main-content" style="margin-right: 0; max-width: 100%;">
-            <div class="content-header">
-                <h1>Paper and Projects</h1>
-                <span class="sort-icon">↕</span>
-            </div>
-
-            <!-- Project 1: GSA 2022 Thesis -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="thesis.html" target="content-frame">
-                        <img src="gsa_thesis_preview-01.png" alt="2022 GSA Cordellerian Presentation">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>2022 GSA CORDELLERIAN PRESENTATION</h3>
-                    <div class="project-subtitle">PALEOMAGNETISM & GEOCHRONOLOGY</div>
-                    <p class="project-description">
-                        Paleomagnetism & Geochronology of Mesoproterozoic Diabase Sills from Death Valley, California: Evaluating the Bifurcating Plume Hypothesis for the Southwestern Laurentia large igneous province
-                    </p>
-                    <a href="thesis.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Project 2: Sediment Mill -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="sediment-mill.html" target="content-frame">
-                        <img src="IMG_0819.JPG" alt="Sediment Mill">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>SEDIMENT ENTRAINMENT MILL</h3>
-                    <div class="project-subtitle">FLUVIAL GEOMORPHOLOGY AND MICRO-IMAGING</div>
-                    <p class="project-description">
-                        Custom-built sediment mill for high-resolution imaging of floccualted particles and measuring sediment entrainment properties.
-                    </p>
-                    <a href="sediment-mill.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Project 3: Sediment Press -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="sediment-press.html" target="content-frame">
-                        <img src="pill_press.png" alt="Sediment Press">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>SEDIMENT PELLET PRESS</h3>
-                    <div class="project-subtitle">FIELD INSTRUMENTATION</div>
-                    <p class="project-description">
-                        Portable and reliable in-field pellet press for consistent pXRF geochemical analyses. Cheap, reproducible, lightweight and durable design for field use.
-                    </p>
-                    <a href="sediment-press.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Project 4: Maps & Field Work -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="stuff.html" target="content-frame">
-                        <img src="map_preview.png" alt="Geologic Maps" onerror="this.style.display='none'">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>GEOLOGIC MAPS & FIELD WORK</h3>
-                    <div class="project-subtitle">STRUCTURAL GEOLOGY</div>
-                    <p class="project-description">
-                        Collection of geological maps, field observations, and structural analysis from various research campaigns and field courses.
-                    </p>
-                    <a href="stuff.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Paper 1: Zhang et al. -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="zhang-paper.html" target="content-frame">
-                        <img src="zhang_preview-01.png" alt="Zhang et al. Paper" onerror="this.src='geo_compass.png'">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>PALEOMAGNETIC RECORDS FROM PULSED MAGMATISM</h3>
-                    <div class="project-subtitle">PUBLICATION - SWLLIP & CARDENAS BASALT</div>
-                    <p class="project-description">
-                        Paleomagnetic records from pulsed magmatism in the southwestern Laurentia large igneous province and Cardenas Basalt support rapid late Mesoproterozoic plate motion
-                    </p>
-                    <a href="zhang-paper.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Paper 2: Mohr et al. -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="mohr-paper.html" target="content-frame">
-                        <img src="mohr_preview-1.png" alt="Mohr et al. Paper" onerror="this.src='geo_compass.png'">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>HIGH-PRECISION U-PB GEOCHRONOLOGY</h3>
-                    <div class="project-subtitle">PUBLICATION - SWLLIP & MIDCONTINENT RIFT</div>
-                    <p class="project-description">
-                        High-precision U-Pb geochronology links magmatism in the Southwestern Laurentia large igneous province and Midcontinent Rift
-                    </p>
-                    <a href="mohr-paper.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Project 5: Kirschvink Thesis -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="kirschvink-thesis.html" target="content-frame">
-                        <img src="kirschvink_preview.png" alt="Kirschvink PhD Thesis" onerror="this.src='geo_compass.png'">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>KIRSCHVINK PHD THESIS ORIGINAL SCANS</h3>
-                    <div class="project-subtitle">HISTORICAL ARCHIVE</div>
-                    <p class="project-description">
-                        Original scans of Joseph Kirschvink's groundbreaking PhD thesis on paleomagnetism and the geomagnetic field.
-                    </p>
-                    <a href="kirschvink-thesis.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-
-            <!-- Project 6: Lowenstam Biography -->
-            <article class="project-item">
-                <div class="project-image">
-                    <a href="lowenstam-bio.html" target="content-frame">
-                        <img src="lowenstam_preview.png" alt="Lowenstam Biography" onerror="this.src='geo_compass.png'">
-                    </a>
-                </div>
-                <div class="project-info">
-                    <h3>HEINZ LOWENSTAM BIOGRAPHY - KIRSCHVINK</h3>
-                    <div class="project-subtitle">BIOGRAPHICAL MEMOIR</div>
-                    <p class="project-description">
-                        Biography of Heinz Lowenstam, pioneering geobiologist, written by Joseph Kirschvink.
-                    </p>
-                    <a href="lowenstam-bio.html" target="content-frame" class="read-more">Read more…</a>
-                </div>
-                <div class="project-icon">
-                    ⌘
-                </div>
-            </article>
-        </main>
-    </div>
-
-    <!-- Mobile Footer -->
-    <div class="mobile-footer">
-        <hr>
-        <div class="footer-nav">
-            <a href="index.html">INDEX</a>
-            <a href="#top">↑ TOP</a>
-        </div>
-    </div>
-
-    <script src="clock.js"></script>
 </body>
 </html>
