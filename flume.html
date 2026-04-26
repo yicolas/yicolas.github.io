@@ -1,69 +1,2502 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Half-Channel Flume Erosion Model - Nicolas Anderson</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .tool-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 3rem;
-            border-bottom: 1px solid #000;
-        }
-        .tool-header h1 {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 1.3em;
-            font-weight: normal;
-        }
-        .tool-header .subtitle {
-            color: rgba(0, 0, 0, 0.7);
-        }
-        .tool-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-        .tool-actions a {
-            font-size: 0.95em;
-            padding: 0.4rem 0.8rem;
-            border: 1px solid #000;
-            color: #000;
-            text-decoration: none;
-            transition: all 0.15s;
-        }
-        .tool-actions a:hover {
-            background: #000;
-            color: #fff;
-            text-transform: none;
-        }
-        .tool-iframe-container {
-            width: 100%;
-            height: calc(100vh - 60px);
-            background: #0f1416;
-        }
-        .tool-iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sea Level Inundation &amp; Flexural Basin Model — v3.1</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#faf9f7;--bg2:#f2f0ec;--bg3:#e8e6e1;
+--tx:#1a1a18;--tx2:#6b6a65;--tx3:#9c9a92;
+--bd:#d8d6cf;--bd2:#c2c0b6;
+--blue:#2563eb;--blue-l:#dbeafe;--blue-d:#1e40af;
+--teal:#0d9488;--teal-l:#ccfbf1;--teal-d:#115e59;
+--coral:#dc2626;--coral-l:#fee2e2;--coral-d:#991b1b;
+--amber:#d97706;--amber-l:#fef3c7;--amber-d:#92400e;
+--font:'IBM Plex Sans',system-ui,sans-serif;
+--mono:'IBM Plex Mono',monospace;
+--serif:'IBM Plex Serif',Georgia,serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);line-height:1.4;font-size:12px;overflow:hidden;height:100vh}
+.dash{display:flex;height:100vh}
+.col{overflow-y:auto;padding:12px;border-right:1px solid var(--bd)}
+.col:last-child{border-right:none}
+.col-a{width:33.33%;min-width:0;background:#fff}
+.col-b{width:33.33%;min-width:0;background:#fff}
+.col-c{width:33.34%;min-width:0;background:var(--bg)}
+.resize-handle{width:5px;cursor:col-resize;background:transparent;flex-shrink:0;z-index:10;margin:0 -2px}
+.resize-handle:hover,.resize-handle.active{background:var(--blue);opacity:0.3}
+h1{font-size:15px;font-weight:600;margin:0 0 4px;letter-spacing:-0.3px}
+.sub{font-size:10px;color:var(--tx2);margin:0 0 10px}
+h2{font-size:11px;font-weight:600;margin:12px 0 8px;text-transform:uppercase;letter-spacing:0.7px;color:var(--tx2);border-bottom:1px solid var(--bg2);padding-bottom:4px}
+h2:first-of-type{margin-top:0}
+h3{font-size:11px;font-weight:600;margin:0 0 4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px}
+.panel{background:#fff;border:1px solid var(--bd);border-radius:6px;padding:9px;margin:0 0 8px}
+.panel.accent-blue{border-left:3px solid var(--blue)}
+.panel.accent-teal{border-left:3px solid var(--teal)}
+.panel.accent-coral{border-left:3px solid var(--coral)}
+.panel.accent-purple{border-left:3px solid #7c3aed}
+.panel.accent-green{border-left:3px solid #059669}
+.module{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px;margin:0 0 8px}
+.stat{background:var(--bg2);border-radius:5px;padding:5px 7px}
+.stat .lbl{font-size:9px;color:var(--tx2);margin:0 0 1px;text-transform:uppercase;letter-spacing:0.3px}
+.stat .val{font-size:13px;font-weight:600;margin:0;font-family:var(--mono)}
+.stat .note{font-size:9px;color:var(--tx3);margin:1px 0 0}
+.stat.yes .val,.stat.match .val{color:var(--teal-d)}
+.stat.no .val,.stat.miss .val{color:var(--coral-d)}
+.eq{font-family:var(--serif);font-size:13px;text-align:center;padding:5px 0;line-height:2;color:var(--tx)}
+.eq .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px}
+.eq .frac .n{border-bottom:1.5px solid var(--tx);padding:0 4px 2px;font-size:11px;line-height:1.2}
+.eq .frac .d{padding:2px 4px 0;font-size:11px;line-height:1.2}
+.eq sub{font-size:9px}
+.var-def{font-size:10px;color:var(--tx2);line-height:1.5;margin:4px 0 0;padding-left:6px;border-left:2px solid var(--bg3)}
+.var-def b{color:var(--tx);font-family:var(--serif);font-weight:normal;font-style:italic}
+.field{margin:0 0 8px}.field:last-child{margin:0}
+.field label{display:block;font-size:11px;color:var(--tx2);margin:0 0 3px;font-weight:500}
+.field input[type=number],.field select{width:100%;height:26px;border:1px solid var(--bd);border-radius:5px;padding:0 6px;font-family:var(--mono);font-size:11px;background:var(--bg);color:var(--tx);outline:none}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field .unit{font-size:9px;color:var(--tx3);margin-top:1px}
+.field-row{display:flex;gap:6px;align-items:flex-end}.field-row .field{flex:1}
+.slider-row{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.slider-row label{font-size:11px;color:var(--tx2);min-width:75px;font-weight:500}
+.slider-row input[type=range]{flex:1;accent-color:var(--blue)}
+.slider-row .out{font-family:var(--mono);font-size:12px;font-weight:500;min-width:46px;text-align:right}
+canvas{display:block;width:100%;margin:0}
+.chart-box{position:relative;background:#fff;border:1px solid var(--bd);border-radius:6px;padding:6px;margin:0 0 6px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px;margin:3px 0 0;font-size:9px;color:var(--tx2)}
+.chart-legend .dot{display:inline-block;width:8px;height:3px;border-radius:2px;vertical-align:middle;margin-right:2px}
+.compact-town{display:flex;justify-content:space-between;padding:3px 6px;font-size:11px;border-bottom:1px solid var(--bg2)}
+.compact-town .tn{font-weight:500}.compact-town .tv{font-family:var(--mono);color:var(--tx2)}
+.toggle-btn{display:block;width:100%;padding:4px;font-size:10px;font-family:var(--font);border:1px solid var(--bd);border-radius:5px;background:var(--bg);cursor:pointer;color:var(--tx2);text-align:center;margin-top:4px}
+.toggle-btn:hover{background:var(--bg2)}
+.ice-table{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 6px}
+.ice-table th{text-align:left;font-size:9px;color:var(--tx2);font-weight:500;padding:0 4px 3px;border-bottom:1px solid var(--bd)}
+.ice-table td{padding:3px 4px;border-bottom:1px solid var(--bg2)}
+.ice-table .r{text-align:right;font-family:var(--mono);font-weight:500}
+.ice-table .bar-td{width:55px}
+.ice-table .ib{height:7px;border-radius:2px}
+.ice-total{display:flex;justify-content:space-between;padding:5px;border-top:2px solid var(--tx);font-weight:600;font-size:12px}
+.ice-total .num{font-family:var(--mono);font-size:13px}
+.seg-table{width:100%;border-collapse:collapse;font-size:11px}
+.seg-table th{text-align:left;font-size:9px;color:var(--tx2);font-weight:500;padding:0 4px 4px;border-bottom:1px solid var(--bd)}
+.seg-table td{padding:3px 4px;border-bottom:1px solid var(--bg2)}
+.elev-tooltip{font-family:var(--font);font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid var(--bd);background:rgba(255,255,255,0.92);color:#1e1d1a;box-shadow:0 1px 3px rgba(0,0,0,0.12)}
+#inundation-map .leaflet-control-attribution{font-size:8px;opacity:0.5}
+#inundation-map .leaflet-control-layers{font-size:11px;font-family:var(--font)}
+#inundation-map .leaflet-control-layers-list{padding:4px 8px}
+#inundation-map .leaflet-control-layers label{margin-bottom:2px}
+.route-opt{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid var(--bd);background:var(--bg)}
+.shield-note{background:#fef3c7;border:1px solid #d97706;border-radius:6px;padding:8px;margin:6px 0;font-size:10px;line-height:1.5;color:#92400e}
+.shield-note b{color:#78350f}
+h2.collapsible{cursor:pointer;user-select:none;position:relative;padding-right:18px}
+h2.collapsible::after{content:'▾';position:absolute;right:0;top:0;font-size:10px;color:var(--tx3);transition:transform .15s}
+h2.collapsible.collapsed::after{transform:rotate(-90deg)}
+.sec-body.hidden{display:none}
+.proxy-tbl{width:100%;border-collapse:collapse;font-size:10px;line-height:1.4}
+.proxy-tbl th{text-align:left;font-size:9px;color:var(--tx2);font-weight:600;padding:4px 5px;border-bottom:1.5px solid var(--bd);text-transform:uppercase;letter-spacing:0.3px}
+label[title]{cursor:help;border-bottom:1px dotted var(--tx3)}
+.proxy-tbl td{padding:4px 5px;border-bottom:1px solid var(--bg2);vertical-align:top}
+.proxy-tbl .verdict-y{color:var(--teal-d);font-weight:600}
+.proxy-tbl .verdict-n{color:var(--coral-d);font-weight:600}
+.proxy-tbl .verdict-a{color:var(--amber);font-weight:600}
+.timeline{position:relative;padding:8px 0 8px 20px;font-size:10px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--bd)}
+.tl-item{position:relative;margin:0 0 10px;padding-left:12px}
+.tl-item::before{content:'';position:absolute;left:-16px;top:4px;width:8px;height:8px;border-radius:50%;border:2px solid var(--blue);background:#fff}
+.tl-item.marine::before{background:var(--blue);border-color:var(--blue)}
+.tl-item.disputed::before{background:var(--coral);border-color:var(--coral)}
+.tl-item .tl-age{font-family:var(--mono);font-weight:600;color:var(--tx)}
+.tl-item .tl-name{font-weight:500;color:var(--tx)}
+.tl-item .tl-desc{color:var(--tx2)}
+@media(max-width:900px){.dash{flex-direction:column;height:auto;overflow:auto}.col{width:100%!important;border-right:none;border-bottom:1px solid var(--bd)}.resize-handle{display:none}}
+</style>
 </head>
 <body>
-    <div class="site-container">
-        <main class="main-content" style="margin-right: 0; max-width: 100%; padding: 0;">
-            <div class="tool-header">
-                <h1>HALF-CHANNEL FLUME EROSION MODEL <span class="subtitle">→ SEDIMENT TRANSPORT</span></h1>
-                <div class="tool-actions">
-                    <a href="flume_model_17.html" target="_blank">Open in new tab ↗</a>
-                </div>
-            </div>
-            <div class="tool-iframe-container">
-                <iframe src="flume_model_17.html"></iframe>
-            </div>
-        </main>
-    </div>
+<div class="dash" id="dash">
+<!-- ═══ COL A: EQUATIONS ═══ -->
+<div class="col col-a" id="col-a">
+<h1>Sea level inundation model</h1>
+<p class="sub">Madre de Dios marine incursion — v3.1</p>
+
+<h2 class="collapsible">§1. Ice budget</h2>
+<div class="panel accent-blue">
+<table class="ice-table">
+<tr><th>Source</th><th>Vol (10⁶km³)</th><th class="bar-td"></th><th class="r">SLE (m)</th></tr>
+<tr><td>EAIS</td><td class="r">21.7</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:92%;background:var(--blue)"></div></div></td><td class="r">53.3</td></tr>
+<tr><td>WAIS</td><td class="r">3.3</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:7.4%;background:var(--blue)"></div></div></td><td class="r">4.3</td></tr>
+<tr><td>Ant. Pen.</td><td class="r">0.1</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:0.4%;background:var(--blue)"></div></div></td><td class="r">0.2</td></tr>
+<tr><td>Greenland</td><td class="r">2.9</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:12.8%;background:var(--teal)"></div></div></td><td class="r">7.4</td></tr>
+<tr><td>Glaciers</td><td class="r">0.16</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:0.6%;background:var(--amber)"></div></div></td><td class="r">0.3</td></tr>
+<tr><td>Therm. exp.</td><td class="r">—</td><td class="bar-td"><div style="background:var(--bg2);border-radius:2px;height:7px;overflow:hidden"><div class="ib" style="width:3.4%;background:var(--coral)"></div></div></td><td class="r">~2.0</td></tr>
+</table>
+<div class="ice-total"><span>Total</span><span class="num">~67.5 m</span></div>
+</div>
+
+<h2 class="collapsible">§2. Marine incursion timeline</h2>
+<div class="sec-body">
+<div class="panel accent-blue">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 8px">Documented marine/brackish episodes in western Amazonia &amp; Paraná, vs. Parra et al. claim.</p>
+<div class="timeline">
+<div class="tl-item marine"><span class="tl-age">23–10 Ma</span><br><span class="tl-name">Pebas mega-wetland</span><br><span class="tl-desc">W. Amazonia — long-lived lacustrine/brackish system, episodic tidal influence. Well-documented mollusks, ostracods, calcareous forams. Hovikoski et al. 2010; Wesselingh et al. 2002</span></div>
+<div class="tl-item marine"><span class="tl-age">15–10 Ma</span><br><span class="tl-name">Paranense Sea</span><br><span class="tl-desc">Chaco-Paraná basin, NE Argentina. Reached Asunción arch (~25°S). Marine mollusks, calcareous forams, sharks. del Río et al. 2018</span></div>
+<div class="tl-item marine"><span class="tl-age">14–7 Ma</span><br><span class="tl-name">Yecua Fm marine facies</span><br><span class="tl-desc">Bolivian Chaco — marginal marine facies, possible Paranense connection. Hernández et al. 2005</span></div>
+<div class="tl-item marine"><span class="tl-age">~10–7 Ma</span><br><span class="tl-name">Acre system</span><br><span class="tl-desc">SW Amazonia — transitional marine-freshwater. Latrubesse et al. 2010</span></div>
+<div class="tl-item"><span class="tl-age">~9 Ma</span><br><span class="tl-name">Amazon transcontinental</span><br><span class="tl-desc">Amazon River establishes eastward flow to Atlantic. End of western mega-wetland. Figueiredo et al. 2009</span></div>
+<div class="tl-item"><span class="tl-age">7–3.5 Ma</span><br><span class="tl-name">No documented marine episodes</span><br><span class="tl-desc">Gap — no published evidence of marine influence anywhere in western Amazonia during this interval</span></div>
+<div class="tl-item disputed"><span class="tl-age">3.45 Ma</span><br><span class="tl-name">Parra et al. claim ⚠</span><br><span class="tl-desc">Madre de Dios — conference abstract only. No calcareous forams, no marine mollusks, no Sr isotopes. Only ambiguous agglutinated forams + pyrite. Contradicted by freshwater algae.</span></div>
+</div>
+</div>
+</div>
+
+
+<h2 class="collapsible">§3. Inundation equations</h2>
+<div class="panel">
+<h3>Sea level equivalent</h3>
+<div class="eq">SLE = <span class="frac"><span class="n">V<sub>ice</sub> × ρ<sub>ice</sub></span><span class="d">A<sub>ocean</sub> × ρ<sub>sw</sub></span></span> − <span class="frac"><span class="n">V<sub>below SL</sub></span><span class="d">A<sub>ocean</sub></span></span></div>
+<div class="var-def"><b>V<sub>ice</sub></b> = ice sheet volume (km³) · <b>ρ<sub>ice</sub></b> = 917 kg/m³ · <b>A<sub>ocean</sub></b> = ocean surface area (km²) · <b>ρ<sub>sw</sub></b> = 1028 kg/m³ · <b>V<sub>below SL</sub></b> = ice grounded below sea level</div>
+</div>
+<div class="panel">
+<h3>Linear inundation reach</h3>
+<div class="eq">x<sub>reach</sub> = <span class="frac"><span class="n">ΔSL</span><span class="d">S<sub>linear</sub></span></span> where S<sub>linear</sub> = <span class="frac"><span class="n">h<sub>target</sub></span><span class="d">L</span></span></div>
+<div class="var-def"><b>x<sub>reach</sub></b> = inland flooding distance (km) · <b>ΔSL</b> = eustatic sea level rise (m) · <b>S<sub>linear</sub></b> = constant slope from coast to target · <b>h<sub>target</sub></b> = target city elevation (m) · <b>L</b> = coast-to-target distance (km)</div>
+</div>
+<div class="panel">
+<h3>Concave (piecewise) inundation</h3>
+<div class="eq">x<sub>reach</sub> = max { d : e(d) ≤ ΔSL }</div>
+<div class="var-def"><b>e(d)</b> = piecewise-linear elevation profile interpolated between waypoints · Sea penetrates to the farthest point where riverbed elevation ≤ sea level</div>
+</div>
+<div class="panel">
+<h3>Required post-depositional uplift</h3>
+<div class="eq">U = h<sub>modern</sub> − ΔSL</div>
+<div class="eq" style="font-size:12px">Rate = U / t<sub>age</sub></div>
+<div class="var-def"><b>U</b> = total uplift since deposition (m) · <b>h<sub>modern</sub></b> = present-day elevation (m) · <b>ΔSL</b> = Pliocene eustatic SL (m) · <b>t<sub>age</sub></b> = age of deposit (Ma)</div>
+</div>
+
+<h2 class="collapsible">§4. Flexural basin equations</h2>
+<div class="panel">
+<h3>Broken plate elastic deflection</h3>
+<div class="eq">w(x) = w₀ · e<sup>−x/α</sup> · cos(x/α)</div>
+<div class="var-def"><b>w(x)</b> = deflection at distance x from load (m) · <b>w₀</b> = maximum deflection at thrust front (m) · <b>x</b> = distance from thrust front (km) · <b>α</b> = flexural parameter (km)</div>
+</div>
+<div class="panel">
+<h3>Flexural parameter</h3>
+<div class="eq" style="font-size:12px">α = ⁴√( 4D / (Δρ · g) )</div>
+<div class="var-def"><b>D</b> = flexural rigidity (N·m) · <b>Δρ</b> = ρ<sub>mantle</sub> − ρ<sub>fill</sub> (kg/m³) · <b>g</b> = 9.81 m/s²</div>
+</div>
+<div class="panel">
+<h3>Flexural rigidity</h3>
+<div class="eq" style="font-size:12px">D = <span class="frac"><span class="n">E · T<sub>e</sub>³</span><span class="d">12(1−ν²)</span></span></div>
+<div class="var-def"><b>E</b> = Young's modulus (Pa) · <b>T<sub>e</sub></b> = effective elastic thickness (m) · <b>ν</b> = Poisson's ratio (dimensionless)</div>
+</div>
+
+<h2 class="collapsible">§5. Basal shear equations</h2>
+<div class="panel">
+<h3>Gaussian crustal thickening</h3>
+<div class="eq" style="font-size:12px">Δh<sub>c</sub>(x) = Δh<sub>max</sub> · exp(−(x−x₀)²/2σ²)</div>
+<div class="var-def"><b>Δh<sub>c</sub></b> = crustal thickening at position x (km) · <b>Δh<sub>max</sub></b> = maximum crustal thickening at arch crest (km) · <b>x₀</b> = arch center distance from thrust front (km) · <b>σ</b> = Gaussian width of thickening dome (km)</div>
+</div>
+<div class="panel">
+<h3>Airy isostatic surface uplift</h3>
+<div class="eq" style="font-size:12px">h<sub>surf</sub> = Δh<sub>c</sub> × <span class="frac"><span class="n">ρ<sub>m</sub> − ρ<sub>c</sub></span><span class="d">ρ<sub>m</sub></span></span></div>
+<div class="var-def"><b>h<sub>surf</sub></b> = surface uplift (m) · <b>ρ<sub>m</sub></b> = mantle density (kg/m³) · <b>ρ<sub>c</sub></b> = crustal density (kg/m³) · Isostatic fraction ≈ 0.182 for standard densities</div>
+</div>
+
+<div style="font-size:8px;color:var(--tx3);margin-top:12px;line-height:1.5">
+<b>Refs:</b> Beaumont 1981 · Turcotte &amp; Schubert 2002 · Bishop et al. 2018 · Espurt et al. 2007/10 · Regard et al. 2009 · Pérez-Gussinyé et al. 2007 · Parra et al.
+</div>
+
+<h2 class="collapsible">§6. Proxy critique — Parra et al. 2016</h2>
+<div class="sec-body">
+<div class="panel accent-coral">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 6px">Each proxy Parra et al. cite as evidence for marine incursion, with alternative freshwater explanations.</p>
+<table class="proxy-tbl">
+<tr><th>Proxy</th><th>Parra interpretation</th><th>Alternative</th><th>Diag.?</th></tr>
+<tr><td><b>Miliammina, Trochammina, Haplophragmoides, Bathysiphon</b></td><td>Marginal marine forams, oligohaline–mesohaline</td><td>Agglutinated forams — euryhaline, well-documented in freshwater lakes, rivers, anoxic wetlands</td><td class="verdict-n">No</td></tr>
+<tr><td><b>Authigenic pyrite</b></td><td>Marine sulfate source</td><td>Forms in any anoxic sulfate-rich setting; Andean evaporite weathering supplies SO₄²⁻ to foreland rivers</td><td class="verdict-n">No</td></tr>
+<tr><td><b>Dinoflagellate morphotypes</b></td><td>"Related to estuarine tidal environment"</td><td>Not identified to species; freshwater dinoflagellates exist; hedging language ("morphotypes related to")</td><td class="verdict-a">Weak</td></tr>
+<tr><td><b>Crab ichnofacies</b></td><td>Marine crabs</td><td>Freshwater crabs abundant in Neotropical rivers; traces not diagnostic</td><td class="verdict-n">No</td></tr>
+<tr><td><b>Pediastrum</b></td><td>Listed but not reconciled</td><td><b>Exclusively freshwater</b> green alga — contradicts marine interpretation</td><td class="verdict-y">FW only</td></tr>
+<tr><td><b>Oedogonium</b></td><td>Listed but not reconciled</td><td><b>Freshwater</b> filamentous alga — ponds and slow streams</td><td class="verdict-y">FW only</td></tr>
+<tr><td><b>Potamomyces, Tetraploa</b></td><td>Neogene age marker</td><td>Freshwater/terrestrial fungi on submerged debris — supports river/swamp, not marine</td><td class="verdict-n">No</td></tr>
+<tr><td><b>Poaceae + pteridophyte spores</b></td><td>Marginal marine vegetation</td><td>Grassy wetland/swamp assemblage; no obligate marine taxa</td><td class="verdict-n">No</td></tr>
+</table>
+<p style="font-size:9px;color:var(--coral-d);margin-top:6px;font-weight:500">Verdict: Zero diagnostic marine proxies. Two exclusively freshwater taxa contradict the marine hypothesis. The "marine" case rests entirely on ambiguous agglutinated forams + pyrite.</p>
+</div>
+</div>
+
+<h2 class="collapsible">§7. Sulfate budget &amp; pyrite</h2>
+<div class="sec-body">
+<div class="panel">
+<p style="font-size:10px;color:var(--tx2);line-height:1.6;margin:0">
+<b>Why pyrite doesn't require marine water:</b><br>
+Pyrite (FeS₂) forms wherever bacterial sulfate reduction occurs in anoxic conditions: SO₄²⁻ + 2CH₂O → H₂S + 2HCO₃⁻, then Fe²⁺ + H₂S → FeS₂.<br><br>
+<b>Sulfate sources in the Madre de Dios foreland:</b><br>
+• <b>Yecua Fm evaporites</b> (14–7 Ma) — gypsum/anhydrite in Bolivian sub-Andean zone, actively weathering into modern rivers<br>
+• <b>Ipururo Fm</b> — evaporitic facies in Peruvian sub-Andean zone<br>
+• <b>Modern Andean rivers</b> — SO₄²⁻ = 50–200 mg/L (Stallard &amp; Edmond 1983), vs. seawater ~2,700 mg/L<br>
+• Even 50 mg/L SO₄²⁻ is sufficient for bacterial sulfate reduction in organic-rich wetlands<br><br>
+<b>Salinity without marine water:</b><br>
+Parra's estimated 2–16 ppt could result from evaporative concentration in floodplain lakes receiving sulfate-rich Andean runoff — a common process in modern Pantanal and Llanos de Moxos wetlands. No ocean connection required.
+</p>
+</div>
+</div>
+
+<h2 class="collapsible">§8. Paranense Sea constraints</h2>
+<div class="sec-body">
+<div class="panel accent-blue">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 6px">The documented Miocene marine incursion in the Paraná system — vs. Parra et al.</p>
+<div class="grid2" style="margin-bottom:6px">
+<div class="stat"><p class="lbl">Paranense Sea age</p><p class="val" style="font-size:12px">~15–10 Ma</p><p class="note">Mid–Late Miocene</p></div>
+<div class="stat"><p class="lbl">Parra claim age</p><p class="val" style="font-size:12px;color:var(--coral-d)">3.45 Ma</p><p class="note">6.5+ Myr younger</p></div>
+</div>
+<div class="grid2" style="margin-bottom:6px">
+<div class="stat"><p class="lbl">Northern limit</p><p class="val" style="font-size:11px">Asunción arch</p><p class="note">~25°S, NE Argentina</p></div>
+<div class="stat"><p class="lbl">Distance to MdD</p><p class="val" style="font-size:12px;color:var(--coral-d)">~2,500 km</p><p class="note">Never reached Bolivia</p></div>
+</div>
+<p style="font-size:10px;color:var(--tx2);line-height:1.5;margin-top:4px">
+<b>Evidence quality contrast:</b> Paranense Sea is documented with calcareous forams (Buccella, Elphidium), marine mollusks, shark teeth, Sr isotopes (⁸⁷Sr/⁸⁶Sr = 0.7089). Parra et al. have NONE of these.<br>
+<b>Refs:</b> del Río et al. 2018; Hernández et al. 2005; Marengo 2015
+</p>
+</div>
+</div>
+
+<h2 class="collapsible">§9. Isotopic constraints</h2>
+<div class="sec-body">
+<div class="panel">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px">Geochemical tests that could confirm or refute marine influence — and what Parra lacks.</p>
+<div style="font-size:10px;color:var(--tx2);line-height:1.6">
+<b>⁸⁷Sr/⁸⁶Sr — the definitive test:</b><br>
+• Pliocene seawater: <b>0.7090–0.7092</b><br>
+• Continental water: <b>0.710–0.730</b> (radiogenic from old crust)<br>
+• Pebas forams: <b>0.7090–0.7110</b> — continental, not marine<br>
+• <b>Parra: NO Sr isotope data</b><br><br>
+<b>δ¹⁸O / δ¹³C:</b><br>
+• Marine carbonates: δ¹⁸O ≈ 0 ‰, δ¹³C ≈ 0 to +2 ‰<br>
+• Freshwater: δ¹⁸O ≈ −2 to −12 ‰, δ¹³C ≈ −5 to −15 ‰<br>
+• <b>Parra: NO stable isotope data</b><br><br>
+<b>δ³⁴S on pyrite:</b><br>
+• Marine sulfate: δ³⁴S ≈ +10 to +25 ‰<br>
+• Evaporite-derived: δ³⁴S ≈ +10 to +20 ‰<br>
+• Freshwater bacterial: δ³⁴S ≈ −40 to +5 ‰<br>
+• <b>Parra: NO sulfur isotope data</b><br><br>
+<span style="color:var(--coral-d);font-weight:500">The absence of ANY geochemical data is a fundamental gap. Standard practice requires at minimum Sr isotopes on foram tests.</span>
+</div>
+</div>
+</div>
+
+<h2 class="collapsible">§R. Key references</h2>
+<div class="sec-body">
+<div class="panel" style="font-size:9px;line-height:1.7;color:var(--tx2)">
+<b style="color:var(--tx);font-size:10px">Fitzcarrald Arch &amp; Andean foreland</b><br>
+• Espurt, N. et al. (2007) How does the Nazca Ridge subduction influence the modern Amazonian foreland basin? <i>Geology</i> 35, 515–518. <a href="https://doi.org/10.1130/G23237A.1" target="_blank">doi:10.1130/G23237A.1</a><br>
+• Bishop, B.T. et al. (2018) Foreland uplift during flat subduction: Insights from the Peruvian Andes and Fitzcarrald Arch. <i>Tectonics</i> 37. <a href="https://doi.org/10.1029/2017TC004731" target="_blank">doi:10.1029/2017TC004731</a><br>
+• Regard, V. et al. (2009) Geomorphic evidence for recent uplift of the Fitzcarrald Arch. <i>Geomorphology</i> 107, 107–117. <a href="https://doi.org/10.1016/j.geomorph.2008.12.003" target="_blank">doi:10.1016/j.geomorph.2008.12.003</a><br>
+• Pérez-Gussinyé, M. et al. (2007) Effective elastic thickness of South America. <i>Earth Planet. Sci. Lett.</i> 253, 17–35. <a href="https://doi.org/10.1016/j.epsl.2006.10.014" target="_blank">doi:10.1016/j.epsl.2006.10.014</a><br><br>
+
+<b style="color:var(--tx);font-size:10px">Transcontinental Drainage Divide &amp; dynamic topography</b><br>
+• Gomes/Crelier, C. et al. (2025) Mobility of South America's transcontinental drainage divide and shrinkage of the Paraná river basin. <i>Sci. Rep.</i> 15, 3134. <a href="https://doi.org/10.1038/s41598-025-87470-1" target="_blank">doi:10.1038/s41598-025-87470-1</a><br>
+• Ribeiro, A.C. et al. (2018) Origin of the largest South American transcontinental water divide. <i>Sci. Rep.</i> 8, 17144. <a href="https://doi.org/10.1038/s41598-018-35554-6" target="_blank">doi:10.1038/s41598-018-35554-6</a><br>
+• Flament, N. et al. (2015) Influence of subduction history on South American topography. <i>Earth Planet. Sci. Lett.</i> 430, 9–18. <a href="https://doi.org/10.1016/j.epsl.2015.08.006" target="_blank">doi:10.1016/j.epsl.2015.08.006</a><br>
+• Dávila, F.M. &amp; Lithgow-Bertelloni, C. (2015) Dynamic topography in South America. <i>J. South Am. Earth Sci.</i> 58, 1–13. <a href="https://doi.org/10.1016/j.jsames.2014.12.002" target="_blank">doi:10.1016/j.jsames.2014.12.002</a><br>
+• Sacek, V. (2014) Drainage reversal of the Amazon River. <i>Earth Planet. Sci. Lett.</i> 401, 301–312. <a href="https://doi.org/10.1016/j.epsl.2014.06.006" target="_blank">doi:10.1016/j.epsl.2014.06.006</a><br>
+• Rubey, M. et al. (2017) Global patterns in Earth's dynamic topography since the Jurassic. <i>Solid Earth</i> 8, 899–919. <a href="https://doi.org/10.5194/se-8-899-2017" target="_blank">doi:10.5194/se-8-899-2017</a><br><br>
+
+<b style="color:var(--tx);font-size:10px">Marine incursions &amp; Pebas system</b><br>
+• Parra, F.J. et al. (2016) A Late Early Pliocene Marine Incursion in the Madre de Dios Basin. <i>Congreso Peruano de Geología</i> (conference abstract).<br>
+• Wesselingh, F.P. et al. (2002) The Miocene freshwater mollusc fauna of Pebas, Peru. <i>J. South Am. Earth Sci.</i> 15, 175–185. <a href="https://doi.org/10.1016/S0895-9811(02)00015-4" target="_blank">doi:10.1016/S0895-9811(02)00015-4</a><br>
+• Hovikoski, J. et al. (2010) Marine influence in Amazonia. In <i>Amazonia, Landscape and Species Evolution</i>. <a href="https://doi.org/10.1002/9781444306408.ch9" target="_blank">doi:10.1002/9781444306408.ch9</a><br>
+• del Río, C.J. et al. (2018) The Paranense Sea. <i>J. South Am. Earth Sci.</i><br><br>
+
+<b style="color:var(--tx);font-size:10px">Amazonian structural arches</b><br>
+• Roddaz, M. et al. (2005) Forebulge dynamics and environmental control in Western Amazonia: The Arch of Iquitos. <i>Tectonophysics</i> 399, 87–108. <a href="https://doi.org/10.1016/j.tecto.2004.12.017" target="_blank">doi:10.1016/j.tecto.2004.12.017</a><br>
+• Caputo, M.V. (1991) Solimões megashear: Intraplate tectonics in northwestern Brazil. <i>Tectonophysics</i> 199, 163–181. <a href="https://doi.org/10.1016/0040-1951(91)90125-C" target="_blank">doi:10.1016/0040-1951(91)90125-C</a><br>
+• Latrubesse, E.M. et al. (2010) The Late Miocene paleogeography of the Amazon Basin. <i>Earth-Sci. Rev.</i> 99, 99–124. <a href="https://doi.org/10.1016/j.earscirev.2010.02.005" target="_blank">doi:10.1016/j.earscirev.2010.02.005</a><br>
+• Hoorn, C. et al. (2010) Amazonia through time. <i>Science</i> 330, 927–931. <a href="https://doi.org/10.1126/science.1194585" target="_blank">doi:10.1126/science.1194585</a><br>
+• Hermoza, W. et al. (2005) The Huallaga foreland basin evolution. <i>Tectonophysics</i> 399, 109–128. <a href="https://doi.org/10.1016/j.tecto.2004.12.015" target="_blank">doi:10.1016/j.tecto.2004.12.015</a><br>
+• Navarro Zelasco, L.D. (2010) Tectonic Evolution of the Contaya Arch, Ucayali Basin, Peru. M.S. Thesis, Texas A&amp;M University.<br>
+• Parra, F.J. et al. (2020) Neogene marine incursions in Western Amazonia revealed by palynology of boreholes from the Marañón Basin, Peru. <i>J. South Am. Earth Sci.</i><br><br>
+
+<b style="color:var(--tx);font-size:10px">Foreland basin system</b><br>
+• Horton, B.K. (1997) The modern foreland basin system adjacent to the Central Andes. <i>Geology</i> 25, 895–898. <a href="https://doi.org/10.1130/0091-7613(1997)025<0895:TMFBSA>2.3.CO;2" target="_blank">doi:10.1130/0091-7613</a><br>
+• Repasch, M. et al. (2023) Lithospheric flexure controls on geomorphology, hydrology, and river chemistry in the Andean foreland basin. <i>AGU Advances</i> 4. <a href="https://doi.org/10.1029/2023AV000924" target="_blank">doi:10.1029/2023AV000924</a><br>
+• Chase, C.G. et al. (2009) Colorado Plateau: Geoid and means of isostatic support. <i>Int. J. Earth Sci.</i><br>
+• DeCelles, P.G. &amp; Giles, K.A. (1996) Foreland basin systems. <i>Basin Research</i> 8, 105–123. <a href="https://doi.org/10.1046/j.1365-2117.1996.01491.x" target="_blank">doi:10.1046/j.1365-2117.1996.01491.x</a><br>
+• Prezzi, C.B. et al. (2009) Flexural isostasy in the Bolivian Andes: Chaco foreland basin development. <i>Tectonophysics</i> 474, 526–543. <a href="https://doi.org/10.1016/j.tecto.2009.04.037" target="_blank">doi:10.1016/j.tecto.2009.04.037</a><br>
+• Whitman, D. (1994) Moho geometry beneath the eastern margin of the Andes, NW Argentina: effective elastic thickness. <i>J. Geophys. Res.</i> 99, 15277–15289. <a href="https://doi.org/10.1029/94JB00342" target="_blank">doi:10.1029/94JB00342</a><br>
+• Strecker, M.R. et al. (2012) Structural, geomorphic, and depositional characteristics of contiguous and broken foreland basins. In <i>Tectonics of Sedimentary Basins</i>, Ch. 25.<br>
+• Tassara, A. et al. (2006) Elastic thickness of South America. <i>Earth Planet. Sci. Lett.</i> 253, 17–35.</br>
+• Moizinho, G.R. et al. (2023) Late Miocene–Pliocene deformational and depositional evolution of the Eastern Cordillera and Sub-Andean Zone, southern Peru. <i>J. South Am. Earth Sci.</i> <a href="https://doi.org/10.1016/j.jsames.2023.104680" target="_blank">doi:10.1016/j.jsames.2023.104680</a><br>
+• Campbell, K.E. et al. (2006) The late Miocene geohistory of the Amazonian Madre de Dios basin. <i>J. South Am. Earth Sci.</i><br><br>
+
+<b style="color:var(--tx);font-size:10px">Amazonian Craton &amp; shields</b><br>
+• Tassinari, C.C.G. &amp; Macambira, M.J.B. (1999) Geochronological provinces of the Amazonian Craton. <i>Episodes</i> 22, 174–182.<br>
+• Kroonenberg, S.B. et al. (2016) Paleoproterozoic evolution of the Guiana Shield in Suriname. <i>Neth. J. Geosci.</i> 95, 491–522. <a href="https://doi.org/10.1017/njg.2016.10" target="_blank">doi:10.1017/njg.2016.10</a><br>
+• Cordani, U.G. &amp; Sato, K. (1999) Crustal evolution of the South American Platform. <i>Episodes</i> 22, 167–173.<br><br>
+
+<b style="color:var(--tx);font-size:10px">Geochemistry &amp; proxies</b><br>
+• Stallard, R.F. &amp; Edmond, J.M. (1983) Geochemistry of the Amazon. <i>J. Geophys. Res.</i> 88, 9671–9688. <a href="https://doi.org/10.1029/JC088iC14p09671" target="_blank">doi:10.1029/JC088iC14p09671</a><br>
+• Assine, M.L. et al. (2015) The Quaternary alluvial systems tract of the Pantanal Basin. <i>Braz. J. Geol.</i> <a href="https://doi.org/10.1590/2317-4889201520150014" target="_blank">doi:10.1590/2317-4889201520150014</a>
+</div>
+</div>
+
+</div><!-- end col-a -->
+
+<div class="resize-handle" id="rh1"></div>
+
+<!-- ═══ COL B: PARAMETERS ═══ -->
+<div class="col col-b" id="col-b">
+
+<h2 class="collapsible">§10. Route &amp; profile</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Select one of three pre-defined Atlantic-to-Amazonia inundation routes (A, B, C) based on HydroRIVERS drainage data, or define a custom route (D) by clicking on the §15 map. Each route's waypoints, elevations, and cumulative distances are shown below. The target city dropdown (§11) updates automatically for each route.</p>
+<div class="panel accent-coral">
+<div style="display:flex;flex-direction:column;gap:4px;margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--bd)">
+<span style="font-size:10px;font-weight:500;color:var(--tx2)">Inundation route:</span>
+<label class="route-opt" id="route-a-label"><input type="radio" name="route" value="A" checked onchange="switchRoute('A')"> <b>A</b> — Amazon → Madeira → MdD</label>
+<label class="route-opt" id="route-b-label"><input type="radio" name="route" value="B" onchange="switchRoute('B')"> <b>B</b> — Paraná → Paraguá → MdD</label>
+<label class="route-opt" id="route-c-label"><input type="radio" name="route" value="C" onchange="switchRoute('C')"> <b>C</b> — Paraná → Chiquitano → MdD</label>
+<label class="route-opt" id="route-d-label"><input type="radio" name="route" value="D" onchange="switchRoute('D')"> <b>D</b> — Paraná → Chiquitano (user pts) → MdD</label>
+<label class="route-opt" id="route-e-label"><input type="radio" name="route" value="E" onchange="switchRoute('E')"> <b>E</b> — Custom (click on map)</label>
+</div>
+<div style="margin:0 0 6px;display:flex;gap:6px;flex-wrap:wrap">
+<button class="toggle-btn" onclick="reverseCurrentRoute()" style="font-size:9px">⇄ Reverse direction</button>
+<button class="toggle-btn" onclick="exportRouteCSV()" style="font-size:9px">↓ Save CSV</button>
+<button class="toggle-btn" onclick="exportRouteKML()" style="font-size:9px">↓ Save KML</button>
+<label class="toggle-btn" style="font-size:9px;cursor:pointer">↑ Load CSV<input type="file" accept=".csv" style="display:none" onchange="importRouteCSV(event)"></label>
+</div>
+<div id="route-e-panel" style="display:none;margin:0 0 8px;padding:8px;background:var(--bg2);border-radius:5px;border:1px dashed var(--coral)">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 6px;line-height:1.4"><b>Custom route mode:</b> Click on the §15 map to add waypoints. Elevations are fetched automatically (Open-Meteo SRTM). Double-click a name to edit. Right-click a marker to delete.</p>
+<div id="routeE-waypoints" style="max-height:180px;overflow-y:auto;font-size:9px;margin:0 0 6px"></div>
+<div style="display:flex;gap:6px">
+<button class="toggle-btn" onclick="clearRouteE()" style="font-size:9px;background:var(--coral-l);color:var(--coral-d);border:1px solid var(--coral)">Clear all</button>
+<button class="toggle-btn" onclick="fetchAllElevsE()" style="font-size:9px">Re-fetch elevations</button>
+</div>
+</div>
+<p id="route-desc" style="font-size:10px;color:var(--tx3);margin:0 0 6px">Route A: Amazon + Madeira/Beni/MdD — dense HydroRIVERS profile.</p>
+<div id="compact-towns"></div>
+<button class="toggle-btn" id="show-all-btn" onclick="toggleFullTable()">Show all waypoints</button>
+<div id="full-table-wrap" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:5px;margin-top:4px">
+<table class="seg-table" id="seg-tbl"><tr><th>Waypoint</th><th>Dist</th><th>Elev</th><th>Slope</th></tr></table>
+</div>
+</div>
+
+<h2 class="collapsible">§11. Global parameters</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Core inputs shared by all models: the Pliocene sea level rise to test, the target city (auto-fills elevation and distance from coast), the incursion age from Parra et al. (2016), and the ocean area for ice-volume budget calculations (§1).</p>
+<div class="panel accent-teal">
+<div class="field-row">
+<div class="field">
+<label>Sea level rise</label>
+<input type="number" id="sl-global" value="25" min="1" max="200" step="1" oninput="runAll()">
+<div class="unit">m above modern</div>
+</div>
+<div class="field">
+<label>Target city</label>
+<select id="target-city" onchange="onCityChange()">
+</select>
+</div>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Target elevation</label>
+<input type="number" id="h-target" value="183" step="5" oninput="runAll()">
+<div class="unit">m above SL</div>
+</div>
+<div class="field">
+<label>Coast → target dist</label>
+<input type="number" id="d-target" value="3900" step="100" oninput="runAll()">
+<div class="unit">km via river</div>
+</div>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Incursion age</label>
+<input type="number" id="t-age" value="3.45" step="0.05" oninput="runAll()">
+<div class="unit">Ma</div>
+</div>
+<div class="field">
+<label>Ocean area</label>
+<input type="number" id="a-ocean" value="362.5" step="0.5" oninput="runAll()">
+<div class="unit">× 10⁶ km²</div>
+</div>
+</div>
+</div>
+
+<h2 class="collapsible">§12. Flexural parameters</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Broken-plate flexural model parameters for the Andean foreland basin. Controls how the lithosphere deflects under the Andean load. The Miocene vs. present foredeep depth difference gives the net flexural uplift rate. Hover over any label for a tooltip explaining the variable.</p>
+<div class="panel accent-purple" style="padding:8px">
+<div class="field"><label title="Effective elastic thickness of the lithosphere. Controls how wide the flexural response extends from the load.">Tₑ elastic thickness (km)</label><input type="number" id="fx-Te" value="40" step="5" oninput="runAll()"><div class="unit" id="te-suggestion">Typical: 25–70 km (Pérez-Gussinyé 2007)</div></div>
+<div class="field-row">
+<div class="field"><label title="Young's modulus — stiffness of the lithospheric plate. Higher E = stiffer plate = wider flexural response.">E (GPa)</label><input type="number" id="fx-E" value="70" step="5" oninput="runAll()"><div class="unit">Typical: 50–100 GPa</div></div>
+<div class="field"><label title="Poisson's ratio — ratio of lateral to axial strain. ~0.25 for most lithospheric rock.">ν</label><input type="number" id="fx-nu" value="0.25" step="0.01" oninput="runAll()"><div class="unit">Standard: 0.25</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Mantle density — controls buoyancy contrast for flexural loading and isostatic calculations.">ρ mantle (kg/m³)</label><input type="number" id="fx-rhom" value="3300" step="50" oninput="runAll()"><div class="unit">Standard: 3300</div></div>
+<div class="field"><label title="Infill density — density of sediment filling the foredeep. Controls magnitude of deflection.">ρ fill (kg/m³)</label><input type="number" id="fx-rhof" value="2400" step="50" oninput="runAll()"><div class="unit">Sediment: 2200–2600</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Maximum foredeep deflection during the Miocene. Represents the deeper, older basin configuration.">w₀ Miocene (m)</label><input type="number" id="fx-w0m" value="3500" step="200" oninput="runAll()"><div class="unit">Espurt 2007: 3000–5000 m</div></div>
+<div class="field"><label title="Maximum foredeep deflection today. Shallower than Miocene due to Andean loading changes.">w₀ present (m)</label><input type="number" id="fx-w0n" value="2800" step="200" oninput="runAll()"><div class="unit">Espurt 2007: 2500–3500 m</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Time interval over which the flexural change occurred. ~4 Ma for Fitzcarrald Arch (onset of Nazca Ridge flat subduction).">Δt (Myr)</label><input type="number" id="fx-dt" value="4.0" step="0.5" oninput="runAll()"><div class="unit">Espurt 2007: ~4 Ma</div></div>
+<div class="field"><label>x extent (km)</label><input type="number" id="fx-xmax" value="700" step="50" oninput="runAll()"></div>
+</div>
+<div class="field-row">
+<div class="field"><label>P.M. dist (km)</label><input type="number" id="fx-xmdd" value="180" step="10" oninput="runAll()"></div>
+<div class="field"><label>Fitz dist (km)</label><input type="number" id="fx-xfitz" value="350" step="10" oninput="runAll()"></div>
+</div>
+</div>
+
+<h2 class="collapsible">§13. Basal shear parameters</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Fitzcarrald Arch crustal thickening model (Bishop et al. 2018). The Nazca Ridge flat slab shears the lower crust, producing a Gaussian dome of thickened crust. Δh max controls the maximum thickening; isostatic fraction converts thickening to surface uplift. The fill floor sets the foredeep sediment surface for the §19c paleo-landscape chart.</p>
+<div class="panel accent-green" style="padding:8px">
+<div class="field-row">
+<div class="field"><label title="Continental crustal density. Controls the isostatic fraction — how much crustal thickening converts to surface uplift.">ρ crust (kg/m³)</label><input type="number" id="bs-rhoc" value="2700" step="50" oninput="runAll()"><div class="unit">Standard: 2700</div></div>
+<div class="field"><label title="Sub-lithospheric mantle density. Together with ρ_crust determines the Airy isostatic fraction.">ρ mantle (kg/m³)</label><input type="number" id="bs-rhom" value="3300" step="50" oninput="runAll()"><div class="unit">Standard: 3300</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Isostatic fraction = (ρ_m − ρ_c) / ρ_m. Fraction of crustal thickening expressed as surface uplift under Airy isostasy.">Isostatic fraction</label><input type="number" id="bs-isofrac" readonly style="background:var(--bg2);font-weight:600;color:var(--teal-d)"><div class="unit">Computed from ρ values</div></div>
+<div class="field"><label title="Maximum crustal thickening at the arch crest. Bishop 2018 preferred ~4.9 km (with flexural support); Airy equivalent ~3.5 km.">Δh max (km)</label><input type="number" id="bs-dhmax" value="3.5" step="0.5" oninput="runAll()"><div class="unit">Bishop 2018: 4–6.5 km (pref. ~4.9)</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Distance from thrust front to the Fitzcarrald Arch crest. Bishop 2018: apex ~350 km east of the sub-Andean thrust front.">Arch center (km)</label><input type="number" id="bs-xcenter" value="350" step="10" oninput="runAll()"><div class="unit">Bishop 2018: ~350 km</div></div>
+<div class="field"><label title="Gaussian half-width of the crustal thickening dome. Arch has >500 km half-wavelength (Bishop 2018).">σ width (km)</label><input type="number" id="bs-sigma" value="150" step="10" oninput="runAll()"><div class="unit">Bishop 2018: half-λ >500 km</div></div>
+</div>
+<div class="field-row">
+<div class="field"><label title="Duration of Fitzcarrald Arch uplift. Linked to Nazca Ridge flat subduction onset ~4 Ma (Espurt 2007).">Δt (Myr)</label><input type="number" id="bs-dt" value="4.0" step="0.5" oninput="runAll()"><div class="unit">Espurt 2007: ~4 Ma</div></div>
+<div class="field"><label title="Background crustal thickness before thickening. Typical for the Amazonian foreland ~40 km.">Bg crust (km)</label><input type="number" id="bs-hbg" value="40" step="1" oninput="runAll()"><div class="unit">Bishop 2017: 40–45 km</div></div>
+</div>
+<div class="field"><label title="Horizontal extent of the model cross-section from the thrust front into the foreland.">x extent (km)</label><input type="number" id="bs-xmax" value="700" step="50" oninput="runAll()"><div class="unit">Arch influence: ~750 km (Espurt 2007)</div></div>
+<div class="field"><label title="Foredeep sediment fill surface elevation at 3.45 Ma. The foredeep was structurally deep but filled with Cretaceous–Miocene deposits (Moizinho et al. 2023). 0 m = fully filled to sea level; negative = slight depression (lacustrine).">Fill floor (m)</label><input type="number" id="bs-fillfloor" value="-20" step="10" min="-100" max="50" oninput="runAll()"><div class="unit">0 = filled to SL; −50 = underfilled basin</div></div>
+</div>
+
+<h2 class="collapsible">§14. Dynamic topography</h2>
+<div class="sec-body">
+<div class="panel" style="border-left:3px solid #f59e0b;padding:8px">
+<p style="font-size:10px;color:var(--tx2);margin:0 0 6px;line-height:1.4">Mantle convection–driven subsidence of the Paraná Basin and the Transcontinental Drainage Divide (TDD). Select from five published dynamic topography models or enter custom values. The computed TDD lowering tells you how much higher the divide was at Parra's claimed incursion age — making the barrier HARDER to cross, not easier.</p>
+<div class="field">
+<label>Model source</label>
+<select id="dt-model" onchange="onDtModelChange()">
+<option value="flament3">Flament et al. 2015 Case 3 (100–300 m / 50 Ma)</option>
+<option value="flament1">Flament et al. 2015 Case 1 (150–250 m / 50 Ma)</option>
+<option value="davila">Dávila &amp; Lithgow-Bertelloni 2015 (200–400 m / 50 Ma)</option>
+<option value="sacek">Sacek 2014 (~200 m / 35 Ma)</option>
+<option value="rubey">Rubey et al. 2017 (50–150 m / 50 Ma)</option>
+<option value="custom">Custom</option>
+</select>
+</div>
+<div class="field-row">
+<div class="field"><label>Subsidence rate (m/Ma)</label><input type="number" id="dt-rate" value="4.0" step="0.5" oninput="calcDynTopo();runBasalShear()"></div>
+<div class="field"><label>Since (Ma)</label><input type="number" id="dt-since" value="50" step="5" oninput="calcDynTopo();runBasalShear()"></div>
+</div>
+<div class="field-row">
+<div class="field"><label>Parra age (Ma)</label><input type="number" id="dt-parra" value="3.45" step="0.05" oninput="calcDynTopo();runBasalShear()"></div>
+<div class="field"><label>TDD lowering since Parra</label><input type="number" id="dt-result" value="14" readonly style="background:var(--bg2);font-weight:600;color:var(--teal-d)">
+<div class="unit">meters — divide was this much HIGHER at 3.45 Ma</div>
+</div>
+</div>
+<div class="grid2" style="margin-top:6px">
+<div class="stat"><p class="lbl">Total subsidence</p><p class="val" id="dt-total">200 m</p><p class="note" id="dt-model-note">Flament Case 3, 50 Ma</p></div>
+<div class="stat"><p class="lbl">Divide higher at Parra age</p><p class="val" id="dt-plio">14 m</p><p class="note">Added to route sill elevations</p></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="resize-handle" id="rh2"></div>
+
+<!-- ═══ COL C: RESULTS ═══ -->
+<div class="col col-c" id="col-c">
+<div class="module">
+<h2 class="collapsible">§15. Aerial inundation &amp; geology</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Interactive map showing the selected route. <b>Drag</b> any waypoint marker to reposition it (elevation auto-updates from SRTM). <b>Click</b> on the map to add a new waypoint between the nearest existing points. <b>Right-click</b> a marker to delete it. Toggle geological overlays via the layer control (top-right).</p>
+<div id="inundation-map" style="width:100%;height:340px;border-radius:6px;border:1px solid var(--bd);margin-bottom:4px;position:relative;z-index:0"></div>
+<div class="chart-legend" style="flex-wrap:wrap">
+<span><span class="dot" style="background:#dc2626"></span>Below SL</span>
+<span><span class="dot" style="background:#059669"></span>Above SL</span>
+<span><span class="dot" style="background:#2563eb"></span>Towns</span>
+<span><span class="dot" style="background:#785630"></span>Thrust front</span>
+<span><span class="dot" style="background:#f59e0b"></span>AZ 125</span>
+<span><span class="dot" style="background:#8b5cf6"></span>TDD</span>
+<span><span class="dot" style="background:#e11d48"></span>Contaya Arch</span>
+<span style="font-size:8px;color:var(--tx3)">Layer control ↗ toggles all overlays incl. shields, arches, foreland zones</span>
+</div>
+</div>
+
+
+<div class="module">
+<h2 class="collapsible">§16. Inundation results</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Simple geometric inundation test: how far inland would a SL rise reach along the route profile? <b>Linear reach</b> assumes a flat water surface from the coast; <b>concave reach</b> allows the water surface to curve upward (following the river gradient). Neither accounts for uplift history — see §19c for the full paleo-landscape model.</p>
+<div class="grid2" style="margin-bottom:5px">
+<div class="stat" id="st-linr"><p class="lbl">Linear reach</p><p class="val">—</p></div>
+<div class="stat" id="st-conr"><p class="lbl">Concave reach</p><p class="val">—</p></div>
+</div>
+<div class="grid3" style="margin-bottom:5px">
+<div class="stat" id="st-linyn"><p class="lbl">Linear → target?</p><p class="val">—</p></div>
+<div class="stat" id="st-conyn"><p class="lbl">Concave → target?</p><p class="val">—</p></div>
+<div class="stat" id="st-diff"><p class="lbl">Conc − linear</p><p class="val">—</p></div>
+</div>
+<div class="grid3">
+<div class="stat" id="st-lslope"><p class="lbl">Linear slope</p><p class="val">—</p></div>
+<div class="stat" id="st-uplift"><p class="lbl">Req. uplift</p><p class="val">—</p></div>
+<div class="stat" id="st-rate"><p class="lbl">Uplift rate</p><p class="val">—</p></div>
+</div>
+</div>
+
+<div class="module">
+<h2 class="collapsible">§17. Profile &amp; sensitivity</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Modern elevation profile along the selected route from coast to target city. The blue fill shows areas below SL. Town names and elevations are labeled along the profile. For Routes B/C, the sill (highest point) and TDD location are marked. Sensitivity curves show how the inundation reach changes with different SL values.</p>
+<div class="chart-box"><canvas id="cv" height="250"></canvas>
+<div class="chart-legend">
+<span><span class="dot" style="background:var(--tx)"></span>Real profile</span>
+<span><span class="dot" style="background:var(--tx2)"></span>Linear</span>
+<span><span class="dot" style="background:var(--blue);opacity:0.4"></span>Inundated</span>
+<span><span class="dot" style="background:var(--coral)"></span>Target</span>
+<span><span class="dot" style="background:var(--teal)"></span>Flood limit</span>
+<span><span class="dot" style="background:var(--amber)"></span>Sensitivity curves</span>
+</div>
+</div>
+</div>
+
+<div class="module">
+<h2 class="collapsible">§18. Flexural results</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Broken-plate flexural model for the Andean foreland basin. Computes how lithospheric deflection under the Andean load changed between the Miocene and present, producing differential uplift across the foreland. <span style="color:var(--coral)">⚠ Does NOT model the Fitzcarrald Arch (see §19).</span> Parameters from §12.</p>
+<div class="grid3" style="margin-bottom:5px">
+<div class="stat" id="fx-alpha"><p class="lbl">α flexural</p><p class="val">—</p></div>
+<div class="stat" id="fx-D"><p class="lbl">Rigidity D</p><p class="val">—</p></div>
+<div class="stat" id="fx-fb"><p class="lbl">Forebulge</p><p class="val">—</p></div>
+</div>
+<div class="grid4" style="margin-bottom:5px">
+<div class="stat" id="fx-wm1"><p class="lbl">P.M. Mio</p><p class="val">—</p></div>
+<div class="stat" id="fx-wn1"><p class="lbl">P.M. now</p><p class="val">—</p></div>
+<div class="stat" id="fx-wm2"><p class="lbl">Fitz Mio</p><p class="val">—</p></div>
+<div class="stat" id="fx-wn2"><p class="lbl">Fitz now</p><p class="val">—</p></div>
+</div>
+<div class="grid2">
+<div class="stat" id="fx-umdd"><p class="lbl">P.M. flex uplift</p><p class="val">—</p><p class="note">Parra: ~51</p></div>
+<div class="stat" id="fx-ufitz"><p class="lbl">Fitz flex uplift</p><p class="val">—</p><p class="note">Pub: 100–300</p></div>
+</div>
+</div>
+<div class="module"><h2 class="collapsible">§18a. Deflection profiles</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Flexural deflection (m) vs. distance from thrust front. Red = Miocene (deeper foredeep); teal = present. The difference between the two curves is the net flexural uplift since the Miocene. The foredeep (left) transitions to the forebulge (where curves cross zero) and back-bulge (right).</p>
+<div class="chart-box"><canvas id="cv3" height="150"></canvas>
+<div class="chart-legend"><span><span class="dot" style="background:var(--coral)"></span>Miocene</span><span><span class="dot" style="background:var(--teal)"></span>Present</span></div></div></div>
+<div class="module"><h2 class="collapsible">§18b. Flexural uplift rate</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Net flexural uplift rate (m/Myr) across the foreland from the change in deflection over Δt. Compared against Parra's required ~51 m/Myr at P. Maldonado and the Espurt/Bishop published range of 100–300 m/Myr at the Fitzcarrald Arch crest.</p>
+<div class="chart-box"><canvas id="cv4" height="150"></canvas>
+<div class="chart-legend"><span><span class="dot" style="background:var(--blue)"></span>Rate</span><span><span class="dot" style="background:var(--coral)"></span>Parra ~51</span><span><span class="dot" style="background:var(--teal);opacity:0.3"></span>100–300</span></div></div></div>
+
+<div class="module">
+<h2 class="collapsible">§19. Basal shear results</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Basal shear model for the Fitzcarrald Arch: the Nazca Ridge flat slab shears the lower crust eastward, thickening it beneath the arch and producing isostatic surface uplift (Bishop et al. 2018). The Gaussian dome shape is controlled by Δh max, arch center, and σ width from §13. Combined with flexural uplift (§18) to give the total uplift at any point.</p>
+<div class="grid2" style="margin-bottom:5px">
+<div class="stat" id="bs-hsurf"><p class="lbl">Arch crest uplift</p><p class="val">—</p><p class="note">Pub: 400–500</p></div>
+<div class="stat" id="bs-rate-arch"><p class="lbl">Arch rate</p><p class="val">—</p><p class="note">100–125</p></div>
+</div>
+<div class="grid2" style="margin-bottom:5px">
+<div class="stat" id="bs-hmdd"><p class="lbl">P.M. shear uplift</p><p class="val">—</p></div>
+<div class="stat" id="bs-rate-mdd"><p class="lbl">P.M. shear rate</p><p class="val">—</p></div>
+</div>
+<div class="grid3">
+<div class="stat" id="bs-totalm"><p class="lbl">P.M. total</p><p class="val">—</p></div>
+<div class="stat" id="bs-totalf"><p class="lbl">Fitz total</p><p class="val">—</p></div>
+<div class="stat" id="bs-parra"><p class="lbl">Parra req.</p><p class="val">~51</p></div>
+</div>
+</div>
+<div class="module"><h2 class="collapsible">§19a. Crustal thickening</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Gaussian crustal thickening profile (green, km, left axis) and corresponding Airy isostatic surface uplift (purple, m, right axis) vs. distance from thrust front. The arch crest at ~350 km shows the maximum thickening. Bishop et al. 2018 preferred ~4.9 km; our default 3.5 km accounts for the Airy approximation.</p>
+<div class="chart-box"><canvas id="cv6" height="150"></canvas>
+<div class="chart-legend"><span><span class="dot" style="background:#059669"></span>Thickening</span><span><span class="dot" style="background:#7c3aed"></span>Surface uplift</span></div></div></div>
+<div class="module"><h2 class="collapsible">§19b. Combined uplift rate</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Total uplift rate (m/Myr) combining flexural rebound (blue) and basal shear (green) across the foreland. The purple total curve should match Parra's ~51 m/Myr at P. Maldonado and fall within the published 100–300 m/Myr range at the Fitz Arch crest (teal band).</p>
+<div class="chart-box"><canvas id="cv7" height="150"></canvas>
+<div class="chart-legend"><span><span class="dot" style="background:var(--blue)"></span>Flex</span><span><span class="dot" style="background:#059669"></span>Shear</span><span><span class="dot" style="background:#7c3aed"></span>Total</span><span><span class="dot" style="background:var(--coral)"></span>Parra</span></div></div></div>
+
+<div class="module">
+<h2 class="collapsible">§19c. Paleo-landscape &amp; inundation test</h2>
+<div id="shield-warning" style="display:none" class="shield-note">
+<b>⚠ Cratonic shield caveat:</b> Pre-uplift reconstruction applies only to Fitzcarrald Arch. The <span id="shield-divide-name">divide</span> is <b>Precambrian shield</b> (Guaporé Shield, ~2000–1300 Ma, Tₑ >70 km; Pérez-Gussinyé 2007) — too rigid for Neogene deformation.
+<span id="shield-plio-note" style="display:block;margin-top:4px"></span>
+</div>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 6px;line-height:1.5">Subtracts modeled Neogene uplift (§18 flexural + §19 basal shear) from modern elevations to reconstruct the pre-uplift landscape, then tests whether Pliocene SL could reach the target along the full route. <b>The green line</b> is the reconstructed surface at 3.45 Ma — the actual terrain an observer would have walked on. <b>Where the foredeep goes structurally deep</b> (dashed brown line), sediment fill layers show how the basin was filled to near sea level by Cretaceous–Miocene deposits (3–4 km total; Horton 1997, Hermoza 2005). Layer proportions from published MdD foredeep stratigraphy: Paleozoic–Cretaceous 30%, Paleogene 15%, <b>Miocene 45%</b> (Ipururo/Madre de Dios Fm.; Moizinho et al. 2023), Plio-Pleistocene 10% (Campbell et al. 2006). The <b>Fill floor</b> parameter (§13) controls the surface elevation of this sediment fill: 0 m = fully filled to sea level (overfilled foreland); negative values = slight lacustrine/wetland depression; the actual value is uncertain and worth exploring.</p>
+<div class="grid4" style="margin-bottom:5px">
+<div class="stat" id="bs-pre-mdd"><p class="lbl">Target paleo elev</p><p class="val">—</p></div>
+<div class="stat" id="bs-pre-fitz"><p class="lbl">Fitz paleo elev</p><p class="val">—</p></div>
+<div class="stat" id="bs-pre-paleoreach"><p class="lbl">Paleo reach at SL</p><p class="val">—</p></div>
+<div class="stat" id="bs-pre-verdict"><p class="lbl">Verdict</p><p class="val">—</p></div>
+</div>
+<div class="chart-box"><canvas id="cv8" height="180"></canvas>
+<div class="chart-legend">
+<span><span class="dot" style="background:#7c3aed"></span>Modern profile</span>
+<span><span class="dot" style="background:#059669"></span>Paleo surface (3.45 Ma)</span>
+<span><span class="dot" style="background:var(--coral)"></span>Plio. SL</span>
+<span><span class="dot" style="background:rgba(37,99,235,0.3)"></span>Marine flood</span>
+<span><span class="dot" style="background:rgba(37,99,235,0.08)"></span>Inland (disconn.)</span>
+<span><span class="dot" style="background:#b8845a"></span>Sediment fill (Cret.–Mio.)</span>
+<span><span class="dot" style="background:#8B4513;opacity:0.4"></span>Structural depth</span>
+<span><span class="dot" style="background:rgba(180,83,9,0.2)"></span>Shield zone</span>
+<span><span class="dot" style="background:rgba(124,58,237,0.15)"></span>Fitz. Arch zone</span>
+<span><span class="dot" style="background:#f59e0b"></span>Shield sill (B/C)</span>
+</div></div>
+<div id="verdict-box" class="panel accent-coral" style="margin-top:6px;font-size:10px;line-height:1.6;color:var(--tx)"></div>
+</div>
+
+<div class="module">
+<h2 class="collapsible">§20. Global uplift comparison</h2>
+<p style="font-size:10px;color:var(--tx2);margin:0 0 4px;line-height:1.4">Comparison of modeled uplift rates at P. Maldonado and Fitzcarrald Arch against published values from the literature. Green bars = published observations; blue/purple bars = this model's predictions. Overlap between model and published ranges indicates a well-calibrated model.</p>
+<div class="chart-box"><div style="position:relative;width:100%;height:340px"><canvas id="cv5"></canvas></div></div>
+</div>
+
+</div><!-- end col-c -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ═══ RESIZE ═══
+(function(){const d=document.getElementById('dash'),a=document.getElementById('col-a'),b=document.getElementById('col-b'),c=document.getElementById('col-c'),r1=document.getElementById('rh1'),r2=document.getElementById('rh2');let act=null,sx=0,sa=0,sb=0,sc=0;function dn(e,h){e.preventDefault();act=h;sx=e.clientX||(e.touches&&e.touches[0].clientX)||0;sa=a.offsetWidth;sb=b.offsetWidth;sc=c.offsetWidth;h.classList.add('active');document.body.style.cursor='col-resize';document.body.style.userSelect='none'}r1.addEventListener('mousedown',e=>dn(e,r1));r2.addEventListener('mousedown',e=>dn(e,r2));r1.addEventListener('touchstart',e=>dn(e,r1),{passive:false});r2.addEventListener('touchstart',e=>dn(e,r2),{passive:false});function mv(e){if(!act)return;const cx=e.clientX||(e.touches&&e.touches[0].clientX)||0;const dx=cx-sx;const tw=d.clientWidth-10;const mn=180;if(act===r1){let na=Math.max(mn,Math.min(sa+dx,tw-sc-mn));let nb=tw-na-sc;if(nb<mn){nb=mn;na=tw-nb-sc}a.style.width=(na/tw*100)+'%';b.style.width=(nb/tw*100)+'%'}else{let nb=Math.max(mn,Math.min(sb+dx,tw-sa-mn));let nc=tw-sa-nb;if(nc<mn){nc=mn;nb=tw-sa-nc}b.style.width=(nb/tw*100)+'%';c.style.width=(nc/tw*100)+'%'}}function up(){if(!act)return;act.classList.remove('active');act=null;document.body.style.cursor='';document.body.style.userSelect='';setTimeout(runAll,50)}document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('touchmove',mv,{passive:false});document.addEventListener('touchend',up)})();
+
+// ═══ CITY SELECTOR — builds from named towns on active route ═══
+function buildCitySelector(){
+  const sel = document.getElementById('target-city');
+  const src = currentRoute==='A' ? routeA : currentRoute==='B' ? routeB : routeC;
+  // Get named towns only (skip "km XXX" waypoints), exclude the fixed mouth point
+  const towns = src.filter(s => !s.name.startsWith('km ') && !s.fixed);
+  sel.innerHTML = '';
+  towns.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.d + '|' + t.e;
+    opt.textContent = t.name + ' (' + t.e + ' m, ' + t.d + ' km)';
+    sel.appendChild(opt);
+  });
+  // Default to P. Maldonado if present, otherwise last town
+  const pmOpt = towns.find(t => t.name.includes('Maldonado'));
+  if(pmOpt) sel.value = pmOpt.d + '|' + pmOpt.e;
+  else sel.value = towns[towns.length-1].d + '|' + towns[towns.length-1].e;
+}
+function onCityChange(){
+  const val = document.getElementById('target-city').value;
+  if(!val) return;
+  const parts = val.split('|');
+  document.getElementById('d-target').value = parts[0];
+  document.getElementById('h-target').value = parts[1];
+  runAll();
+}
+
+// ═══ ROUTE DATA ═══
+const routeA=[{name:'Atlantic mouth',d:0,e:0,fixed:true},{name:'km 50',d:50,e:0},{name:'km 100',d:100,e:0},{name:'km 150',d:150,e:0},{name:'km 200',d:200,e:0},{name:'km 250',d:250,e:0},{name:'Macapá',d:300,e:1},{name:'km 350',d:350,e:1},{name:'km 400',d:400,e:1},{name:'km 450',d:450,e:1},{name:'km 500',d:500,e:1},{name:'km 550',d:550,e:1},{name:'km 600',d:600,e:1},{name:'km 650',d:650,e:1},{name:'km 700',d:700,e:1},{name:'km 750',d:750,e:1},{name:'Santarém',d:800,e:1},{name:'km 850',d:850,e:2},{name:'Óbidos',d:900,e:3},{name:'km 950',d:950,e:4},{name:'km 1000',d:1000,e:4},{name:'km 1050',d:1050,e:4},{name:'km 1100',d:1100,e:4},{name:'km 1150',d:1150,e:5},{name:'Itacoatiara',d:1200,e:6},{name:'km 1250',d:1250,e:7},{name:'Manaus',d:1300,e:10},{name:'km 1350',d:1350,e:11},{name:'km 1400',d:1400,e:10},{name:'km 1450',d:1450,e:12},{name:'km 1500',d:1500,e:12},{name:'km 1550',d:1550,e:13},{name:'km 1600',d:1600,e:16},{name:'Madeira confl.',d:1650,e:16},{name:'km 1700',d:1700,e:18},{name:'km 2100',d:2100,e:36},{name:'km 2150',d:2150,e:39},{name:'km 2200',d:2200,e:41},{name:'km 2250',d:2250,e:43},{name:'km 2300',d:2300,e:46},{name:'km 2350',d:2350,e:48},{name:'Porto Velho',d:2400,e:50},{name:'km 2450',d:2450,e:53},{name:'km 2500',d:2500,e:55},{name:'km 2550',d:2550,e:57},{name:'Guajará-Mirim',d:2600,e:60},{name:'km 2650',d:2650,e:39},{name:'km 2700',d:2700,e:54},{name:'km 2750',d:2750,e:64},{name:'km 2800',d:2800,e:72},{name:'km 2850',d:2850,e:74},{name:'km 2900',d:2900,e:78},{name:'km 2950',d:2950,e:88},{name:'km 3000',d:3000,e:95},{name:'km 3050',d:3050,e:100},{name:'Riberalta',d:3100,e:105},{name:'km 3150',d:3150,e:113},{name:'km 3200',d:3200,e:120},{name:'km 3250',d:3250,e:124},{name:'km 3300',d:3300,e:148},{name:'km 3350',d:3350,e:157},{name:'km 3400',d:3400,e:109},{name:'km 3450',d:3450,e:117},{name:'km 3500',d:3500,e:122},{name:'km 3550',d:3550,e:128},{name:'km 3600',d:3600,e:135},{name:'km 3650',d:3650,e:141},{name:'km 3700',d:3700,e:146},{name:'km 3750',d:3750,e:151},{name:'km 3800',d:3800,e:152},{name:'km 3850',d:3850,e:156},{name:'P. Maldonado',d:3900,e:165},{name:'km 3950',d:3950,e:165},{name:'Pto Tahuantinsuyo',d:4000,e:167},{name:'km 4025',d:4025,e:175}];
+
+// Route B: Paraná → Paraguay → Pantanal → Río Paraguá (via Florida) → Guaporé → MdD
+const routeB=[{name:'Río de la Plata',d:0,e:1,fixed:true},{name:'km 30',d:30,e:1},{name:'Buenos Aires',d:60,e:1},{name:'km 90',d:90,e:2},{name:'km 120',d:120,e:3},{name:'km 150',d:150,e:3},{name:'km 180',d:180,e:3},{name:'km 210',d:210,e:4},{name:'km 240',d:240,e:6},{name:'km 270',d:270,e:8},{name:'Rosario',d:300,e:10},{name:'km 330',d:330,e:15},{name:'km 360',d:360,e:20},{name:'km 390',d:390,e:30},{name:'km 420',d:420,e:45},{name:'km 450',d:450,e:60},{name:'km 480',d:480,e:70},{name:'km 510',d:510,e:80},{name:'Formosa',d:540,e:92},{name:'km 570',d:570,e:100},{name:'km 600',d:600,e:105},{name:'Asunción',d:630,e:108},{name:'km 660',d:660,e:113},{name:'km 690',d:690,e:116},{name:'km 720',d:720,e:127},{name:'km 750',d:750,e:128},{name:'km 780',d:780,e:135},{name:'km 810',d:810,e:140},{name:'km 840',d:840,e:138},{name:'km 870',d:870,e:148},{name:'Concepción',d:900,e:141},{name:'km 930',d:930,e:148},{name:'km 960',d:960,e:157},{name:'km 990',d:990,e:158},{name:'km 1020',d:1020,e:157},{name:'km 1050',d:1050,e:156},{name:'km 1080',d:1080,e:161},{name:'km 1110',d:1110,e:170},{name:'Pantanal',d:1170,e:175},{name:'km 1200',d:1200,e:169},{name:'km 1230',d:1230,e:170},{name:'km 1260',d:1260,e:173},{name:'km 1290',d:1290,e:176},{name:'km 1320',d:1320,e:177},{name:'km 1350',d:1350,e:179},{name:'km 1380',d:1380,e:180},{name:'km 1410',d:1410,e:185},{name:'km 1440',d:1440,e:188},{name:'km 1470',d:1470,e:190},{name:'Florida',d:1500,e:185},{name:'km 1600',d:1600,e:175},{name:'km 1700',d:1700,e:165},{name:'Príncipe de la Beira',d:1800,e:155},{name:'km 1900',d:1900,e:148},{name:'km 2000',d:2000,e:140},{name:'km 2100',d:2100,e:135},{name:'Guajará-Mirim',d:2300,e:130},{name:'km 2500',d:2500,e:120},{name:'km 2700',d:2700,e:115},{name:'Riberalta',d:2900,e:130},{name:'km 3100',d:3100,e:150},{name:'P. Maldonado',d:3300,e:183}];
+
+// Route C: Chiquitano divide route (original Route B — highest barrier)
+const routeC=[{name:'Río de la Plata',d:0,e:1,fixed:true},{name:'km 30',d:30,e:1},{name:'Buenos Aires',d:60,e:1},{name:'km 90',d:90,e:2},{name:'km 120',d:120,e:3},{name:'km 150',d:150,e:3},{name:'km 180',d:180,e:3},{name:'km 210',d:210,e:4},{name:'km 240',d:240,e:70},{name:'km 270',d:270,e:70},{name:'km 300',d:300,e:70},{name:'km 330',d:330,e:70},{name:'km 360',d:360,e:75},{name:'km 390',d:390,e:80},{name:'km 420',d:420,e:80},{name:'km 450',d:450,e:90},{name:'km 480',d:480,e:90},{name:'km 510',d:510,e:92},{name:'Formosa',d:540,e:95},{name:'km 570',d:570,e:102},{name:'km 600',d:600,e:105},{name:'Asunción',d:630,e:108},{name:'km 660',d:660,e:113},{name:'km 690',d:690,e:116},{name:'km 720',d:720,e:127},{name:'km 750',d:750,e:128},{name:'km 780',d:780,e:135},{name:'km 810',d:810,e:140},{name:'km 840',d:840,e:138},{name:'km 870',d:870,e:148},{name:'Concepción',d:900,e:141},{name:'km 930',d:930,e:148},{name:'km 960',d:960,e:157},{name:'km 990',d:990,e:158},{name:'km 1020',d:1020,e:157},{name:'km 1050',d:1050,e:156},{name:'km 1080',d:1080,e:161},{name:'km 1110',d:1110,e:170},{name:'km 1140',d:1140,e:170},{name:'Corumbá',d:1170,e:175},{name:'km 1200',d:1200,e:169},{name:'km 1230',d:1230,e:170},{name:'km 1260',d:1260,e:173},{name:'km 1290',d:1290,e:176},{name:'km 1320',d:1320,e:199},{name:'km 1350',d:1350,e:179},{name:'km 1380',d:1380,e:181},{name:'km 1410',d:1410,e:208},{name:'km 1440',d:1440,e:212},{name:'km 1470',d:1470,e:194},{name:'km 1500',d:1500,e:221},{name:'km 1530',d:1530,e:226},{name:'km 1560',d:1560,e:231},{name:'km 1590',d:1590,e:236},{name:'km 1620',d:1620,e:240},{name:'km 1650',d:1650,e:251},{name:'km 1680',d:1680,e:258},{name:'Chiquitano divide',d:1750,e:248},{name:'km 1850',d:1850,e:280},{name:'km 1950',d:1950,e:286},{name:'km 2050',d:2050,e:250},{name:'S.Ign. Moxos',d:2200,e:200},{name:'Trinidad',d:2400,e:155},{name:'Sta Ana Yacuma',d:2550,e:144},{name:'km 2700',d:2700,e:135},{name:'Riberalta',d:2900,e:130},{name:'km 3100',d:3100,e:155},{name:'P. Maldonado',d:3200,e:183}];
+
+const routeA_coords=[{name:'Atlantic mouth',lat:-0.4,lon:-49.5,e:0},{name:'Macapá',lat:0.03,lon:-51.05,e:1},{name:'Santarém',lat:-2.43,lon:-54.7,e:1},{name:'Manaus',lat:-3.12,lon:-60.02,e:10},{name:'Porto Velho',lat:-8.76,lon:-63.9,e:50},{name:'Guajará-Mirim',lat:-10.79,lon:-65.34,e:60},{name:'Riberalta',lat:-11.01,lon:-66.06,e:105},{name:'P. Maldonado',lat:-12.59,lon:-69.19,e:165}];
+const routeB_coords=[{name:'Río de la Plata',lat:-34.9,lon:-57.5,e:1},{name:'Buenos Aires',lat:-34.6,lon:-58.38,e:1},{name:'Rosario',lat:-32.95,lon:-60.65,e:10},{name:'Asunción',lat:-25.28,lon:-57.63,e:108},{name:'Pantanal',lat:-19.0,lon:-57.65,e:175},{name:'Florida',lat:-14.60942,lon:-61.19288,e:185},{name:'Príncipe de la Beira',lat:-12.4,lon:-64.4,e:155},{name:'Guajará-Mirim',lat:-10.79,lon:-65.34,e:130},{name:'Riberalta',lat:-11.01,lon:-66.06,e:130},{name:'P. Maldonado',lat:-12.59,lon:-69.19,e:183}];
+const routeC_coords=[{name:'Río de la Plata',lat:-34.9,lon:-57.5,e:1},{name:'Buenos Aires',lat:-34.6,lon:-58.38,e:1},{name:'Asunción',lat:-25.28,lon:-57.63,e:108},{name:'Corumbá',lat:-19.0,lon:-57.65,e:175},{name:'Chiquitano divide',lat:-16.5,lon:-61.0,e:248},{name:'Trinidad',lat:-14.83,lon:-64.9,e:155},{name:'Riberalta',lat:-11.01,lon:-66.06,e:130},{name:'P. Maldonado',lat:-12.59,lon:-69.19,e:183}];
+
+let currentRoute='A';let segs=routeA.map(s=>({...s}));
+const routeDescs={A:'Route A: Amazon → Madeira → Beni — eastern pathway. 75 HydroRIVERS waypoints.',B:'Route B: Paraná → Paraguay → Pantanal → Río Paraguá (via Florida) → Guaporé → MdD. Follows Amazon-side drainage, potentially avoiding the Parecis divide.',C:'Route C: Paraná → Paraguay → Chiquitano divide (286 m) → Llanos de Moxos → MdD. Sill: Precambrian shield (highest barrier).',D:'Route D: User-defined 34-point transect from Buenos Aires via Chiquitano divide to P. Maldonado. SRTM elevations.',E:'Custom route — click on §15 map to define waypoints. Elevations from Open-Meteo (SRTM 90m).'};
+
+// Route D — user-defined 34-point transect (Buenos Aires → P. Maldonado via Chiquitano)
+const routeD=[{d:0,e:2,name:"Buenos Aires"},{d:119,e:3,name:"km 119"},{d:361,e:37,name:"Rosario"},{d:412,e:98,name:"km 412"},{d:865,e:42,name:"km 865"},{d:1172,e:69,name:"Formosa"},{d:1399,e:69,name:"km 1399"},{d:1610,e:86,name:"km 1610"},{d:1824,e:85,name:"km 1824"},{d:1968,e:92,name:"km 1968"},{d:2098,e:91,name:"Pantanal"},{d:2219,e:96,name:"km 2219"},{d:2270,e:113,name:"km 2270"},{d:2339,e:241,name:"Chiquitano div."},{d:2454,e:196,name:"km 2454"},{d:2543,e:191,name:"km 2543"},{d:2609,e:185,name:"km 2609"},{d:2653,e:164,name:"km 2653"},{d:2695,e:158,name:"km 2695"},{d:2731,e:159,name:"km 2731"},{d:2789,e:152,name:"km 2789"},{d:2887,e:140,name:"km 2887"},{d:3004,e:139,name:"km 3004"},{d:3100,e:128,name:"km 3100"},{d:3167,e:140,name:"km 3167"},{d:3241,e:124,name:"km 3241"},{d:3275,e:137,name:"km 3275"},{d:3315,e:119,name:"km 3315"},{d:3357,e:112,name:"km 3357"},{d:3417,e:125,name:"km 3417"},{d:3489,e:130,name:"Riberalta"},{d:3600,e:152,name:"km 3600"},{d:3730,e:169,name:"km 3730"},{d:3805,e:207,name:"P. Maldonado"}];
+const routeD_coords=[{name:"Buenos Aires",lat:-34.12,lon:-58.64,e:2},{name:"",lat:-33.53,lon:-59.72,e:3},{name:"Rosario",lat:-31.62,lon:-60.96,e:37},{name:"",lat:-31.95,lon:-60.58,e:98},{name:"",lat:-28.07,lon:-59.17,e:42},{name:"Formosa",lat:-25.46,lon:-58.16,e:69},{name:"",lat:-23.51,lon:-57.49,e:69},{name:"",lat:-21.66,lon:-57.97,e:86},{name:"",lat:-19.83,lon:-57.35,e:85},{name:"",lat:-18.55,lon:-57.14,e:92},{name:"Pantanal",lat:-17.5,lon:-57.68,e:91},{name:"",lat:-16.73,lon:-58.49,e:96},{name:"",lat:-16.47,lon:-58.88,e:113},{name:"Chiquitano div.",lat:-16.25,lon:-59.49,e:241},{name:"",lat:-15.5,lon:-60.22,e:196},{name:"",lat:-14.87,lon:-60.73,e:191},{name:"",lat:-14.46,lon:-61.18,e:185},{name:"",lat:-14.12,lon:-61.38,e:164},{name:"",lat:-13.81,lon:-61.61,e:158},{name:"",lat:-13.49,lon:-61.68,e:159},{name:"",lat:-13.17,lon:-62.1,e:152},{name:"",lat:-12.76,lon:-62.9,e:140},{name:"",lat:-12.51,lon:-63.95,e:139},{name:"",lat:-12.11,lon:-64.73,e:128},{name:"",lat:-11.74,lon:-65.21,e:140},{name:"",lat:-11.08,lon:-65.3,e:124},{name:"",lat:-10.77,lon:-65.33,e:137},{name:"",lat:-10.42,lon:-65.4,e:119},{name:"",lat:-10.65,lon:-65.71,e:112},{name:"",lat:-11.02,lon:-66.1,e:125},{name:"Riberalta",lat:-11.2,lon:-66.74,e:130},{name:"",lat:-11.59,lon:-67.68,e:152},{name:"",lat:-12.42,lon:-68.52,e:169},{name:"P. Maldonado",lat:-12.58,lon:-69.19,e:207}];;
+
+// ═══ ROUTE D — Custom user-defined route ═══
+let routeE = []; // {lat, lon, e, name, d}
+let routeE_markers = [];
+let routeE_polyline = null;
+let mapDrawingMode = false;
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Latitude-dependent effective elastic thickness (km)
+// Based on: Horton 1997 (18°S), Repasch 2023 (16-18°S), Whitman 1994 (24°S), Strecker 2012 (27°S)
+function getTeForLatitude(lat){
+  const absLat=Math.abs(lat);
+  if(absLat < 16) return 40;       // Fitzcarrald/Peru: stiff
+  if(absLat < 20) return 38;       // Bolivia Subandean: Horton 1997
+  if(absLat < 23) return 30;       // Transition zone: Prezzi 2009
+  if(absLat < 26) return 12;       // NW Argentina: Whitman 1994
+  if(absLat < 30) return 15;       // Sierras Pampeanas: Strecker 2012
+  return 25;                        // Southern Argentina: intermediate
+}
+
+// Foreland basin zone widths (km from thrust front) — latitude dependent
+// Based on Horton 1997 Figure 3C and DeCelles & Giles 1996
+function getForelandZones(lat){
+  const Te=getTeForLatitude(lat);
+  // Zone widths scale with Tₑ — stiffer plate = wider zones
+  const scale=Te/37; // normalized to Horton 1997 value
+  return {
+    wedgetop: Math.round(100*scale),    // 0 to this
+    foredeep: Math.round(400*scale),    // wedgetop to this
+    forebulge: Math.round(700*scale),   // foredeep to this
+    backbulge: Math.round(1000*scale),  // forebulge to this
+    Te: Te
+  };
+}
+
+// Thrust front coordinates for distance computation
+const thrustFrontPts=[
+  [-8.0,-75.5],[-9.0,-75.8],[-10.0,-75.5],[-11.0,-74.5],
+  [-12.0,-73.5],[-13.0,-72.0],[-14.0,-70.5],[-15.0,-69.5],
+  [-16.0,-68.5],[-17.5,-66.5],[-18.5,-65.0],[-19.5,-64.0],
+  [-20.5,-63.5],[-21.5,-63.5],[-22.5,-64.0],[-23.5,-64.5],
+  [-24.5,-65.0],[-26.0,-65.5],[-27.5,-66.0],[-29.0,-66.5],
+  [-30.5,-67.0],[-32.0,-68.0],[-33.5,-69.0]
+];
+
+// Distance from a point to the nearest segment of the thrust front
+function distToThrustFront(lat,lon){
+  let minD=Infinity;
+  for(let i=0;i<thrustFrontPts.length-1;i++){
+    // Point-to-segment distance (approximate using midpoint for speed)
+    const mLat=(thrustFrontPts[i][0]+thrustFrontPts[i+1][0])/2;
+    const mLon=(thrustFrontPts[i][1]+thrustFrontPts[i+1][1])/2;
+    const d=haversine(lat,lon,mLat,mLon);
+    if(d<minD) minD=d;
+    // Also check endpoints
+    const d1=haversine(lat,lon,thrustFrontPts[i][0],thrustFrontPts[i][1]);
+    const d2=haversine(lat,lon,thrustFrontPts[i+1][0],thrustFrontPts[i+1][1]);
+    if(d1<minD) minD=d1;
+    if(d2<minD) minD=d2;
+  }
+  return minD;
+}
+
+// Classify a lat/lon into foreland basin zone
+function classifyForelandZone(lat,lon){
+  const dTF=distToThrustFront(lat,lon);
+  const zones=getForelandZones(lat);
+  if(dTF<=zones.wedgetop) return {zone:'wedgetop',label:'Wedge-top',dTF:dTF,Te:zones.Te,color:'#785630'};
+  if(dTF<=zones.foredeep) return {zone:'foredeep',label:'Foredeep',dTF:dTF,Te:zones.Te,color:'#2563eb'};
+  if(dTF<=zones.forebulge) return {zone:'forebulge',label:'Forebulge',dTF:dTF,Te:zones.Te,color:'#dc2626'};
+  if(dTF<=zones.backbulge) return {zone:'backbulge',label:'Back-bulge',dTF:dTF,Te:zones.Te,color:'#059669'};
+  return {zone:'craton',label:'Craton',dTF:dTF,Te:zones.Te,color:'#9c9a92'};
+}
+
+function recomputeRouteEDistances(){
+  let cumD=0;
+  routeE.forEach((pt,i)=>{
+    if(i===0){pt.d=0;}
+    else{cumD+=haversine(routeE[i-1].lat,routeE[i-1].lon,pt.lat,pt.lon);pt.d=Math.round(cumD);}
+  });
+}
+
+async function fetchElevation(lat,lon){
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4));
+    const j=await r.json();
+    return j.elevation&&j.elevation[0]!=null?Math.round(j.elevation[0]):0;
+  }catch(e){console.warn('Elevation fetch failed:',e);return 0;}
+}
+
+async function fetchAllElevsE(){
+  if(routeE.length===0)return;
+  const lats=routeE.map(p=>p.lat.toFixed(4)).join(',');
+  const lons=routeE.map(p=>p.lon.toFixed(4)).join(',');
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lats+'&longitude='+lons);
+    const j=await r.json();
+    if(j.elevation){j.elevation.forEach((e,i)=>{if(i<routeE.length)routeE[i].e=Math.round(e||0)});}
+    recomputeRouteEDistances();
+    applyRouteE();
+  }catch(e){console.warn('Batch elevation fetch failed:',e);}
+}
+
+function applyRouteE(){
+  segs=routeE.map(s=>({...s}));
+  renderRouteEPanel();
+  buildCitySelector();
+  onCityChange();
+  runAll();
+  updateRouteEMapLine();
+}
+
+function renderRouteEPanel(){
+  const wp=document.getElementById('routeE-waypoints');if(!wp)return;
+  if(routeE.length===0){wp.innerHTML='<div style="color:var(--tx3);padding:4px">No waypoints. Click on the §15 map to add.</div>';return;}
+  let h='<table style="width:100%;border-collapse:collapse;font-size:9px"><tr style="color:var(--tx2);font-weight:600"><td>#</td><td>Name</td><td>Lat</td><td>Lon</td><td>Elev</td><td>Dist</td><td></td></tr>';
+  routeE.forEach((pt,i)=>{
+    h+='<tr style="border-top:1px solid var(--bd)">';
+    h+='<td style="color:var(--tx3)">'+(i+1)+'</td>';
+    h+='<td><span contenteditable="true" style="cursor:text;min-width:30px;display:inline-block" onblur="renameRouteEPt('+i+',this.textContent)">'+pt.name+'</span></td>';
+    h+='<td style="font-family:var(--mono)">'+pt.lat.toFixed(2)+'</td>';
+    h+='<td style="font-family:var(--mono)">'+pt.lon.toFixed(2)+'</td>';
+    h+='<td style="font-family:var(--mono);font-weight:500">'+pt.e+' m</td>';
+    h+='<td style="font-family:var(--mono)">'+pt.d+' km</td>';
+    h+='<td><span style="cursor:pointer;color:var(--coral)" onclick="deleteRouteEPt('+i+')">✕</span></td>';
+    h+='</tr>';
+  });
+  h+='</table>';
+  h+='<div style="color:var(--tx3);margin-top:4px">'+routeE.length+' waypoints · '+
+    (routeE.length>1?Math.round(routeE[routeE.length-1].d)+' km total':'—')+'</div>';
+  wp.innerHTML=h;
+}
+
+function renameRouteEPt(i,name){if(i<routeE.length){routeE[i].name=name.trim()||('Pt '+(i+1));applyRouteE();}}
+function deleteRouteEPt(i){
+  if(i<routeE.length){
+    if(routeE_markers[i]){inundMap.removeLayer(routeE_markers[i]);}
+    routeE.splice(i,1);routeE_markers.splice(i,1);
+    recomputeRouteEDistances();applyRouteE();
+  }
+}
+function clearRouteE(){
+  routeE_markers.forEach(m=>{if(m)inundMap.removeLayer(m)});
+  routeE_markers=[];routeE=[];
+  if(routeE_polyline){inundMap.removeLayer(routeE_polyline);routeE_polyline=null;}
+  applyRouteE();
+}
+
+function enableMapDrawing(){
+  mapDrawingMode=true;
+  if(inundMap){
+    inundMap.getContainer().style.cursor='crosshair';
+    if(!inundMap._routeDClickHandler){
+      inundMap._routeDClickHandler=async function(e){
+        if(!mapDrawingMode)return;
+        const lat=e.latlng.lat,lon=e.latlng.lng;
+        const elev=await fetchElevation(lat,lon);
+        const name='Pt '+(routeE.length+1);
+        routeE.push({lat,lon,e:elev,name,d:0});
+        recomputeRouteEDistances();
+        // Add draggable marker
+        const marker=L.marker([lat,lon],{draggable:true,title:name}).addTo(inundMap);
+        marker.bindTooltip('<b>'+name+'</b><br>'+elev+' m<br>'+lat.toFixed(3)+', '+lon.toFixed(3),{direction:'top',offset:[0,-10],className:'elev-tooltip'});
+        const idx=routeE_markers.length;
+        marker.on('dragend',async function(ev){
+          const pos=ev.target.getLatLng();
+          routeE[idx].lat=pos.lat;routeE[idx].lon=pos.lng;
+          routeE[idx].e=await fetchElevation(pos.lat,pos.lng);
+          recomputeRouteEDistances();applyRouteE();
+          marker.setTooltipContent('<b>'+routeE[idx].name+'</b><br>'+routeE[idx].e+' m<br>'+pos.lat.toFixed(3)+', '+pos.lng.toFixed(3));
+        });
+        marker.on('contextmenu',function(){deleteRouteEPt(idx);});
+        routeE_markers.push(marker);
+        applyRouteE();
+      };
+      inundMap.on('click',inundMap._routeDClickHandler);
+    }
+  }
+}
+
+function disableMapDrawing(){
+  mapDrawingMode=false;
+  if(inundMap){
+    inundMap.getContainer().style.cursor='';
+    // Don't remove the handler — just flag it off via mapDrawingMode
+  }
+}
+
+function updateRouteEMapLine(){
+  if(!inundMap)return;
+  if(routeE_polyline){inundMap.removeLayer(routeE_polyline);routeE_polyline=null;}
+  if(routeE.length>1){
+    const coords=routeE.map(p=>[p.lat,p.lon]);
+    routeE_polyline=L.polyline(coords,{color:'#f59e0b',weight:3,opacity:0.8,dashArray:'6,4'}).addTo(inundMap);
+  }
+  // Update marker tooltips
+  routeE_markers.forEach((m,i)=>{
+    if(i<routeE.length&&m){
+      m.setTooltipContent('<b>'+routeE[i].name+'</b><br>'+routeE[i].e+' m<br>'+routeE[i].lat.toFixed(3)+', '+routeE[i].lon.toFixed(3)+' · '+routeE[i].d+' km');
+    }
+  });
+}
+function switchRoute(r){
+  currentRoute=r;
+  if(r==='E'){
+    segs=routeE.length>1?routeE.map(s=>({...s})):[{d:0,e:0,name:'(click map to add)'}];
+    document.getElementById('route-e-panel').style.display='block';
+    enableMapDrawing();
+  } else {
+    segs=(r==='A'?routeA:r==='B'?routeB:r==='C'?routeC:routeD).map(s=>({...s}));
+    document.getElementById('route-e-panel').style.display='none';
+    disableMapDrawing();
+  }
+  document.getElementById('route-desc').textContent=routeDescs[r]||'';
+  ['a','b','c','d','e'].forEach(x=>document.getElementById('route-'+x+'-label').style.borderColor=x.toUpperCase()===r?'var(--coral)':'var(--bd)');
+  const sw=document.getElementById('shield-warning');
+  if(r==='B'||r==='C'||r==='D'){sw.style.display='block';
+    const divName=r==='B'?'Paraguá/Guaporé watershed':r==='C'?'Chiquitano':'Chiquitano (user pts)';
+    document.getElementById('shield-divide-name').textContent=divName;
+    var dtRate = +document.getElementById('dt-rate').value || 4;
+    var dtParra = +document.getElementById('dt-parra').value || 3.45;
+    var dtLower = Math.round(dtRate * dtParra);
+    var sillNow = r==='B' ? 190 : r==='C' ? 286 : 241;
+    var sillPlio = sillNow + dtLower;
+    document.getElementById('shield-plio-note').innerHTML = 'At §14 subsidence rate ('+dtRate+' m/Ma), the <b>'+divName+'</b> sill was ~<b>'+sillPlio+' m</b> at 3.45 Ma (vs. '+sillNow+' m today). Barrier was <b>higher</b> during Parra\'s claimed incursion.';
+  }else{sw.style.display='none'}
+  buildCitySelector();
+  onCityChange();
+  // Auto-suggest Tₑ based on route's average latitude
+  updateTeSuggestion();
+  runAll();
+}
+
+function updateTeSuggestion(){
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  if(!coords||coords.length<2){return;}
+  // Compute average latitude along route
+  const avgLat=coords.reduce((s,c)=>s+Math.abs(c.lat),0)/coords.length;
+  // Get Te for the Andean-proximal end of the route (most relevant for flexural model)
+  const andeanEnd=coords[coords.length-1]; // inland end
+  const teAndean=getTeForLatitude(andeanEnd.lat);
+  const teAvg=getTeForLatitude(-avgLat);
+  const el=document.getElementById('te-suggestion');
+  if(el){
+    const sources={40:'Bishop 2018',38:'Horton 1997; Repasch 2023',30:'Prezzi 2009',12:'Whitman 1994',15:'Strecker 2012',25:'intermediate'};
+    el.innerHTML='Route '+currentRoute+': Tₑ≈'+teAndean+' km at Andean end ('+Math.abs(andeanEnd.lat).toFixed(0)+'°S, '+
+      (sources[teAndean]||'')+')';
+    // Auto-update Te field to match route
+    document.getElementById('fx-Te').value=teAndean;
+  }
+}
+
+function reverseCurrentRoute(){
+  if(segs.length<2)return;
+  // Reverse the segs array and recompute distances
+  segs.reverse();
+  let cumD=0;
+  for(let i=0;i<segs.length;i++){
+    if(i===0){segs[i].d=0;}
+    else{
+      // Use the gap from the original (now reversed) spacing
+      cumD+=(segs.length>1?segs[segs.length-1-0].d/segs.length:100); // approximate
+    }
+  }
+  // Better: recompute from total distance
+  const totalD=segs[segs.length-1]?segs[0].d:0; // old last point's distance was stored before reverse
+  // Actually, just rebuild distances from the reversed order using original gaps
+  const origDists=segs.map(s=>s.d);
+  const totalDist=Math.max(...origDists);
+  segs.forEach((s,i)=>{s.d=Math.round(totalDist-origDists[segs.length-1-i])||0;});
+  // Fix: recalculate properly
+  // The original distances were cumulative. After reversing, recalculate from gaps.
+  const gaps=[];
+  for(let i=segs.length-1;i>0;i--){gaps.push(origDists[i]-origDists[i-1]);}
+  // gaps is now in reverse order (first gap = what was the last segment)
+  // But we already reversed segs, so gaps[0] corresponds to segs[0]→segs[1]
+  let d=0;segs[0].d=0;
+  for(let i=1;i<segs.length;i++){d+=gaps[i-1];segs[i].d=Math.round(d);}
+  renderSegTable();
+  buildCitySelector();
+  onCityChange();
+  runAll();
+  if(inundMap)updateInundationMap();
+}
+
+function exportRouteCSV(){
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  let csv='name,latitude,longitude,elevation_m,distance_km\n';
+  coords.forEach((c,i)=>{
+    const seg=i<segs.length?segs[i]:null;
+    csv+=(c.name||seg?.name||'Pt '+(i+1))+','+c.lat.toFixed(5)+','+c.lon.toFixed(5)+','+c.e+','+(seg?seg.d:0)+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='route_'+currentRoute+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function exportRouteKML(){
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  let kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n';
+  kml+='<name>MdD Incursion Model — Route '+currentRoute+'</name>\n';
+  // Line
+  kml+='<Placemark><name>Route '+currentRoute+'</name><LineString><coordinates>\n';
+  coords.forEach(c=>{kml+=c.lon.toFixed(5)+','+c.lat.toFixed(5)+','+c.e+'\n'});
+  kml+='</coordinates></LineString></Placemark>\n';
+  // Points
+  coords.forEach((c,i)=>{
+    const name=c.name||(i<segs.length?segs[i].name:'Pt '+(i+1));
+    if(name&&!name.startsWith('km ')){
+      kml+='<Placemark><name>'+name+'</name><description>'+c.e+' m</description>';
+      kml+='<Point><coordinates>'+c.lon.toFixed(5)+','+c.lat.toFixed(5)+','+c.e+'</coordinates></Point></Placemark>\n';
+    }
+  });
+  kml+='</Document>\n</kml>';
+  const blob=new Blob([kml],{type:'application/vnd.google-earth.kml+xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='route_'+currentRoute+'_'+new Date().toISOString().slice(0,10)+'.kml';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function importRouteCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.trim().split('\n');
+    const header=lines[0].toLowerCase();
+    // Detect columns
+    const cols=header.split(',').map(s=>s.trim());
+    const iName=cols.findIndex(c=>c.includes('name'));
+    const iLat=cols.findIndex(c=>c.includes('lat'));
+    const iLon=cols.findIndex(c=>c.includes('lon'));
+    const iElev=cols.findIndex(c=>c.includes('elev')||c==='e'||c.includes('height'));
+    if(iLat<0||iLon<0){alert('CSV must have latitude and longitude columns');return}
+    // Parse points
+    const pts=[];
+    for(let i=1;i<lines.length;i++){
+      const vals=lines[i].split(',').map(s=>s.trim());
+      if(vals.length<2)continue;
+      const lat=parseFloat(vals[iLat]),lon=parseFloat(vals[iLon]);
+      if(isNaN(lat)||isNaN(lon))continue;
+      const elev=iElev>=0?parseInt(vals[iElev])||0:0;
+      const name=iName>=0?(vals[iName]||'Pt '+(pts.length+1)):'Pt '+(pts.length+1);
+      pts.push({lat,lon,e:elev,name});
+    }
+    if(pts.length<2){alert('Need at least 2 valid points');return}
+    // Compute distances
+    let cumD=0;
+    const newSegs=pts.map((p,i)=>{
+      if(i>0) cumD+=haversine(pts[i-1].lat,pts[i-1].lon,p.lat,p.lon);
+      return {d:Math.round(cumD),e:p.e,name:p.name};
+    });
+    // Switch to Route E (custom) with imported data
+    routeE=pts.map((p,i)=>({...p,d:newSegs[i].d}));
+    currentRoute='E';
+    document.querySelector('input[name="route"][value="E"]').checked=true;
+    segs=newSegs;
+    document.getElementById('route-e-panel').style.display='block';
+    document.getElementById('route-desc').textContent='Imported '+pts.length+' waypoints from '+file.name;
+    ['a','b','c','d','e'].forEach(x=>document.getElementById('route-'+x+'-label').style.borderColor=x==='e'?'var(--coral)':'var(--bd)');
+    renderSegTable();renderRouteEPanel();buildCitySelector();onCityChange();runAll();
+    if(inundMap){updateInundationMap();updateRouteEMapLine();}
+  };
+  reader.readAsText(file);
+  event.target.value=''; // reset file input
+}
+function renderSegTable(){
+  const cd=document.getElementById('compact-towns');let h='';
+  segs.forEach(s=>{if(!s.name.startsWith('km '))h+=`<div class="compact-town"><span class="tn">${s.name}</span><span class="tv">${s.d} km · ${s.e} m</span></div>`});
+  h+=`<div style="font-size:9px;color:var(--tx3);padding:3px 6px">${segs.filter(s=>!s.name.startsWith('km ')).length} towns / ${segs.length} total</div>`;
+  cd.innerHTML=h;
+  const tb=document.getElementById('seg-tbl');let th='<tr><th>Pt</th><th>Dist</th><th>Elev</th><th>Slope</th></tr>';
+  segs.forEach((s,i)=>{const sc=i>0?((s.e-segs[i-1].e)/(s.d-segs[i-1].d))*100:0;const it=!s.name.startsWith('km ');th+=`<tr style="${it?'font-weight:500':'color:var(--tx3)'}"><td style="font-size:10px">${s.name}</td><td style="font-family:var(--mono);font-size:10px">${s.d}</td><td style="font-family:var(--mono);font-size:10px">${s.e}</td><td style="font-family:var(--mono);font-size:9px;color:var(--tx3)">${i>0?sc.toFixed(1):'—'}</td></tr>`});
+  tb.innerHTML=th;
+}
+let fullTableVisible=false;
+function toggleFullTable(){fullTableVisible=!fullTableVisible;document.getElementById('full-table-wrap').style.display=fullTableVisible?'block':'none';document.getElementById('show-all-btn').textContent=fullTableVisible?'Hide':'Show all waypoints'}
+function elevAt(d){if(d<=segs[0].d)return segs[0].e;for(let i=1;i<segs.length;i++){if(d<=segs[i].d){const t=(d-segs[i-1].d)/(segs[i].d-segs[i-1].d);return segs[i-1].e+t*(segs[i].e-segs[i-1].e)}}return segs[segs.length-1].e}
+function concaveReach(sl){const mx=segs[segs.length-1].d;for(let d=0;d<=mx;d+=2){if(elevAt(d)>=sl)return d}return mx}
+function setStat(id,val,note,cls){const el=document.getElementById(id);el.className='stat'+(cls?' '+cls:'');el.querySelector('.val').textContent=val;let n=el.querySelector('.note');if(note){if(!n){n=document.createElement('p');n.className='note';el.appendChild(n)}n.textContent=note}else if(n)n.textContent=''}
+
+// ═══ INUNDATION ═══
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+function run(){
+  const sl=+document.getElementById('sl-global').value,hT=+document.getElementById('h-target').value,dT=+document.getElementById('d-target').value,tA=+document.getElementById('t-age').value;
+  renderSegTable();
+  const linSlope=hT/(dT*1000),linReach=sl/linSlope/1000,conReach=concaveReach(sl);
+  setStat('st-linr',Math.round(linReach).toLocaleString()+' km');setStat('st-conr',Math.round(conReach).toLocaleString()+' km');
+  setStat('st-linyn',linReach>=dT?'Yes':'No',linReach>=dT?'':Math.round(dT-linReach).toLocaleString()+' km short',linReach>=dT?'yes':'no');
+  setStat('st-conyn',conReach>=dT?'Yes':'No',conReach>=dT?'':Math.round(dT-conReach).toLocaleString()+' km short',conReach>=dT?'yes':'no');
+  const diff=conReach-linReach;setStat('st-diff',(diff>=0?'+':'')+Math.round(diff).toLocaleString()+' km',diff>0?'Concave floods farther':'');
+  setStat('st-lslope',linSlope.toExponential(2),(linSlope*100000).toFixed(2)+' cm/km');
+  const uplift=hT-sl;setStat('st-uplift',Math.round(uplift)+' m',uplift>0?'Basin must have risen':'');
+  const rate=tA>0?uplift/tA:0;setStat('st-rate',Math.round(rate)+' m/Myr',(rate/1000).toFixed(4)+' mm/yr');
+  drawCombinedProfile(sl,hT,dT,linSlope,linReach,conReach);
+}
+
+// Combined Profile + Sensitivity chart (merged §16 profile & sensitivity)
+function drawCombinedProfile(sl,hT,dT,linSlope,linReach,conReach){
+  const dpr=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();cv.width=rect.width*dpr;cv.height=rect.height*dpr;ctx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height;const pad={t:28,r:16,b:36,l:50};const pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const maxD=Math.max(segs[segs.length-1].d,dT)*1.05;const maxSegE=Math.max(...segs.map(s=>s.e));const maxE=Math.max(maxSegE,hT,sl)*1.15;
+  function px(d){return pad.l+(d/maxD)*pw}function py(e){return pad.t+ph-(e/maxE)*ph}
+  ctx.clearRect(0,0,W,H);
+  // Grid
+  ctx.strokeStyle='#d8d6cf';ctx.lineWidth=0.5;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);ctx.stroke();
+  ctx.fillStyle='#9c9a92';ctx.font='10px "IBM Plex Mono"';ctx.textAlign='right';
+  const eStep=maxE>300?100:maxE>150?50:25;
+  for(let e=0;e<=maxE;e+=eStep){ctx.fillText(e,pad.l-4,py(e)+3);ctx.beginPath();ctx.moveTo(pad.l,py(e));ctx.lineTo(pad.l+pw,py(e));ctx.strokeStyle='#e8e6e1';ctx.lineWidth=0.5;ctx.stroke()}
+  ctx.textAlign='center';const dStep=maxD>6000?1000:500;for(let d=0;d<=maxD;d+=dStep){ctx.fillText(d.toLocaleString(),px(d),pad.t+ph+14)}
+  ctx.fillStyle='#9c9a92';ctx.font='10px "IBM Plex Sans"';ctx.textAlign='left';ctx.fillText('Elevation (m)',pad.l,pad.t-10);ctx.textAlign='right';ctx.fillText('Distance from coast (km)',pad.l+pw,pad.t+ph+30);
+  // Sensitivity ghost curves at key SL levels
+  [25,65.5,100,150].forEach(sv=>{
+    if(sv===sl) return;
+    const cr=concaveReach(sv);
+    ctx.setLineDash([2,3]);ctx.strokeStyle='rgba(217,119,6,0.2)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(px(0),py(sv));ctx.lineTo(px(Math.min(cr,maxD)),py(sv));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(Math.min(cr,maxD)),py(sv));ctx.lineTo(px(Math.min(cr,maxD)),pad.t+ph);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(217,119,6,0.4)';ctx.beginPath();ctx.arc(px(Math.min(cr,maxD)),py(sv),2,0,Math.PI*2);ctx.fill();
+    ctx.font='9px "IBM Plex Sans"';ctx.textAlign='left';ctx.fillText(sv+'m→'+Math.round(cr)+'km',px(Math.min(cr,maxD))+4,py(sv)+3);
+  });
+  // Inundation fill
+  const sly=py(sl);ctx.fillStyle='rgba(37,99,235,0.08)';ctx.beginPath();ctx.moveTo(px(0),py(0));
+  const crc=Math.min(conReach,maxD);for(let d=0;d<=crc;d+=5){ctx.lineTo(px(d),Math.max(py(elevAt(d)),sly))}
+  ctx.lineTo(px(crc),sly);ctx.lineTo(px(0),sly);ctx.closePath();ctx.fill();
+  // SL line
+  ctx.setLineDash([8,5]);ctx.strokeStyle='rgba(37,99,235,0.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px(0),sly);ctx.lineTo(px(maxD),sly);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(37,99,235,0.6)';ctx.font='10px "IBM Plex Sans"';ctx.textAlign='left';ctx.fillText('SL +'+sl+'m',px(maxD)-50,sly-4);
+  // Linear
+  ctx.setLineDash([6,4]);ctx.strokeStyle='#9c9a92';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px(0),py(0));
+  for(let d=0;d<=maxD;d+=50){ctx.lineTo(px(d),py(d*(hT/(dT*1000))*1000))}ctx.stroke();ctx.setLineDash([]);
+  // Profile
+  ctx.strokeStyle='#1a1a18';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px(segs[0].d),py(segs[0].e));
+  for(let i=1;i<segs.length;i++){ctx.lineTo(px(segs[i].d),py(segs[i].e))}ctx.stroke();
+  segs.forEach(s=>{if(!s.name.startsWith('km ')){ctx.fillStyle='#1a1a18';ctx.beginPath();ctx.arc(px(s.d),py(s.e),2,0,Math.PI*2);ctx.fill();
+    // Label named towns
+    ctx.fillStyle='#6b6a65';ctx.font='8px "IBM Plex Sans"';ctx.textAlign='left';
+    ctx.save();ctx.translate(px(s.d)+4,py(s.e)-3);ctx.rotate(-0.35);ctx.fillText(s.name,0,0);ctx.restore();
+  }});
+  // Target + flood limit
+  ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(px(dT),py(hT),4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0d9488';ctx.beginPath();ctx.arc(px(Math.min(crc,maxD)),sly,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0d9488';ctx.font='10px "IBM Plex Sans"';ctx.textAlign='left';ctx.fillText('Concave: '+Math.round(crc)+' km',px(Math.min(crc,maxD))+6,sly+12);
+  const lrc=Math.min(linReach,maxD);ctx.fillStyle='#d97706';ctx.beginPath();ctx.arc(px(lrc),sly,3,0,Math.PI*2);ctx.fill();
+  ctx.fillText('Linear: '+Math.round(linReach)+' km',px(lrc)+6,sly-6);
+  // Sill / TDD / landmark labels
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+    // Find the maximum elevation point (the sill)
+    let sillSeg=segs[0];segs.forEach(s=>{if(s.e>sillSeg.e)sillSeg=s});
+    const sillX=px(sillSeg.d),sillY=py(sillSeg.e);
+    ctx.fillStyle='#92400e';ctx.font='600 10px "IBM Plex Sans"';ctx.textAlign='center';
+    ctx.fillText('▼ SILL: '+sillSeg.name,sillX,sillY-14);
+    ctx.fillText(sillSeg.e+' m',sillX,sillY-4);
+    // TDD approximate position (near the sill on southern routes)
+    ctx.setLineDash([3,5]);ctx.strokeStyle='#8b5cf6';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(sillX,pad.t);ctx.lineTo(sillX,pad.t+ph);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#8b5cf6';ctx.font='9px "IBM Plex Sans"';ctx.textAlign='center';
+    ctx.fillText('TDD',sillX,pad.t+10);
+    // Label basin sides
+    ctx.fillStyle='#8b5cf688';ctx.font='italic 9px "IBM Plex Sans"';
+    ctx.textAlign='right';ctx.fillText('Paraná basin →',sillX-8,pad.t+22);
+    ctx.textAlign='left';ctx.fillText('← Amazon basin',sillX+8,pad.t+22);
+  }
+}
+
+// ═══ FLEXURAL ═══
+function fxDefl(x_km,w0,alpha){const x=x_km*1000;if(x<0)return w0;return w0*Math.exp(-x/alpha)*Math.cos(x/alpha)}
+function fxSetStat(id,val,cls){const el=document.getElementById(id);el.querySelector('.val').textContent=val;el.className='stat'+(cls?' '+cls:'')}
+function runFlex(){
+  const Te=+document.getElementById('fx-Te').value,Ev=+document.getElementById('fx-E').value,nu=+document.getElementById('fx-nu').value,rhom=+document.getElementById('fx-rhom').value,rhof=+document.getElementById('fx-rhof').value,w0m=+document.getElementById('fx-w0m').value,w0n=+document.getElementById('fx-w0n').value,dt=+document.getElementById('fx-dt').value,xmdd=+document.getElementById('fx-xmdd').value,xfitz=+document.getElementById('fx-xfitz').value,xmax=+document.getElementById('fx-xmax').value;
+  const Te_m=Te*1000,E_pa=Ev*1e9,D=(E_pa*Math.pow(Te_m,3))/(12*(1-nu*nu)),alpha=Math.pow((4*D)/((rhom-rhof)*9.81),0.25),alpha_km=alpha/1000;
+  fxSetStat('fx-alpha',Math.round(alpha_km)+' km');fxSetStat('fx-D',(D/1e22).toFixed(1)+'e22');fxSetStat('fx-fb',Math.round(alpha_km*3*Math.PI/4)+' km');
+  const wm1=fxDefl(xmdd,w0m,alpha),wn1=fxDefl(xmdd,w0n,alpha),wm2=fxDefl(xfitz,w0m,alpha),wn2=fxDefl(xfitz,w0n,alpha);
+  fxSetStat('fx-wm1',Math.round(wm1)+' m');fxSetStat('fx-wn1',Math.round(wn1)+' m');fxSetStat('fx-wm2',Math.round(wm2)+' m');fxSetStat('fx-wn2',Math.round(wn2)+' m');
+  const rMdd=dt>0?(wm1-wn1)/dt:0,rFitz=dt>0?(wm2-wn2)/dt:0;
+  fxSetStat('fx-umdd',Math.round(rMdd)+' m/Myr',Math.abs(rMdd-51)<40?'match':'miss');
+  fxSetStat('fx-ufitz',Math.round(rFitz)+' m/Myr',rFitz>=60&&rFitz<=400?'match':'miss');
+  drawFlexProfiles(alpha,w0m,w0n,xmdd,xfitz,xmax);drawFlexRates(alpha,w0m,w0n,dt,xmdd,xfitz,xmax);
+}
+function drawFlexProfiles(alpha,w0m,w0n,xmdd,xfitz,xmax){
+  const c=document.getElementById('cv3'),cx=c.getContext('2d'),dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;cx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad={t:20,r:12,b:32,l:50},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const allW=[];for(let x=0;x<=xmax;x+=3){allW.push(fxDefl(x,w0m,alpha));allW.push(fxDefl(x,w0n,alpha))}
+  const minW=Math.min(...allW,-200),maxW=Math.max(...allW,500),rng=maxW-minW||1;
+  function px(x){return pad.l+(x/xmax)*pw}function py(w){return pad.t+ph-((w-minW)/rng)*ph}
+  cx.clearRect(0,0,W,H);
+  // Andes reference — compact triangular silhouette at x=0 (thrust front)
+  cx.fillStyle='rgba(120,90,60,0.15)';cx.beginPath();
+  cx.moveTo(px(0),py(0));cx.lineTo(px(0),py(Math.min(maxW,4200)));
+  cx.lineTo(px(0)+3,py(0));cx.closePath();cx.fill();
+  // Label at thrust front
+  cx.fillStyle='#785630';cx.font='bold 8px "IBM Plex Sans"';cx.textAlign='left';
+  cx.fillText('Andes',px(0)+5,py(Math.min(maxW*0.8,3000)));
+  cx.font='7px "IBM Plex Sans"';cx.fillText('(~4 km)',px(0)+5,py(Math.min(maxW*0.65,2500)));
+  // Thrust front line
+  cx.setLineDash([3,3]);cx.strokeStyle='#78563055';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(px(0),pad.t);cx.lineTo(px(0),pad.t+ph);cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#785630';cx.font='7px "IBM Plex Sans"';cx.textAlign='center';cx.fillText('Thrust front',px(0),pad.t+ph-4);
+  // Axes
+  cx.strokeStyle='#d8d6cf';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(pad.l,pad.t);cx.lineTo(pad.l,pad.t+ph);cx.lineTo(pad.l+pw,pad.t+ph);cx.stroke();
+  // Zero line
+  cx.setLineDash([4,4]);cx.strokeStyle='#9c9a9244';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(0));cx.lineTo(pad.l+pw,py(0));cx.stroke();cx.setLineDash([]);
+  // Y-axis ticks
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Mono"';cx.textAlign='right';
+  const wSt=rng>6000?2000:rng>3000?1000:500;
+  for(let w=Math.ceil(minW/wSt)*wSt;w<=maxW;w+=wSt){cx.fillText(w,pad.l-4,py(w)+3);cx.beginPath();cx.moveTo(pad.l,py(w));cx.lineTo(pad.l+pw,py(w));cx.strokeStyle='#e8e6e1';cx.lineWidth=0.5;cx.stroke()}
+  // X-axis ticks
+  cx.textAlign='center';for(let x=0;x<=xmax;x+=100){cx.fillText(x,px(x),pad.t+ph+14)}
+  // Axis labels
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('Deflection (m)',pad.l,pad.t-6);
+  cx.textAlign='right';cx.fillText('km from thrust front',pad.l+pw,pad.t+ph+26);
+  // Curves (x>=0 only — model is not valid inside the orogen)
+  function drawC(w0,col){cx.strokeStyle=col;cx.lineWidth=1.5;cx.beginPath();for(let x=0;x<=xmax;x+=2){const w=fxDefl(x,w0,alpha);x===0?cx.moveTo(px(x),py(w)):cx.lineTo(px(x),py(w))}cx.stroke()}
+  drawC(w0m,'#dc2626');drawC(w0n,'#0d9488');
+  // Marker lines
+  [{x:xmdd,l:'P.M.',c:'#2563eb'},{x:xfitz,l:'Fitz',c:'#7c3aed'}].forEach(m=>{
+    cx.setLineDash([3,3]);cx.strokeStyle=m.c+'55';cx.lineWidth=1;cx.beginPath();cx.moveTo(px(m.x),pad.t);cx.lineTo(px(m.x),pad.t+ph);cx.stroke();cx.setLineDash([]);
+    cx.fillStyle='#dc2626';cx.beginPath();cx.arc(px(m.x),py(fxDefl(m.x,w0m,alpha)),3,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#0d9488';cx.beginPath();cx.arc(px(m.x),py(fxDefl(m.x,w0n,alpha)),3,0,Math.PI*2);cx.fill();
+    cx.fillStyle=m.c;cx.font='500 9px "IBM Plex Sans"';cx.textAlign='center';cx.fillText(m.l,px(m.x),pad.t+ph+24);
+  });
+  // Foredeep & Forebulge labels
+  cx.fillStyle='#dc262688';cx.font='italic 9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('← Foredeep',px(10),pad.t+12);
+  let fbX=0;for(let x=10;x<=xmax;x+=2){if(fxDefl(x,w0n,alpha)<=0){fbX=x;break}}
+  if(fbX>0){cx.fillStyle='#0d948888';cx.textAlign='center';cx.fillText('Forebulge →',px(fbX),pad.t+12)}
+}
+function drawFlexRates(alpha,w0m,w0n,dt,xmdd,xfitz,xmax){
+  const c=document.getElementById('cv4'),cx=c.getContext('2d'),dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;cx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad={t:20,r:12,b:32,l:50},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const rates=[];for(let x=0;x<=xmax;x+=2){rates.push(dt>0?(fxDefl(x,w0m,alpha)-fxDefl(x,w0n,alpha))/dt:0)}
+  const minR=Math.min(...rates,-50),maxR=Math.max(...rates,350),rng=maxR-minR||1;
+  function px(x){return pad.l+(x/xmax)*pw}function py(r){return pad.t+ph-((r-minR)/rng)*ph}
+  cx.clearRect(0,0,W,H);
+  // Axes
+  cx.strokeStyle='#d8d6cf';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(pad.l,pad.t);cx.lineTo(pad.l,pad.t+ph);cx.lineTo(pad.l+pw,pad.t+ph);cx.stroke();
+  // Zero line
+  cx.setLineDash([4,4]);cx.strokeStyle='#9c9a9244';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(0));cx.lineTo(pad.l+pw,py(0));cx.stroke();cx.setLineDash([]);
+  // Y-axis ticks
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Mono"';cx.textAlign='right';
+  const rSt=rng>1000?200:rng>500?100:50;
+  for(let r=Math.ceil(minR/rSt)*rSt;r<=maxR;r+=rSt){cx.fillText(r,pad.l-4,py(r)+3);cx.beginPath();cx.moveTo(pad.l,py(r));cx.lineTo(pad.l+pw,py(r));cx.strokeStyle='#e8e6e1';cx.lineWidth=0.5;cx.stroke()}
+  // X-axis ticks
+  cx.textAlign='center';for(let x=0;x<=xmax;x+=100){cx.fillText(x,px(x),pad.t+ph+14)}
+  // Axis labels
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('Uplift rate (m/Myr)',pad.l,pad.t-6);
+  cx.textAlign='right';cx.fillText('km from thrust front',pad.l+pw,pad.t+ph+26);
+  // Espurt/Bishop band
+  if(maxR>=100){cx.fillStyle='#0d948815';cx.fillRect(pad.l,py(300),pw,py(100)-py(300));
+    cx.setLineDash([6,4]);cx.strokeStyle='#0d9488';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(100));cx.lineTo(pad.l+pw,py(100));cx.stroke();cx.beginPath();cx.moveTo(pad.l,py(300));cx.lineTo(pad.l+pw,py(300));cx.stroke();cx.setLineDash([]);
+    cx.fillStyle='#0d9488';cx.font='9px "IBM Plex Sans"';cx.textAlign='right';cx.fillText('Espurt/Bishop 100–300',pad.l+pw-4,py(300)-3)}
+  // Parra reference line
+  cx.setLineDash([6,4]);cx.strokeStyle='#dc2626';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(pad.l,py(51));cx.lineTo(pad.l+pw,py(51));cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#dc2626';cx.font='9px "IBM Plex Sans"';cx.textAlign='right';cx.fillText('Parra ~51',pad.l+pw-4,py(51)-3);
+  // Rate curve
+  cx.strokeStyle='#2563eb';cx.lineWidth=2;cx.beginPath();let i=0;for(let x=0;x<=xmax;x+=2){i===0?cx.moveTo(px(x),py(rates[i])):cx.lineTo(px(x),py(rates[i]));i++}cx.stroke();
+  // Marker dots
+  [{x:xmdd,l:'P.M.',c:'#2563eb'},{x:xfitz,l:'Fitz',c:'#7c3aed'}].forEach(m=>{
+    cx.setLineDash([3,3]);cx.strokeStyle=m.c+'55';cx.lineWidth=1;cx.beginPath();cx.moveTo(px(m.x),pad.t);cx.lineTo(px(m.x),pad.t+ph);cx.stroke();cx.setLineDash([]);
+    const wm=fxDefl(m.x,w0m,alpha),wn=fxDefl(m.x,w0n,alpha);const rate=dt>0?(wm-wn)/dt:0;
+    cx.fillStyle=m.c;cx.beginPath();cx.arc(px(m.x),py(rate),3,0,Math.PI*2);cx.fill();
+    cx.font='500 9px "IBM Plex Sans"';cx.textAlign='center';cx.fillText(m.l+': '+Math.round(rate),px(m.x),py(rate)-6);
+  });
+}
+
+// ═══ BASAL SHEAR ═══
+let compChart=null;
+function runBasalShear(){
+  const rhoc=+document.getElementById('bs-rhoc').value,rhom=+document.getElementById('bs-rhom').value,dhmax=+document.getElementById('bs-dhmax').value,xcenter=+document.getElementById('bs-xcenter').value,sigma=+document.getElementById('bs-sigma').value,bsdt=+document.getElementById('bs-dt').value,bsxmax=+document.getElementById('bs-xmax').value;
+  const isoFrac=(rhom-rhoc)/rhom,archSurf=dhmax*1000*isoFrac;
+  // Update isoFrac display
+  const isoFracEl=document.getElementById('bs-isofrac');
+  if(isoFracEl) isoFracEl.value=isoFrac.toFixed(4);
+  fxSetStat('bs-hsurf',Math.round(archSurf)+' m',Math.abs(archSurf-450)<150?'match':'miss');
+  fxSetStat('bs-rate-arch',Math.round(bsdt>0?archSurf/bsdt:0)+' m/Myr');
+  const xmdd=+document.getElementById('fx-xmdd').value,xfitz=+document.getElementById('fx-xfitz').value;
+  function bsU(x){const dx=x-xcenter;return dhmax*Math.exp(-(dx*dx)/(2*sigma*sigma))*1000*isoFrac}
+  fxSetStat('bs-hmdd',Math.round(bsU(xmdd))+' m');fxSetStat('bs-rate-mdd',Math.round(bsdt>0?bsU(xmdd)/bsdt:0)+' m/Myr');
+  const Te=+document.getElementById('fx-Te').value,Ev=+document.getElementById('fx-E').value,nu=+document.getElementById('fx-nu').value,fxrhom=+document.getElementById('fx-rhom').value,fxrhof=+document.getElementById('fx-rhof').value,w0m=+document.getElementById('fx-w0m').value,w0n=+document.getElementById('fx-w0n').value,fxdt=+document.getElementById('fx-dt').value;
+  const D=(Ev*1e9*Math.pow(Te*1000,3))/(12*(1-nu*nu)),alpha=Math.pow((4*D)/((fxrhom-fxrhof)*9.81),0.25);
+  const fxMdd=fxdt>0?(fxDefl(xmdd,w0m,alpha)-fxDefl(xmdd,w0n,alpha))/fxdt:0,fxFitz=fxdt>0?(fxDefl(xfitz,w0m,alpha)-fxDefl(xfitz,w0n,alpha))/fxdt:0;
+  const totalMdd=fxMdd+(bsdt>0?bsU(xmdd)/bsdt:0),totalFitz=fxFitz+(bsdt>0?bsU(xfitz)/bsdt:0);
+  fxSetStat('bs-totalm',Math.round(totalMdd)+' m/Myr',Math.abs(totalMdd-51)<40?'match':'miss');
+  fxSetStat('bs-totalf',Math.round(totalFitz)+' m/Myr',totalFitz>=80&&totalFitz<=350?'match':'miss');
+  const paleoMdd=183-totalMdd*bsdt,paleoFitz=450-totalFitz*bsdt,plioSL=+document.getElementById('sl-global').value;
+  // Compute actual paleo elevations using the shared function (accounts for regional geology + dynamic topo)
+  const dT=+document.getElementById('d-target').value;
+  const hT=+document.getElementById('h-target').value;
+  const paleoTarget = paleoElevAt(dT,alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax);
+  const routeEnd = segs[segs.length-1].d;
+  const fitzDist = routeEnd - bsxmax + xfitz; // approximate Fitz location along route
+  const paleoFitzReal = paleoElevAt(Math.min(fitzDist,routeEnd),alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax);
+  fxSetStat('bs-pre-mdd',Math.round(paleoTarget)+' m',paleoTarget<plioSL?'match':'miss');
+  fxSetStat('bs-pre-fitz',Math.round(paleoFitzReal)+' m',paleoFitzReal<100?'match':'miss');
+  // Compute paleo-profile inundation reach along actual route
+  const paleoReachResult = computePaleoReach(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax,xmdd,xfitz,plioSL,totalMdd,totalFitz);
+  fxSetStat('bs-pre-paleoreach',paleoReachResult.reachStr);
+  fxSetStat('bs-pre-verdict',paleoReachResult.verdictShort,paleoReachResult.blocked?'miss':'match');
+  // Build verdict box
+  buildVerdictBox(paleoTarget,paleoFitzReal,plioSL,paleoReachResult,totalMdd,totalFitz,bsdt);
+  // Draw charts
+  drawBsProfile(rhoc,rhom,dhmax,xcenter,sigma,bsxmax,xmdd,xfitz);
+  drawCombinedRates(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax,xmdd,xfitz);
+  drawPreUplift(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax,xmdd,xfitz,plioSL,paleoReachResult);
+}
+function drawBsProfile(rhoc,rhom,dhmax,xcenter,sigma,xmax,xmdd,xfitz){
+  const c=document.getElementById('cv6'),cx=c.getContext('2d'),dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;cx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad={t:20,r:12,b:32,l:50},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const isoFrac=(rhom-rhoc)/rhom;const maxThick=dhmax*1.2;const maxUplift=dhmax*1000*isoFrac*1.2;
+  function px(x){return pad.l+(x/xmax)*pw}function pyT(t){return pad.t+ph-(t/maxThick)*ph}
+  cx.clearRect(0,0,W,H);
+  // Andes reference — compact indicator at thrust front
+  cx.fillStyle='rgba(120,90,60,0.15)';cx.beginPath();
+  cx.moveTo(px(0),pyT(0));cx.lineTo(px(0),pyT(maxThick));
+  cx.lineTo(px(0)+3,pyT(0));cx.closePath();cx.fill();
+  cx.fillStyle='#78563044';cx.font='bold 7px "IBM Plex Sans"';cx.textAlign='left';
+  cx.fillText('Andes',px(0)+5,pyT(maxThick*0.8));
+  cx.fillText('(off scale)',px(0)+5,pyT(maxThick*0.65));
+  // Thrust front line
+  cx.setLineDash([3,3]);cx.strokeStyle='#78563044';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(px(0),pad.t);cx.lineTo(px(0),pad.t+ph);cx.stroke();cx.setLineDash([]);
+  // Axes
+  cx.strokeStyle='#d8d6cf';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(pad.l,pad.t);cx.lineTo(pad.l,pad.t+ph);cx.lineTo(pad.l+pw,pad.t+ph);cx.stroke();
+  // Y-axis ticks (thickening in km)
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Mono"';cx.textAlign='right';
+  for(let t=0;t<=maxThick;t+=1){cx.fillText(t.toFixed(0)+' km',pad.l-4,pyT(t)+3);cx.beginPath();cx.moveTo(pad.l,pyT(t));cx.lineTo(pad.l+pw,pyT(t));cx.strokeStyle='#e8e6e1';cx.lineWidth=0.5;cx.stroke()}
+  // X-axis ticks
+  cx.textAlign='center';for(let x=0;x<=xmax;x+=100){cx.fillText(x,px(x),pad.t+ph+14)}
+  // Axis labels
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('Thickening (km) / uplift (m)',pad.l,pad.t-6);
+  cx.textAlign='right';cx.fillText('km from thrust front',pad.l+pw,pad.t+ph+26);
+  // Thickening curve
+  cx.strokeStyle='#059669';cx.lineWidth=2;cx.beginPath();
+  for(let x=0;x<=xmax;x+=3){const dx=x-xcenter;const t=dhmax*Math.exp(-(dx*dx)/(2*sigma*sigma));x===0?cx.moveTo(px(x),pyT(t)):cx.lineTo(px(x),pyT(t))}cx.stroke();
+  // Surface uplift curve (right axis scale)
+  cx.strokeStyle='#7c3aed';cx.lineWidth=2;cx.beginPath();
+  for(let x=0;x<=xmax;x+=3){const dx=x-xcenter;const t=dhmax*Math.exp(-(dx*dx)/(2*sigma*sigma));const u=t*1000*isoFrac;
+    const yy=pad.t+ph-(u/maxUplift)*ph;x===0?cx.moveTo(px(x),yy):cx.lineTo(px(x),yy)}cx.stroke();
+  // Marker lines
+  [{x:xmdd,l:'P.M.',c:'#2563eb'},{x:xfitz,l:'Fitz',c:'#7c3aed'}].forEach(m=>{
+    cx.setLineDash([3,3]);cx.strokeStyle=m.c+'55';cx.lineWidth=1;cx.beginPath();cx.moveTo(px(m.x),pad.t);cx.lineTo(px(m.x),pad.t+ph);cx.stroke();cx.setLineDash([]);
+    cx.fillStyle=m.c;cx.font='500 9px "IBM Plex Sans"';cx.textAlign='center';cx.fillText(m.l,px(m.x),pad.t+ph+24);
+  });
+  // Arch crest label at peak
+  cx.fillStyle='#059669';cx.font='600 9px "IBM Plex Sans"';cx.textAlign='center';
+  cx.fillText('▼ Fitzcarrald Arch crest',px(xcenter),pyT(dhmax)-10);
+  cx.fillText(Math.round(dhmax*1000*isoFrac)+' m surface uplift',px(xcenter),pyT(dhmax)-1);
+  // Right-axis ticks (surface uplift in m)
+  cx.fillStyle='#7c3aed';cx.font='9px "IBM Plex Mono"';cx.textAlign='left';
+  for(let u=0;u<=maxUplift;u+=100){const yy=pad.t+ph-(u/maxUplift)*ph;cx.fillText(u+'m',pad.l+pw+3,yy+3)}
+}
+function drawCombinedRates(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xmax,xmdd,xfitz){
+  const c=document.getElementById('cv7'),cx=c.getContext('2d'),dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;cx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad={t:20,r:12,b:32,l:50},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const isoFrac=(rhom-rhoc)/rhom;const allR=[];
+  for(let x=0;x<=xmax;x+=3){
+    const fxR=fxdt>0?(fxDefl(x,w0m,alpha)-fxDefl(x,w0n,alpha))/fxdt:0;
+    const dx=x-xcenter;const bsR=bsdt>0?(dhmax*Math.exp(-(dx*dx)/(2*sigma*sigma))*1000*isoFrac)/bsdt:0;
+    allR.push({fx:fxR,bs:bsR,tot:fxR+bsR});
+  }
+  const minR=Math.min(...allR.map(r=>Math.min(r.fx,r.bs,r.tot)),-50);
+  const maxR=Math.max(...allR.map(r=>Math.max(r.fx,r.bs,r.tot)),350);const rng=maxR-minR||1;
+  function px(x){return pad.l+(x/xmax)*pw}function py(r){return pad.t+ph-((r-minR)/rng)*ph}
+  cx.clearRect(0,0,W,H);
+  // Andes compact indicator at thrust front
+  cx.fillStyle='rgba(120,90,60,0.15)';cx.beginPath();
+  cx.moveTo(px(0),py(minR));cx.lineTo(px(0),py(maxR));cx.lineTo(px(0)+3,py(minR));cx.closePath();cx.fill();
+  cx.fillStyle='#78563044';cx.font='bold 7px "IBM Plex Sans"';cx.textAlign='left';
+  cx.fillText('Andes',px(0)+5,py(maxR*0.8));
+  // Thrust front line
+  cx.setLineDash([3,3]);cx.strokeStyle='#78563044';cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(px(0),pad.t);cx.lineTo(px(0),pad.t+ph);cx.stroke();cx.setLineDash([]);
+  // Axes
+  cx.strokeStyle='#d8d6cf';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(pad.l,pad.t);cx.lineTo(pad.l,pad.t+ph);cx.lineTo(pad.l+pw,pad.t+ph);cx.stroke();
+  // Zero line
+  cx.setLineDash([4,4]);cx.strokeStyle='#9c9a9244';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(0));cx.lineTo(pad.l+pw,py(0));cx.stroke();cx.setLineDash([]);
+  // Y-axis ticks
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Mono"';cx.textAlign='right';
+  const rSt=rng>1000?200:rng>500?100:50;
+  for(let r=Math.ceil(minR/rSt)*rSt;r<=maxR;r+=rSt){cx.fillText(r,pad.l-4,py(r)+3);cx.beginPath();cx.moveTo(pad.l,py(r));cx.lineTo(pad.l+pw,py(r));cx.strokeStyle='#e8e6e1';cx.lineWidth=0.5;cx.stroke()}
+  // X-axis ticks
+  cx.textAlign='center';for(let x=0;x<=xmax;x+=100){cx.fillText(x,px(x),pad.t+ph+14)}
+  // Axis labels
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('Uplift rate (m/Myr)',pad.l,pad.t-6);
+  cx.textAlign='right';cx.fillText('km from thrust front',pad.l+pw,pad.t+ph+26);
+  // Espurt/Bishop band
+  if(maxR>=100){cx.fillStyle='#0d948815';cx.fillRect(pad.l,py(300),pw,py(100)-py(300));
+    cx.setLineDash([6,4]);cx.strokeStyle='#0d9488';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(100));cx.lineTo(pad.l+pw,py(100));cx.stroke();cx.beginPath();cx.moveTo(pad.l,py(300));cx.lineTo(pad.l+pw,py(300));cx.stroke();cx.setLineDash([]);
+    cx.fillStyle='#0d9488';cx.font='9px "IBM Plex Sans"';cx.textAlign='right';cx.fillText('Espurt/Bishop 100–300',pad.l+pw-4,py(300)-3)}
+  // Parra line
+  cx.setLineDash([6,4]);cx.strokeStyle='#dc2626';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(pad.l,py(51));cx.lineTo(pad.l+pw,py(51));cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#dc2626';cx.font='9px "IBM Plex Sans"';cx.textAlign='right';cx.fillText('Parra ~51',pad.l+pw-4,py(51)-3);
+  // Three curves: flex, shear, total
+  function drawLine(key,col,lw){cx.strokeStyle=col;cx.lineWidth=lw;cx.beginPath();let i=0;for(let x=0;x<=xmax;x+=3){i===0?cx.moveTo(px(x),py(allR[i][key])):cx.lineTo(px(x),py(allR[i][key]));i++}cx.stroke()}
+  drawLine('fx','#2563eb',1.5);drawLine('bs','#059669',1.5);drawLine('tot','#7c3aed',2.5);
+  // Marker dots
+  [{x:xmdd,l:'P.M.',c:'#2563eb'},{x:xfitz,l:'Fitz',c:'#7c3aed'}].forEach(m=>{
+    cx.setLineDash([3,3]);cx.strokeStyle=m.c+'55';cx.lineWidth=1;cx.beginPath();cx.moveTo(px(m.x),pad.t);cx.lineTo(px(m.x),pad.t+ph);cx.stroke();cx.setLineDash([]);
+    const idx=Math.round(m.x/3);if(idx<allR.length){
+      cx.fillStyle=m.c;cx.beginPath();cx.arc(px(m.x),py(allR[idx].tot),3,0,Math.PI*2);cx.fill();
+      cx.font='500 9px "IBM Plex Sans"';cx.textAlign='center';cx.fillText(m.l+': '+Math.round(allR[idx].tot),px(m.x),py(allR[idx].tot)-6);
+    }
+  });
+}
+// Shared function to compute paleo elevation at any distance along route
+// The Fitzcarrald Arch uplift is modeled as a broad dome (~500 km half-wavelength,
+// 400-600 m amplitude) per Bishop et al. 2018, Espurt et al. 2007, Regard et al. 2009.
+// We do NOT subtract the raw flexural oscillation (which creates unrealistic troughs)
+// but instead use an empirically-constrained Gaussian dome.
+function paleoElevAt(d, alpha, w0m, w0n, fxdt, dhmax, xcenter, sigma, rhoc, rhom, bsdt, bsxmax){
+  const isoFrac=(rhom-rhoc)/rhom;
+  const routeEnd = segs[segs.length-1].d;
+  const dtRate=+(document.getElementById('dt-rate')||{value:4}).value||4;
+  const dtParra=+(document.getElementById('dt-parra')||{value:3.45}).value||3.45;
+  const dtLower=dtRate*dtParra;
+
+  let modernE = elevAt(d);
+  let paleoE = modernE;
+
+  // ── Regional geological adjustments — zone-classification-based ──
+  // Uses perpendicular distance to thrust front + latitude-dependent Tₑ
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  if(currentRoute==='A'){
+    // Route A: Amazon corridor — mostly craton, special handling
+    if(d > 2500){
+      const frac = Math.min(1, (d-2500)/(routeEnd-2500));
+      paleoE += dtLower * frac * 0.3;
+    }
+  } else if(coords && coords.length>1 && segs.length>1){
+    // Routes B/C/D/E: use foreland zone classification
+    // Interpolate lat/lon at distance d along route
+    let lat=coords[0].lat, lon=coords[0].lon;
+    for(let j=0;j<segs.length-1;j++){
+      if(d>=segs[j].d && d<=segs[j+1].d && j<coords.length-1){
+        const frac=(d-segs[j].d)/((segs[j+1].d-segs[j].d)||1);
+        const j2=Math.min(j+1,coords.length-1);
+        lat=coords[j].lat+(coords[j2].lat-coords[j].lat)*frac;
+        lon=coords[j].lon+(coords[j2].lon-coords[j].lon)*frac;
+        break;
+      }
+    }
+    if(d>=segs[segs.length-1].d){lat=coords[coords.length-1].lat;lon=coords[coords.length-1].lon;}
+
+    const zInfo=classifyForelandZone(lat,lon);
+    const dTF=zInfo.dTF;
+
+    // Apply zone-specific paleo adjustments
+    switch(zInfo.zone){
+      case 'wedgetop':
+        // Wedge-top: on the orogenic wedge itself — structurally active
+        // Minor adjustment: slightly more compressed at 3.45 Ma
+        paleoE += 5;
+        break;
+      case 'foredeep':
+        // Foredeep: overfilled basin (Horton 1997)
+        // At 3.45 Ma: ~15m less Plio-Pleistocene alluvial fill
+        paleoE -= 15;
+        break;
+      case 'forebulge':
+        // Forebulge: flexural uplift ~550 m (Repasch 2023)
+        // At 3.45 Ma: actively maintained by Andean loading
+        // Gaussian-shaped bulge peaking at center of zone
+        {const zones=getForelandZones(lat);
+        const fbCenter=(zones.foredeep+zones.forebulge)/2;
+        const fbSigma=(zones.forebulge-zones.foredeep)/4;
+        const fbFrac=Math.exp(-((dTF-fbCenter)**2)/(2*fbSigma*fbSigma));
+        paleoE += 15 * fbFrac;} // peak +15 m at forebulge crest
+        break;
+      case 'backbulge':
+        // Back-bulge: Pantanal/Chaco distal subsidence
+        // At 3.45 Ma: not fully subsided, surface ~40 m higher
+        paleoE += 40;
+        break;
+      case 'craton':
+        // Craton/shield: dynamic topography + TDD migration
+        // Higher at 3.45 Ma by dtLower + TDD effect
+        // Apply full adjustment near the TDD, tapering toward coast
+        {const shieldAdj = dtLower + 10;
+        // Taper: full at craton edge near backbulge, fading toward coast
+        const zones2=getForelandZones(lat);
+        if(dTF < zones2.backbulge + 500){
+          const taperFrac = Math.max(0, 1 - (dTF - zones2.backbulge)/500);
+          paleoE += shieldAdj * Math.max(0.3, taperFrac); // min 30% of shield adj on deep craton
+        } else {
+          paleoE += shieldAdj * 0.3; // distal craton: minimal adjustment
+        }}
+        break;
+    }
+  }
+
+  // ── Fitzcarrald Arch uplift removal ──
+  // Model as a broad dome (Gaussian) — NO hard boundary
+  // The Gaussian naturally decays to near-zero far from the arch center
+  // Arch apex: ~350 km from thrust front (Espurt 2007; Bishop 2018)
+  // Half-wavelength: >500 km (Bishop 2018)
+  const fitzStart = routeEnd - bsxmax;
+  // xFromThrust: distance from fitzStart (= distance into the arch zone from its far edge)
+  const xFromThrust = d - fitzStart;
+  // Apply Gaussian everywhere — it naturally decays to ~0 beyond 3σ
+  const sigmaRecon = Math.max(sigma, 250);
+  const dx = xFromThrust - xcenter;
+  const archUplift = dhmax*Math.exp(-(dx*dx)/(2*sigmaRecon*sigmaRecon))*1000*isoFrac;
+  // Only subtract if non-negligible (>0.5 m) to avoid floating point noise
+  if(archUplift > 0.5){
+    paleoE -= archUplift;
+  }
+  // Smooth the EDGES of the foredeep transition — prevent sharp angular kinks
+  // where the profile drops from surface level into the deep foredeep.
+  // The issue: the Gaussian subtraction interacts with the modern profile's shape
+  // to create sharp angles at the entry/exit of the foredeep zone.
+  // Fix: apply a cosine taper to the arch uplift at the margins (first/last 150 km)
+  // This does NOT limit the depth — it just smooths the transition in/out.
+  // (The taper is already applied above via archUplift, so we re-add a correction
+  //  at the margins to soften the abruptness)
+  const fillFloor = +(document.getElementById('bs-fillfloor')||{value:-20}).value;
+  if(paleoE < fillFloor && xFromThrust > -100){
+    // Compute how far we are from the foredeep edges
+    // The foredeep zone roughly spans xFromThrust = 0 to xFromThrust = bsxmax
+    const edgeDist = Math.min(xFromThrust, bsxmax - xFromThrust); // distance from nearest edge
+    const taperZone = 150; // smooth over 150 km at each edge
+    if(edgeDist < taperZone && edgeDist >= 0){
+      // Cosine taper: at edge (edgeDist=0), depth is clamped to fillFloor
+      // At taperZone, full depth is allowed
+      const taper = 0.5 * (1 - Math.cos(Math.PI * edgeDist / taperZone));
+      const fullDepth = paleoE;
+      paleoE = fillFloor + (fullDepth - fillFloor) * taper;
+    }
+  }
+
+  return paleoE;
+}
+
+function computePaleoReach(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax,xmdd,xfitz,plioSL,totalMdd,totalFitz){
+  const dT=+document.getElementById('d-target').value;
+  const dtRate=+(document.getElementById('dt-rate')||{value:4}).value||4;
+  const dtParra=+(document.getElementById('dt-parra')||{value:3.45}).value||3.45;
+  const dtLower=dtRate*dtParra;
+  const routeEnd = segs[segs.length-1].d;
+
+  // ── Sequential flooding: start from coast, stop at first barrier ──
+  let paleoReach = 0;
+  let blocked = true;
+  let firstBarrier = null;
+  for(let d=0; d<=routeEnd; d+=2){
+    const paleoE = paleoElevAt(d, alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,bsxmax);
+    if(paleoE <= plioSL){
+      paleoReach = d; // water can reach here
+    } else {
+      // Hit a barrier — water STOPS here
+      if(paleoReach > 0 && !firstBarrier){
+        firstBarrier = {d:d, e:Math.round(paleoE), name:''};
+        // Find nearest named waypoint
+        let closest = segs[0];
+        segs.forEach(s=>{if(Math.abs(s.d-d)<Math.abs(closest.d-d))closest=s});
+        firstBarrier.name = closest.name;
+      }
+      break; // STOP — sequential flooding cannot pass barriers
+    }
+  }
+
+  // Check if paleoReach >= dT (target reached)
+  if(paleoReach >= dT) blocked = false;
+
+  // Shield sill info for Routes B/C
+  let shieldSill = null;
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+    let sillSeg=segs[0]; segs.forEach(s=>{if(s.e>sillSeg.e)sillSeg=s});
+    const sillPlio = sillSeg.e + Math.round(dtLower);
+    shieldSill = {name:sillSeg.name, now:sillSeg.e, plio:sillPlio, d:sillSeg.d};
+  }
+
+  // Shield zone boundaries for shading
+  let shieldZone = null;
+  if(currentRoute==='B'){
+    shieldZone = {start:1200, end:1800, label:'Guaporé Shield'};
+  } else if(currentRoute==='C'){
+    shieldZone = {start:1200, end:2050, label:'Guaporé/Chiquitano Shield'};
+  }
+
+  const shortfall = blocked ? dT - paleoReach : 0;
+  return {
+    reach: paleoReach,
+    reachStr: Math.round(paleoReach).toLocaleString()+' km',
+    blocked: blocked,
+    shortfall: shortfall,
+    firstBarrier: firstBarrier,
+    shieldSill: shieldSill,
+    shieldZone: shieldZone,
+    verdictShort: blocked ? 'BLOCKED' : 'Reaches',
+    dtLower: Math.round(dtLower)
+  };
+}
+
+function buildVerdictBox(paleoMdd,paleoFitz,plioSL,pr,totalMdd,totalFitz,bsdt){
+  const vb = document.getElementById('verdict-box');
+  if(!vb) return;
+  const dT=+document.getElementById('d-target').value;
+  const hT=+document.getElementById('h-target').value;
+  const tAge=+document.getElementById('t-age').value;
+  const Te=+document.getElementById('fx-Te').value;
+  const w0m=+document.getElementById('fx-w0m').value;
+  const w0n=+document.getElementById('fx-w0n').value;
+  const dhmax=+document.getElementById('bs-dhmax').value;
+  const sigmaW=+document.getElementById('bs-sigma').value;
+  const dtRate=+(document.getElementById('dt-rate')||{value:4}).value||4;
+  const dtParra=+(document.getElementById('dt-parra')||{value:3.45}).value||3.45;
+  const dtModelSel=document.getElementById('dt-model');
+  const dtModelName=dtModelSel?dtModelSel.options[dtModelSel.selectedIndex].text:'Flament Case 3';
+  // Get target city name
+  const citySel=document.getElementById('target-city');
+  const cityName=citySel?citySel.options[citySel.selectedIndex].text:'P. Maldonado';
+  const routeName = currentRoute==='A'?'Route A (Amazon→Madeira→MdD)':currentRoute==='B'?'Route B (Río de la Plata→Paraguá→MdD)':'Route C (Río de la Plata→Chiquitano→MdD)';
+
+  let html = '<b style="font-size:11px;color:var(--tx)">§18c Verdict — '+routeName+'</b><br>';
+  html += '<span style="font-size:9px;color:var(--tx2)">Target: '+cityName+' | SL: +'+plioSL+' m | Age: '+tAge+' Ma</span><br><br>';
+
+  // 1. Endpoint
+  html += '<b>1. Endpoint analysis:</b><br>';
+  html += 'Modern '+cityName.split('(')[0].trim()+' = '+hT+' m. ';
+  html += 'Modeled Neogene uplift = '+Math.round(totalMdd*bsdt)+' m ';
+  html += '(flex: Tₑ='+Te+' km, w₀='+w0m+'→'+w0n+' m; shear: Δh='+dhmax+' km, σ='+sigmaW+' km, over '+bsdt+' Ma).<br>';
+  html += 'Paleo elevation = <b>'+Math.round(paleoMdd)+' m</b>. ';
+  if(paleoMdd<plioSL){
+    html += '<span style="color:var(--teal-d)">Below SL (+'+plioSL+' m) — endpoint WAS inundable.</span>';
+  } else {
+    html += '<span style="color:var(--coral-d)">Above SL (+'+plioSL+' m) — endpoint was never flooded.</span>';
+  }
+  html += '<br><br>';
+
+  // 2. Pathway
+  html += '<b>2. Pathway analysis (can marine water GET there?):</b><br>';
+  html += 'Marine water must traverse '+Math.round(dT).toLocaleString()+' km of river corridor from the coast to '+cityName.split('(')[0].trim()+'.<br>';
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+    html += '<i>Foreland zones (⊥ thrust front, Tₑ-dependent): Craton → Back-bulge (+40 m) → Forebulge (+15 m, Repasch 2023) → Foredeep (−15 m, Horton 1997) → Wedge-top (+5 m). Shield/TDD: +'+pr.dtLower+' m (Gomes 2025).</i><br>';
+  }
+  html += 'Sequential paleo flooding at +'+plioSL+' m SL reaches <b>'+pr.reachStr+'</b>';
+  if(pr.blocked){
+    if(pr.firstBarrier){
+      html += ' — blocked near <b>'+pr.firstBarrier.name+'</b> ('+pr.firstBarrier.e+' m paleo elev).<br>';
+    } else {
+      html += '.<br>';
+    }
+    html += '<span style="color:var(--coral-d);font-weight:600">'+Math.round(pr.shortfall).toLocaleString()+' km SHORT of '+cityName.split('(')[0].trim()+'.</span><br>';
+    html += 'Water floods sequentially from the coast and cannot pass topographic barriers. Inland depressions below SL are NOT connected to the ocean.';
+  } else {
+    html += ' — <span style="color:var(--teal-d);font-weight:600">reaches target.</span>';
+  }
+  html += '<br><br>';
+
+  // 3. Shield barrier (Routes B/C only)
+  if(pr.shieldSill){
+    html += '<b>3. Cratonic shield barrier ('+(currentRoute==='B'?'Paraguá/Guaporé':'Chiquitano')+'):</b><br>';
+    html += pr.shieldSill.name+' sill at '+Math.round(pr.shieldSill.d).toLocaleString()+' km from coast. Precambrian shield (Tₑ >70 km, >1300 Ma).<br>';
+    html += 'Modern: '+pr.shieldSill.now+' m. At '+dtParra+' Ma (+'+pr.dtLower+' m §14 adjustment): <b>~'+pr.shieldSill.plio+' m</b>.<br>';
+    html += '<span style="color:var(--coral-d)">This barrier has existed >70 Myr (Ribeiro et al. 2018; Gomes et al. 2025) and is not removable by Neogene flexural or basal shear models. The Amazon is GAINING territory from Paraguay (TDD migrating southward), meaning the divide was higher in the Pliocene.</span>';
+    html += '<br><br>';
+  }
+
+  // 4. Dynamic topography
+  html += '<b>'+(pr.shieldSill?'4':'3')+'. Dynamic topography (§14 — '+dtModelName.split('(')[0].trim()+'):</b><br>';
+  html += 'Subsidence rate: '+dtRate+' m/Ma over '+document.getElementById('dt-since').value+' Ma. ';
+  html += 'TDD lowering since '+dtParra+' Ma: ~'+pr.dtLower+' m.<br>';
+  html += 'All divide elevations were <b>'+pr.dtLower+' m higher</b> during the claimed incursion.';
+  html += '<br><br>';
+
+  // 5. Proxy quality reminder
+  html += '<b>'+(pr.shieldSill?'5':'4')+'. Proxy evidence quality (§5):</b><br>';
+  html += 'Parra et al. report: agglutinated forams (euryhaline, not diagnostic), pyrite (Andean sulfate source), possible dinoflagellate morphotypes (unidentified). ';
+  html += 'CONTRADICTED by exclusively freshwater Pediastrum &amp; Oedogonium. No calcareous forams, no marine mollusks, no Sr/O/C/S isotopes. Conference abstract only — not peer-reviewed as full paper.';
+  html += '<br><br>';
+
+  // CONCLUSION
+  html += '<div style="border-top:2px solid var(--bd);padding-top:6px;margin-top:2px">';
+  html += '<b style="font-size:11px;';
+  if(pr.blocked){
+    html += 'color:var(--coral-d)">CONCLUSION: A '+dtParra+' Ma marine incursion could NOT reach '+cityName.split('(')[0].trim()+' via '+routeName.split('(')[0].trim()+'.</b><br>';
+    html += '<span style="font-size:10px">At +'+plioSL+' m SL, water penetrates '+pr.reachStr;
+    if(pr.firstBarrier) html += ' (blocked near '+pr.firstBarrier.name+')';
+    html += ' — '+Math.round(pr.shortfall).toLocaleString()+' km short of target.';
+    if(pr.shieldSill) html += ' The '+pr.shieldSill.name+' shield sill (~'+pr.shieldSill.plio+' m at '+dtParra+' Ma) is an absolute, non-removable barrier.';
+    html += ' The proxy evidence is ambiguous at best (zero diagnostic marine taxa) and contradicted by freshwater algae.</span>';
+  } else {
+    html += 'color:var(--teal-d)">CONCLUSION: Paleo-profile suggests SL COULD reach '+cityName.split('(')[0].trim()+' via '+routeName.split('(')[0].trim()+'.</b><br>';
+    html += '<span style="font-size:10px">However, this depends on modeled uplift parameters and requires all '+Math.round(dT).toLocaleString()+' km of corridor to be below +'+plioSL+' m.</span>';
+  }
+  html += '</div>';
+  vb.innerHTML = html;
+}
+
+function drawPreUplift(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xmax,xmdd,xfitz,plioSL,paleoReachResult){
+  const c=document.getElementById('cv8');if(!c)return;const cx=c.getContext('2d'),dpr=window.devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;cx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad={t:22,r:16,b:32,l:50},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const routeEnd=segs[segs.length-1].d;
+  const fitzStart=routeEnd-xmax; // FIXED: always anchored to route end
+  // Build data arrays using shared paleoElevAt
+  const data=[];let minE=9999,maxE=-9999;
+  for(let d=0;d<=routeEnd;d+=Math.max(5,routeEnd/300)){
+    const mod=elevAt(d);
+    const paleo=paleoElevAt(d,alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xmax);
+    data.push({d,mod,paleo});
+    minE=Math.min(minE,paleo,mod,-20);
+    maxE=Math.max(maxE,paleo,mod,plioSL+20);
+  }
+  const rng=maxE-minE||1;
+  function px(d){return pad.l+(d/routeEnd)*pw}
+  function py(e){return pad.t+ph-((e-minE)/rng)*ph}
+  cx.clearRect(0,0,W,H);
+  cx.strokeStyle='#d8d6cf';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(pad.l,pad.t);cx.lineTo(pad.l,pad.t+ph);cx.lineTo(pad.l+pw,pad.t+ph);cx.stroke();
+  // Zero line
+  if(minE<0&&maxE>0){cx.setLineDash([4,4]);cx.strokeStyle='#9c9a9244';cx.lineWidth=1;cx.beginPath();cx.moveTo(pad.l,py(0));cx.lineTo(pad.l+pw,py(0));cx.stroke();cx.setLineDash([])}
+  // Y ticks
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Mono"';cx.textAlign='right';
+  const eSt=rng>600?100:rng>300?50:25;
+  for(let e=Math.ceil(minE/eSt)*eSt;e<=maxE;e+=eSt){cx.fillText(e,pad.l-4,py(e)+3);cx.beginPath();cx.moveTo(pad.l,py(e));cx.lineTo(pad.l+pw,py(e));cx.strokeStyle='#e8e6e1';cx.lineWidth=0.5;cx.stroke()}
+  // X ticks
+  cx.textAlign='center';const dStep=routeEnd>6000?1000:500;
+  for(let d=0;d<=routeEnd;d+=dStep){cx.fillText(d.toLocaleString(),px(d),pad.t+ph+14)}
+  // Axis labels
+  cx.fillStyle='#9c9a92';cx.font='9px "IBM Plex Sans"';cx.textAlign='left';cx.fillText('Elevation (m)',pad.l,pad.t-6);
+  cx.textAlign='right';cx.fillText('Distance from coast (km)',pad.l+pw,pad.t+ph+26);
+  // SL line
+  cx.setLineDash([6,4]);cx.strokeStyle='#dc2626';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(pad.l,py(plioSL));cx.lineTo(pad.l+pw,py(plioSL));cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#dc2626';cx.font='9px "IBM Plex Sans"';cx.textAlign='right';cx.fillText('Plio SL +'+plioSL+'m',pad.l+pw-3,py(plioSL)-3);
+  // Sediment fill floor — foredeep surface was near SL (filled with sediment)
+  const FILL_FLOOR = +(document.getElementById('bs-fillfloor')||{value:-20}).value;
+  // Sequential inundation fill — uses SURFACE elevation (clamped to floor)
+  const paleoReachD = paleoReachResult ? paleoReachResult.reach : 0;
+  cx.fillStyle='rgba(37,99,235,0.12)';cx.beginPath();let started=false;
+  for(let i=0;i<data.length;i++){
+    if(data[i].d > paleoReachD + 10) break;
+    const surfE=Math.max(data[i].paleo, FILL_FLOOR);
+    if(surfE<plioSL){
+      if(!started){cx.moveTo(px(data[i].d),py(plioSL));started=true}
+      cx.lineTo(px(data[i].d),py(surfE));
+    } else if(started){
+      cx.lineTo(px(data[i].d),py(plioSL));cx.closePath();cx.fill();cx.beginPath();started=false;
+    }
+  }
+  if(started){
+    const lastD = Math.min(paleoReachD,data[data.length-1].d);
+    cx.lineTo(px(lastD),py(plioSL));cx.closePath();cx.fill();
+  }
+  // Show inland depressions (below SL but NOT connected) as lighter fill
+  cx.fillStyle='rgba(37,99,235,0.04)';
+  let inlandStarted=false;
+  for(let i=0;i<data.length;i++){
+    if(data[i].d <= paleoReachD + 10) continue;
+    const surfE=Math.max(data[i].paleo, FILL_FLOOR);
+    if(surfE<plioSL){
+      if(!inlandStarted){cx.beginPath();cx.moveTo(px(data[i].d),py(plioSL));inlandStarted=true}
+      cx.lineTo(px(data[i].d),py(surfE));
+    } else if(inlandStarted){
+      cx.lineTo(px(data[i].d),py(plioSL));cx.closePath();cx.fill();cx.beginPath();inlandStarted=false;
+    }
+  }
+  if(inlandStarted){cx.lineTo(px(data[data.length-1].d),py(plioSL));cx.closePath();cx.fill()}
+  // Modern profile line
+  cx.strokeStyle='#7c3aed';cx.lineWidth=1.5;cx.beginPath();
+  data.forEach((p,i)=>{i===0?cx.moveTo(px(p.d),py(p.mod)):cx.lineTo(px(p.d),py(p.mod))});cx.stroke();
+  // Paleo surface line — clamped to soft floor (foredeep was filled with sediment)
+  cx.strokeStyle='#059669';cx.lineWidth=2.5;cx.beginPath();
+  data.forEach((p,i)=>{
+    const surf=Math.max(p.paleo, FILL_FLOOR);
+    i===0?cx.moveTo(px(p.d),py(surf)):cx.lineTo(px(p.d),py(surf));
+  });cx.stroke();
+
+  // ── Sediment fill layers (where foredeep goes below floor) ──
+  // Proportions from published MdD foredeep stratigraphy:
+  //   Total 3–4 km (Horton 1997; Hermoza 2005)
+  //   Paleozoic–Cretaceous: 30% (Copacabana, Chonta; Perupetro 2002)
+  //   Paleogene: 15% (Puca Gp.)
+  //   Miocene: 45% (Ipururo/MdD Fm.; Moizinho et al. 2023: ~2000m)
+  //   Plio-Pleistocene: 10% (upper MdD Fm./alluvium; Campbell et al. 2006)
+  const fillLayers=[
+    {frac:0.30, color:'#d4a574', name:'Paleozoic–Cret. (Copacabana/Chonta)'},
+    {frac:0.15, color:'#c4956a', name:'Paleogene (Puca Gp.)'},
+    {frac:0.45, color:'#b8845a', name:'Miocene (Ipururo/MdD Fm.)'},
+    {frac:0.10, color:'#a0734e', name:'Plio-Pleistocene'}
+  ];
+  let hasDeepForedeep = data.some(p=>p.paleo < FILL_FLOOR - 50);
+  if(hasDeepForedeep){
+    fillLayers.forEach((layer, li) => {
+      let bottomFrac=0;
+      for(let j=0;j<li;j++) bottomFrac+=fillLayers[j].frac;
+      const topFrac=bottomFrac+layer.frac;
+      cx.fillStyle=layer.color;cx.globalAlpha=0.25;cx.beginPath();
+      let fStarted=false;
+      for(let i=0;i<data.length;i++){
+        if(data[i].paleo < FILL_FLOOR){
+          const depth=FILL_FLOOR-data[i].paleo;
+          const layerTop=FILL_FLOOR-depth*(1-topFrac);
+          if(!fStarted){cx.moveTo(px(data[i].d),py(layerTop));fStarted=true}
+          else cx.lineTo(px(data[i].d),py(layerTop));
+        } else if(fStarted){cx.lineTo(px(data[i].d),py(FILL_FLOOR));break}
+      }
+      for(let i=data.length-1;i>=0;i--){
+        if(data[i].paleo < FILL_FLOOR){
+          const depth=FILL_FLOOR-data[i].paleo;
+          const layerBot=FILL_FLOOR-depth*(1-bottomFrac);
+          cx.lineTo(px(data[i].d),py(layerBot));
+        }
+      }
+      cx.closePath();cx.fill();cx.globalAlpha=1.0;
+    });
+    // Layer labels at deepest point
+    let deepPt={d:0,paleo:9999};data.forEach(p=>{if(p.paleo<deepPt.paleo)deepPt=p});
+    if(deepPt.paleo < -100){
+      const totalD=FILL_FLOOR-deepPt.paleo;cx.textAlign='center';
+      let cumF=0;
+      fillLayers.forEach((layer,li)=>{
+        const midF=cumF+layer.frac/2;cumF+=layer.frac;
+        const labelY=FILL_FLOOR-totalD*(1-midF);
+        const yPx=py(labelY);
+        if(yPx>pad.t+15&&yPx<pad.t+ph-10&&totalD*layer.frac>30){
+          cx.fillStyle='#ffffffbb';const tw=cx.measureText(layer.name).width;
+          cx.font=(li===2?'bold ':'')+'7px "IBM Plex Sans"';
+          const tw2=cx.measureText(layer.name).width;
+          cx.fillRect(px(deepPt.d)-tw2/2-2,yPx-5,tw2+4,10);
+          cx.fillStyle='#5c3a1e';cx.fillText(layer.name,px(deepPt.d),yPx+3);
+        }
+      });
+    }
+    // Structural depth line (dashed brown, beneath the fill)
+    cx.setLineDash([3,4]);cx.strokeStyle='#8B4513';cx.lineWidth=1;cx.globalAlpha=0.4;cx.beginPath();
+    let drawingS=false;
+    data.forEach(p=>{
+      if(p.paleo<FILL_FLOOR){if(!drawingS){cx.moveTo(px(p.d),py(p.paleo));drawingS=true}else cx.lineTo(px(p.d),py(p.paleo))}
+      else if(drawingS){cx.lineTo(px(p.d),py(p.paleo));drawingS=false}
+    });
+    cx.stroke();cx.setLineDash([]);cx.globalAlpha=1;
+    // Structural depth label
+    if(deepPt.paleo<-100){
+      cx.fillStyle='#8B451377';cx.font='italic 8px "IBM Plex Sans"';cx.textAlign='left';
+      cx.fillText('← Foredeep basement ('+Math.round(deepPt.paleo)+' m)',px(deepPt.d)+5,py(deepPt.paleo)+4);
+    }
+  }
+
+  // ── Geological zone shading — computed from perpendicular distance to thrust front ──
+  // Uses latitude-dependent Tₑ and zone widths (Horton 1997; Whitman 1994; Repasch 2023)
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  if(coords && coords.length>1){
+    // Classify each data point by its foreland zone
+    let lastZone='',zoneStart=0;
+    const zoneRuns=[]; // {zone, label, color, startD, endD}
+    for(let i=0;i<data.length;i++){
+      // Find the closest coord point to get lat/lon for this distance
+      let bestCoord=coords[0];
+      if(segs.length>1){
+        const dd=data[i].d;
+        for(let j=0;j<segs.length-1;j++){
+          if(dd>=segs[j].d&&dd<=segs[j+1].d){
+            const frac=(dd-segs[j].d)/(segs[j+1].d-segs[j].d||1);
+            if(j<coords.length-1){
+              bestCoord={lat:coords[j].lat+(coords[Math.min(j+1,coords.length-1)].lat-coords[j].lat)*frac,
+                         lon:coords[j].lon+(coords[Math.min(j+1,coords.length-1)].lon-coords[j].lon)*frac};
+            }
+            break;
+          }
+        }
+      }
+      const zInfo=classifyForelandZone(bestCoord.lat,bestCoord.lon);
+      if(zInfo.zone!==lastZone){
+        if(lastZone){zoneRuns[zoneRuns.length-1].endD=data[i].d}
+        zoneRuns.push({zone:zInfo.zone,label:zInfo.label,color:zInfo.color,startD:data[i].d,endD:data[i].d,Te:zInfo.Te});
+        lastZone=zInfo.zone;
+      } else {
+        zoneRuns[zoneRuns.length-1].endD=data[i].d;
+      }
+    }
+    // Draw zone shading
+    zoneRuns.forEach(zr=>{
+      if(zr.zone==='craton')return; // don't shade craton — handled by shield zone
+      cx.fillStyle=zr.color+'08';
+      cx.fillRect(px(zr.startD),pad.t,px(zr.endD)-px(zr.startD),ph);
+    });
+    // Draw zone labels at bottom
+    const zy=pad.t+ph+24;
+    cx.font='bold 7px "IBM Plex Sans"';cx.textAlign='center';
+    zoneRuns.forEach(zr=>{
+      const mid=(zr.startD+zr.endD)/2;
+      if(px(zr.endD)-px(zr.startD)<30)return; // skip narrow zones
+      cx.fillStyle=zr.color+'88';
+      const teLabel=zr.Te?(' Tₑ≈'+zr.Te):'';
+      cx.fillText(zr.label+teLabel,px(mid),zy);
+    });
+  }
+  // Precambrian shield zone (Routes B/C)
+  if(paleoReachResult && paleoReachResult.shieldZone){
+    const sz = paleoReachResult.shieldZone;
+    cx.fillStyle='rgba(180,83,9,0.08)';
+    cx.fillRect(px(sz.start),pad.t,px(sz.end)-px(sz.start),ph);
+    // Shield zone borders
+    cx.setLineDash([4,4]);cx.strokeStyle='#b4530944';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(px(sz.start),pad.t);cx.lineTo(px(sz.start),pad.t+ph);cx.stroke();
+    cx.beginPath();cx.moveTo(px(sz.end),pad.t);cx.lineTo(px(sz.end),pad.t+ph);cx.stroke();
+    cx.setLineDash([]);
+    // Label
+    cx.fillStyle='#92400e';cx.font='bold 9px "IBM Plex Sans"';cx.textAlign='center';
+    const szMid = (px(sz.start)+px(sz.end))/2;
+    cx.fillText(sz.label,szMid,pad.t+12);
+    cx.font='8px "IBM Plex Sans"';
+    cx.fillText('Precambrian (>1300 Ma, Tₑ >70 km)',szMid,pad.t+22);
+    cx.fillText('Higher at 3.45 Ma (+'+paleoReachResult.dtLower+' m)',szMid,pad.t+32);
+  }
+  // Fitzcarrald influence zone (all routes)
+  if(fitzStart > 0 && fitzStart < routeEnd){
+    cx.fillStyle='rgba(124,58,237,0.06)';
+    cx.fillRect(px(fitzStart),pad.t,px(routeEnd)-px(fitzStart),ph);
+    cx.setLineDash([3,5]);cx.strokeStyle='#7c3aed55';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(px(fitzStart),pad.t);cx.lineTo(px(fitzStart),pad.t+ph);cx.stroke();
+    cx.setLineDash([]);
+    cx.fillStyle='#7c3aed';cx.font='bold 9px "IBM Plex Sans"';cx.textAlign='center';
+    const fzMid = (px(fitzStart)+px(routeEnd))/2;
+    cx.fillText('Fitzcarrald Arch uplift zone',fzMid,pad.t+ph-16);
+    cx.font='8px "IBM Plex Sans"';
+    cx.fillText('Nazca Ridge flat sub. (~4 Ma, Espurt 2007)',fzMid,pad.t+ph-6);
+  }
+  // Paleo reach marker
+  if(paleoReachResult && paleoReachResult.reach>0){
+    const pr=paleoReachResult.reach;
+    cx.fillStyle='#2563eb';cx.beginPath();cx.arc(px(pr),py(plioSL),5,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#2563eb';cx.font='600 9px "IBM Plex Sans"';cx.textAlign='left';
+    const labelX = px(pr)+8;
+    cx.fillText('Paleo reach: '+Math.round(pr)+' km',labelX,py(plioSL)+4);
+    if(paleoReachResult.blocked){
+      cx.fillStyle='#dc2626';cx.font='600 9px "IBM Plex Sans"';
+      const cityName=(document.getElementById('target-city')||{}).selectedOptions;
+      const cName=cityName&&cityName[0]?cityName[0].text.split('(')[0].trim():'target';
+      cx.fillText('← '+Math.round(paleoReachResult.shortfall)+' km short of '+cName,labelX,py(plioSL)+14);
+      // Mark the barrier
+      if(paleoReachResult.firstBarrier){
+        const fb=paleoReachResult.firstBarrier;
+        cx.fillStyle='#dc2626';cx.beginPath();cx.arc(px(fb.d),py(fb.e),4,0,Math.PI*2);cx.fill();
+        cx.font='600 8px "IBM Plex Sans"';cx.textAlign='center';
+        cx.fillText('✕ '+fb.name+' ('+fb.e+'m)',px(fb.d),py(fb.e)-8);
+      }
+    }
+  }
+  // Target city marker
+  const dT=+document.getElementById('d-target').value;
+  const hT=+document.getElementById('h-target').value;
+  if(dT<=routeEnd){
+    const paleoTarget=paleoElevAt(dT,alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xmax);
+    cx.fillStyle='#dc2626';cx.beginPath();cx.arc(px(dT),py(paleoTarget),4,0,Math.PI*2);cx.fill();
+    cx.fillStyle='#dc2626';cx.font='600 9px "IBM Plex Sans"';cx.textAlign='center';
+    const cSel=document.getElementById('target-city');
+    const targetLabel=cSel&&cSel.selectedOptions[0]?cSel.selectedOptions[0].text.split('(')[0].trim():'Target';
+    cx.fillText(targetLabel+' '+Math.round(paleoTarget)+'m',px(dT),py(paleoTarget)+(paleoTarget<plioSL?14:-8));
+  }
+  // Shield sill line for Routes B/C
+  if(paleoReachResult && paleoReachResult.shieldSill){
+    const ss=paleoReachResult.shieldSill;
+    if(ss.plio<maxE && ss.plio>minE){
+      cx.setLineDash([4,3]);cx.strokeStyle='#f59e0b';cx.lineWidth=2;
+      cx.beginPath();cx.moveTo(pad.l,py(ss.plio));cx.lineTo(pad.l+pw,py(ss.plio));cx.stroke();cx.setLineDash([]);
+      cx.fillStyle='#92400e';cx.font='600 9px "IBM Plex Sans"';cx.textAlign='left';
+      cx.fillText('⚠ '+ss.name+' sill at 3.45 Ma: ~'+ss.plio+' m (not removable)',pad.l+4,py(ss.plio)-4);
+    }
+  }
+  // Town labels along paleo profile — STAGGERED with collision detection
+  let labelSlots=[];let labelIdx=0;
+  segs.forEach((s,si)=>{
+    if(s.name.startsWith('km ')||s.d<=0||!s.name)return;
+    const xp=px(s.d);
+    const tooClose=labelSlots.some(slot=>Math.abs(xp-slot)<50);
+    if(tooClose)return;
+    const rawPe=paleoElevAt(s.d,alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xmax);
+    const pe=Math.max(rawPe, FILL_FLOOR);
+    const tier=labelIdx%3;
+    const yOff=-10-tier*12;
+    cx.fillStyle='#4a4945';cx.font='500 8px "IBM Plex Sans"';cx.textAlign='left';
+    cx.save();cx.translate(xp+3,py(pe)+yOff);cx.rotate(-0.3);cx.fillText(s.name,0,0);cx.restore();
+    // Leader line
+    cx.strokeStyle='#9c9a9233';cx.lineWidth=0.5;cx.beginPath();cx.moveTo(xp,py(pe));cx.lineTo(xp+2,py(pe)+yOff+7);cx.stroke();
+    // Dot on surface
+    cx.fillStyle='#059669';cx.beginPath();cx.arc(xp,py(pe),2,0,Math.PI*2);cx.fill();
+    labelSlots.push(xp);labelIdx++;
+  });
+  // Zone labels — now generated dynamically in the zone shading section above
+  if(fitzStart>0&&fitzStart<routeEnd){
+    cx.fillStyle='#7c3aed66';cx.font='bold 7px "IBM Plex Sans"';cx.textAlign='center';
+    cx.fillText('Fitz Arch zone',px((fitzStart+routeEnd)/2),pad.t+ph+24);
+  }
+}
+
+// ═══ MAP ═══
+let inundMap=null,inundLayers=[];
+function initInundationMap(){
+  if(inundMap) return;
+  const el=document.getElementById('inundation-map');
+  if(!el) return;
+  inundMap = L.map(el, {scrollWheelZoom:true}).setView([-8,-60],4);
+
+  // Base layers
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri',maxZoom:18
+  });
+  const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+    attribution:'OpenTopoMap (CC-BY-SA)',maxZoom:17
+  });
+  const terrainBg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri Shaded Relief',maxZoom:13
+  });
+  // Esri World Terrain — color-coded DEM with hypsometric tints + hillshade
+  const demTerrain = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri Physical Map',maxZoom:8
+  });
+  // Esri NatGeo — good reference map with terrain shading
+  const natGeo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri NatGeo',maxZoom:16
+  });
+  satellite.addTo(inundMap);
+
+  // Overlay layers
+  const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:18,opacity:0.7
+  });
+  labels.addTo(inundMap); // ON by default
+
+  // Hillshade overlay (semi-transparent, works over satellite)
+  const hillshade = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri Hillshade',maxZoom:18,opacity:0.25
+  });
+  hillshade.addTo(inundMap); // ON by default
+
+  // Esri World Hydro Reference — rivers, lakes, ocean labels
+  const hydroRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri Hydro Reference',maxZoom:18,opacity:0.6
+  });
+  // OFF by default — user can toggle on
+
+  // Esri World Transportation — shows roads/rivers reference
+  const waterFeatures = L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'USGS Hydro',maxZoom:16,opacity:0.5
+  });
+  // OFF by default — US-only, but useful for reference
+
+  // OpenTopoMap as transparent overlay (has river names and contours)
+  const topoOverlay = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+    attribution:'OpenTopoMap',maxZoom:17,opacity:0.4
+  });
+  // OFF by default — can overlay on satellite for river+contour context
+
+  const macrostrat = L.tileLayer('https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png',{
+    attribution:'<a href="https://macrostrat.org">Macrostrat</a> CC-BY 4.0',
+    maxZoom:18,opacity:0.55
+  });
+  // macrostrat NOT added — OFF by default
+
+  // GOCE Bouguer gravity anomaly (IRENA/Masdar WMS — global coverage)
+  const gravityBouguer = L.tileLayer.wms('https://irena.masdar.ac.ae/geoserver/gravity/wms?',{
+    layers:'gravity:goce_bouguer_anomaly',
+    styles:'goce_bouguer_anomaly',
+    format:'image/png',transparent:true,
+    version:'1.1.1',
+    attribution:'GOCE Bouguer (Bonvalot et al. 2012)',
+    maxZoom:12,opacity:0.45
+  });
+  // OFF by default — toggle on to see gravity patterns
+
+  // AZ 125 lineament (Ribeiro et al. 2018; Moraes Rocha et al. 2014)
+  // Approximate trace from Rondônia to Rio de Janeiro coast
+  const az125coords = [
+    [-12.0, -62.5],  // Western end — Poxoréu/Rondônia region
+    [-13.0, -60.0],  // Chapada dos Parecis
+    [-14.5, -57.5],  // Northern Pantanal margin
+    [-15.5, -55.0],  // Chapada dos Guimarães
+    [-16.5, -52.5],  // Goiás alkaline province
+    [-17.5, -50.0],  // Central Goiás
+    [-18.5, -47.5],  // Alto Paranaíba province (Araxá, Tapira, Catalão)
+    [-19.5, -46.0],  // Serra da Canastra
+    [-20.5, -44.5],  // Southern Minas Gerais
+    [-21.5, -43.5],  // Poços de Caldas region
+    [-22.5, -42.5],  // Toward coast
+    [-23.0, -42.0],  // Cabo Frio, Rio de Janeiro
+  ];
+  const az125line = L.polyline(az125coords, {
+    color:'#f59e0b', weight:3, opacity:0.8,
+    dashArray:'10,6', lineCap:'round'
+  });
+  az125line.bindTooltip('Azimuth 125° lineament (91–72 Ma)<br>Ribeiro et al. 2018', {sticky:true, className:'elev-tooltip'});
+
+  // Approximate TDD trace (Transcontinental Drainage Divide)
+  // From Gomes et al. 2025 / Ribeiro et al. 2018
+  const tddCoords = [
+    [-12.5, -60.5],  // NW edge — Pantanal/Parecis boundary
+    [-13.5, -57.0],  // Chapada dos Parecis
+    [-14.5, -55.5],  // Upper Xingú/Paraguay divide
+    [-15.5, -53.5],  // Mato Grosso
+    [-16.0, -51.0],  // Central Brazil
+    [-16.5, -49.0],  // Goiás
+    [-17.0, -47.0],  // Triângulo Mineiro
+    [-18.0, -45.5],  // São Francisco/Paraná divide
+    [-19.0, -44.5],  // Serra da Canastra
+    [-19.5, -43.5],  // Southern Minas
+    [-20.0, -43.0],  // Mantiqueira
+    [-20.5, -42.5],  // Near Atlantic
+    [-21.0, -41.5],  // Eastern terminus
+  ];
+  const tddLine = L.polyline(tddCoords, {
+    color:'#8b5cf6', weight:3, opacity:0.8,
+    dashArray:'4,4', lineCap:'round'
+  });
+  tddLine.bindTooltip('Transcontinental Drainage Divide (TDD)<br>Amazon–Paraná–São Francisco boundary<br>Migrating southward (Gomes et al. 2025)', {sticky:true, className:'elev-tooltip'});
+
+  // Sub-Andean thrust front — FULL extent from Peru to Argentina
+  const thrustFrontCoords = [
+    [-8.0, -75.5], [-9.0, -75.8], [-10.0, -75.5], [-11.0, -74.5],
+    [-12.0, -73.5], [-13.0, -72.0], [-14.0, -70.5], [-15.0, -69.5],
+    [-16.0, -68.5], [-17.5, -66.5], [-18.5, -65.0], [-19.5, -64.0],
+    [-20.5, -63.5], [-21.5, -63.5], [-22.5, -64.0], [-23.5, -64.5],
+    [-24.5, -65.0], [-26.0, -65.5], [-27.5, -66.0], [-29.0, -66.5],
+    [-30.5, -67.0], [-32.0, -68.0], [-33.5, -69.0]
+  ];
+  const thrustFront = L.polyline(thrustFrontCoords, {
+    color:'#785630', weight:3, opacity:0.8, dashArray:'8,4'
+  });
+  thrustFront.bindTooltip('Sub-Andean thrust front<br>Orogenic wedge boundary (x=0 in flexural models)<br>Tₑ varies: ~40 km at 18°S, ~10 km at 24°S<br>Horton 1997; Whitman 1994', {sticky:true, className:'elev-tooltip'});
+
+  // Sub-Andean Zone (wedge-top depozone) — 0-100 km east of thrust front
+  const subAndeanZone = L.polygon([
+    // West edge (thrust front)
+    [-8.0, -75.5], [-10.0, -75.5], [-12.0, -73.5], [-14.0, -70.5],
+    [-16.0, -68.5], [-18.5, -65.0], [-20.5, -63.5], [-22.5, -64.0],
+    [-24.5, -65.0], [-27.5, -66.0], [-30.5, -67.0], [-33.5, -69.0],
+    // East edge (~100 km at 18°S, narrowing to ~30 km south of 23°S)
+    [-33.0, -68.7], [-30.0, -66.7], [-27.0, -65.7],
+    [-24.0, -64.7], // narrow: Te=12 km → ~32 km wedge-top
+    [-22.0, -63.0], [-20.0, -62.5], [-18.0, -64.0], // ~100 km: Te=38
+    [-15.5, -67.5], [-13.5, -69.5], [-11.5, -72.5], [-9.5, -74.5], [-8.0, -74.5]
+  ], {color:'#785630', weight:1, fillColor:'#785630', fillOpacity:0.06, dashArray:'3,3'});
+  subAndeanZone.bindTooltip('Sub-Andean Zone (wedge-top)<br>1–3 km Cenozoic deposits on active thrusts<br>Width: ~100 km at 18°S (Tₑ=38), ~30 km at 24°S (Tₑ=12)<br>DeCelles & Giles 1996; Horton 1997<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Chaco Foredeep (3–4 km sediment fill, ~100–400 km from thrust front)
+  const chacoPlain = L.polygon([
+    [-18.0, -64.0], [-18.5, -61.0], [-20.0, -61.0], [-22.0, -61.5],
+    [-24.0, -63.0], [-26.0, -63.5], [-28.0, -64.0], [-30.0, -65.0],
+    [-30.0, -66.5], [-28.0, -65.5], [-26.0, -65.0], [-24.0, -64.5],
+    [-22.0, -63.5], [-20.0, -63.0], [-18.0, -64.5]
+  ], {color:'#2563eb', weight:1, fillColor:'#2563eb', fillOpacity:0.04, dashArray:'4,4'});
+  chacoPlain.bindTooltip('Chaco Foredeep<br>3–4 km Cenozoic sediment fill<br>~100–400 km east of thrust front<br>Maximum flexural subsidence<br>Horton & DeCelles 1997<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Sierras Pampeanas (broken foreland, 27-33°S)
+  const sierrasPampeanas = L.polygon([
+    [-27.0, -66.5], [-27.0, -63.0], [-28.5, -62.5], [-30.0, -63.0],
+    [-31.5, -63.5], [-33.0, -64.5], [-33.5, -66.5], [-32.0, -67.0],
+    [-30.0, -67.0], [-28.5, -66.5]
+  ], {color:'#b91c1c', weight:1, fillColor:'#b91c1c', fillOpacity:0.05, dashArray:'4,4'});
+  sierrasPampeanas.bindTooltip('Sierras Pampeanas (broken foreland)<br>Basement-cored uplifts, 27–33°S<br>Tₑ ~6–15 km — weak lithosphere<br>No continuous foredeep — discrete fault-bounded basins<br>Whitman 1994; Strecker et al. 2012<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Fitzcarrald Arch polygon (~400,000 km², Espurt 2007)
+  const fitzArchPoly = L.polygon([
+    [-9.0, -74.0], [-8.5, -72.5], [-9.0, -70.5], [-10.0, -69.0],
+    [-11.5, -68.5], [-13.0, -69.5], [-13.5, -71.0], [-13.0, -73.0],
+    [-11.5, -74.0], [-10.0, -74.5]
+  ], {color:'#7c3aed', weight:1.5, fillColor:'#7c3aed', fillOpacity:0.08, dashArray:'4,4'});
+  fitzArchPoly.bindTooltip('Fitzcarrald Arch<br>~400,000 km², 400–600 m relief<br>Uplift since ~4 Ma (Espurt 2007)<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Iquitos Arch (north of Fitzcarrald)
+  const iquitosArch = L.polygon([
+    [-3.0, -76.0], [-2.5, -74.5], [-3.0, -73.0], [-4.5, -73.0],
+    [-5.5, -74.0], [-5.0, -75.5]
+  ], {color:'#0891b2', weight:1.5, fillColor:'#0891b2', fillOpacity:0.08, dashArray:'4,4'});
+  iquitosArch.bindTooltip('Iquitos Arch (forebulge)<br>NW Amazonian foreland forebulge<br>Separates Marañón and Solimões basins<br>Roddaz et al. 2005<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Purus Arch (east of Fitzcarrald, in western Brazil)
+  const purusArch = L.polygon([
+    [-5.0, -67.0], [-4.0, -65.0], [-5.0, -63.0], [-7.0, -62.5],
+    [-9.0, -63.0], [-9.5, -65.0], [-8.0, -67.0]
+  ], {color:'#059669', weight:1.5, fillColor:'#059669', fillOpacity:0.06, dashArray:'4,4'});
+  purusArch.bindTooltip('Purus Arch<br>Middle Proterozoic basement high<br>W. boundary of Amazon sedimentary basin<br>Breached ~8–10 Ma (Caputo 1991; Hoorn 2010)<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Paranense Sea maximum extent (~15-10 Ma, reached Asunción arch)
+  const paranenseSea = L.polygon([
+    [-25.0, -52.0], [-27.0, -53.0], [-30.0, -55.0], [-33.0, -57.0],
+    [-35.0, -58.5], [-38.0, -59.0], [-38.5, -57.0], [-36.0, -55.0],
+    [-33.0, -53.0], [-30.0, -50.0], [-27.0, -49.0], [-25.0, -50.0]
+  ], {color:'#2563eb', weight:1.5, fillColor:'#2563eb', fillOpacity:0.08, dashArray:'6,4'});
+  paranenseSea.bindTooltip('Paranense Sea max. extent<br>~15–10 Ma (Mid–Late Miocene)<br>Reached Asunción arch (~25°S)<br>del Río et al. 2018<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Guiana Shield (northern exposed part of Amazonian Craton)
+  const guianaShield = L.polygon([
+    [8.0, -60.0], [7.0, -57.0], [5.5, -54.0], [4.0, -52.0],
+    [2.5, -51.5], [1.5, -50.5], [0.5, -50.0], [-1.0, -52.0],
+    [-2.0, -54.0], [-2.5, -56.0], [-2.0, -58.0], [-1.5, -60.0],
+    [-2.0, -63.0], [-1.0, -66.0], [0.0, -68.0], [2.0, -68.5],
+    [4.0, -67.5], [5.5, -66.0], [6.5, -64.0], [7.5, -62.0]
+  ], {color:'#16a34a', weight:1.5, fillColor:'#16a34a', fillOpacity:0.06, dashArray:'6,4'});
+  guianaShield.bindTooltip('Guiana Shield<br>Northern Amazonian Craton (~1.7 Ga)<br>Precambrian basement, Tₑ >70 km<br>Kroonenberg et al. 2016; Tassinari & Macambira 1999<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Central Brazil / Guaporé Shield (southern exposed part of Amazonian Craton)
+  const guaporeShield = L.polygon([
+    [-7.0, -63.0], [-7.5, -60.0], [-8.0, -57.0], [-9.0, -54.0],
+    [-10.0, -52.0], [-12.0, -50.0], [-14.0, -49.0], [-16.0, -50.0],
+    [-17.0, -52.0], [-17.5, -54.0], [-17.0, -56.0], [-16.0, -58.0],
+    [-15.0, -60.0], [-14.0, -62.0], [-12.0, -63.5], [-10.0, -64.0],
+    [-8.5, -63.5]
+  ], {color:'#ca8a04', weight:1.5, fillColor:'#ca8a04', fillOpacity:0.06, dashArray:'6,4'});
+  guaporeShield.bindTooltip('Central Brazil / Guaporé Shield<br>Southern Amazonian Craton (~2.0–1.3 Ga)<br>Precambrian basement — forms the TDD barrier<br>Routes B/C must cross this shield<br>Pérez-Gussinyé 2007: Tₑ >70 km<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Contaya Arch (NW-SE structural high dividing Marañón and Ucayali basins)
+  const contayaArch = L.polyline([
+    [-7.0, -76.5], [-7.5, -76.0], [-8.0, -75.5], [-8.5, -75.2],
+    [-9.0, -75.0], [-9.5, -74.8], [-10.0, -74.5]
+  ], {color:'#e11d48', weight:2.5, opacity:0.7, dashArray:'8,5'});
+  contayaArch.bindTooltip('Contaya Arch<br>NW-SE structural high, Triassic-Jurassic origin<br>Divides Marañón and Ucayali basins<br>Reactivated in Neogene (Hermoza et al. 2005;<br>Navarro Zelasco 2010; Parra et al. 2020)<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Chaco forebulge zone (~300-500 km from Andean front, 20-28°S)
+  const chacoForebulge = L.polygon([
+    [-18.0, -61.0], [-18.0, -58.0], [-20.0, -57.5], [-22.0, -58.0],
+    [-24.0, -59.5], [-26.0, -60.5], [-28.0, -61.5],
+    [-26.0, -62.5], [-24.0, -62.0], [-22.0, -61.5], [-20.0, -61.0]
+  ], {color:'#dc2626', weight:1, fillColor:'#dc2626', fillOpacity:0.05, dashArray:'4,4'});
+  chacoForebulge.bindTooltip('Chaco forebulge<br>Flexural uplift ~550 m (Repasch 2023; Chase 2009)<br>Width ~200 km, ~400–700 km from thrust front<br>Positive geoid anomaly (Ussami et al. 1997)<br>Horton & DeCelles 1997<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Pantanal back-bulge
+  const pantanalBackbulge = L.polygon([
+    [-16.5, -58.0], [-16.5, -56.0], [-18.0, -55.5], [-20.0, -56.0],
+    [-21.5, -57.0], [-21.0, -58.0], [-19.0, -58.0], [-17.5, -58.0]
+  ], {color:'#059669', weight:1, fillColor:'#059669', fillOpacity:0.05, dashArray:'4,4'});
+  pantanalBackbulge.bindTooltip('Pantanal back-bulge<br>~0.5 km saucer-shaped Cenozoic subsidence<br>~700–1000 km east of thrust front<br>Surface was ~40 m higher at 3.45 Ma<br>Horton & DeCelles 1997<br><i style="color:#999">Approximate extent</i>', {sticky:true, className:'elev-tooltip'});
+
+  // Layer control
+  const baseMaps = {
+    'Satellite': satellite,
+    'DEM / Physical': demTerrain,
+    'Shaded Relief': terrainBg,
+    'NatGeo': natGeo,
+    'Topo (OpenTopoMap)': openTopo
+  };
+  // Add all overlays to map (except geology)
+  az125line.addTo(inundMap);
+  tddLine.addTo(inundMap);
+  thrustFront.addTo(inundMap);
+  subAndeanZone.addTo(inundMap);
+  chacoPlain.addTo(inundMap);
+  sierrasPampeanas.addTo(inundMap);
+  fitzArchPoly.addTo(inundMap);
+  iquitosArch.addTo(inundMap);
+  purusArch.addTo(inundMap);
+  paranenseSea.addTo(inundMap);
+  guianaShield.addTo(inundMap);
+  guaporeShield.addTo(inundMap);
+  contayaArch.addTo(inundMap);
+  chacoForebulge.addTo(inundMap);
+  pantanalBackbulge.addTo(inundMap);
+
+  const overlays = {
+    'Labels': labels,
+    'Hillshade': hillshade,
+    'Hydro reference (Esri)': hydroRef,
+    'Topo overlay (rivers+contours)': topoOverlay,
+    'Geology (Macrostrat)': macrostrat,
+    'Gravity (Bouguer GOCE)': gravityBouguer,
+    'AZ 125 lineament': az125line,
+    'TDD divide': tddLine,
+    'Thrust front': thrustFront,
+    'Sub-Andean Zone': subAndeanZone,
+    'Chaco Foredeep': chacoPlain,
+    'Sierras Pampeanas': sierrasPampeanas,
+    'Fitzcarrald Arch': fitzArchPoly,
+    'Iquitos Arch': iquitosArch,
+    'Purus Arch': purusArch,
+    'Contaya Arch': contayaArch,
+    'Paranense Sea': paranenseSea,
+    'Guiana Shield': guianaShield,
+    'Guaporé Shield': guaporeShield,
+    'Chaco forebulge': chacoForebulge,
+    'Pantanal back-bulge': pantanalBackbulge
+  };
+  L.control.layers(baseMaps, overlays, {collapsed:true, position:'topright'}).addTo(inundMap);
+
+  // General map click handler — adds a new waypoint to the current route
+  // For Route E this is the primary drawing method; for A-D it inserts between nearest existing points
+  inundMap.on('click', async function(e){
+    if(currentRoute==='E' && mapDrawingMode){
+      // Route E custom drawing is handled by enableMapDrawing
+      return;
+    }
+    // For routes A-D: insert a new point between the two nearest consecutive waypoints
+    const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:routeD_coords;
+    if(!coords||coords.length<2)return;
+    const lat=e.latlng.lat,lon=e.latlng.lng;
+    // Find which segment the click is closest to
+    let bestIdx=0,bestDist=Infinity;
+    for(let i=0;i<coords.length-1;i++){
+      const midLat=(coords[i].lat+coords[i+1].lat)/2,midLon=(coords[i].lon+coords[i+1].lon)/2;
+      const d=haversine(lat,lon,midLat,midLon);
+      if(d<bestDist){bestDist=d;bestIdx=i+1;}
+    }
+    const elev=await fetchElevation(lat,lon);
+    const newPt={name:'New pt',lat:lat,lon:lon,e:elev};
+    coords.splice(bestIdx,0,newPt);
+    // Also insert into segs
+    const newSeg={d:0,e:elev,name:'New pt'};
+    if(bestIdx<=segs.length) segs.splice(bestIdx,0,newSeg);
+    // Recompute distances
+    let cumD=0;
+    for(let j=0;j<coords.length;j++){
+      if(j>0) cumD+=haversine(coords[j-1].lat,coords[j-1].lon,coords[j].lat,coords[j].lon);
+      if(j<segs.length) segs[j].d=Math.round(cumD);
+    }
+    renderSegTable();buildCitySelector();onCityChange();runAll();
+    updateInundationMap();
+  });
+
+  updateInundationMap();
+}
+function updateInundationMap(){if(!inundMap)return;inundLayers.forEach(l=>inundMap.removeLayer(l));inundLayers=[];const sl=+document.getElementById('sl-global').value;
+  if(currentRoute==='E'){
+    if(routeE.length<2)return;
+    for(let i=0;i<routeE.length-1;i++){const c1=routeE[i],c2=routeE[i+1],belowSL=Math.max(c1.e,c2.e)<=sl;const line=L.polyline([[c1.lat,c1.lon],[c2.lat,c2.lon]],{color:belowSL?'#dc2626':'#059669',weight:belowSL?5:3,opacity:0.85}).addTo(inundMap);inundLayers.push(line)}
+    return;
+  }
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:routeD_coords;
+  // Route polyline segments
+  for(let i=0;i<coords.length-1;i++){
+    const c1=coords[i],c2=coords[i+1],belowSL=Math.max(c1.e,c2.e)<=sl;
+    const line=L.polyline([[c1.lat,c1.lon],[c2.lat,c2.lon]],{color:belowSL?'#dc2626':'#059669',weight:belowSL?5:3,opacity:0.85}).addTo(inundMap);
+    inundLayers.push(line);
+  }
+  // Draggable waypoint markers
+  coords.forEach((c,i)=>{
+    const bsl=c.e<=sl;
+    const m=L.marker([c.lat,c.lon],{draggable:true}).addTo(inundMap);
+    m.bindTooltip(`<b>${c.name||'Pt '+(i+1)}</b><br>${c.e}m · ${segs[i]?segs[i].d:0} km${bsl?' ⚠ BELOW SL':''}`,
+      {permanent:i===0||i===coords.length-1,direction:'top',offset:[0,-10],className:'elev-tooltip'});
+    // Drag to reposition — fetches new elevation
+    m.on('dragend',async function(ev){
+      const pos=ev.target.getLatLng();
+      coords[i].lat=pos.lat;coords[i].lon=pos.lng;
+      const newElev=await fetchElevation(pos.lat,pos.lng);
+      coords[i].e=newElev;
+      // Update segs elevation
+      if(i<segs.length) segs[i].e=newElev;
+      // Recompute distances using haversine
+      let cumD=0;
+      for(let j=0;j<coords.length;j++){
+        if(j>0) cumD+=haversine(coords[j-1].lat,coords[j-1].lon,coords[j].lat,coords[j].lon);
+        if(j<segs.length) segs[j].d=Math.round(cumD);
+      }
+      renderSegTable();buildCitySelector();onCityChange();runAll();
+      updateInundationMap();
+    });
+    // Right-click to delete (min 2 points)
+    m.on('contextmenu',function(){
+      if(coords.length<=2||segs.length<=2)return;
+      coords.splice(i,1);
+      if(i<segs.length) segs.splice(i,1);
+      // Recompute distances
+      let cumD=0;
+      for(let j=0;j<coords.length;j++){
+        if(j>0) cumD+=haversine(coords[j-1].lat,coords[j-1].lon,coords[j].lat,coords[j].lon);
+        if(j<segs.length) segs[j].d=Math.round(cumD);
+      }
+      renderSegTable();buildCitySelector();onCityChange();runAll();
+      updateInundationMap();
+    });
+    inundLayers.push(m);
+  });
+  inundMap.fitBounds(L.latLngBounds(coords.map(c=>[c.lat,c.lon])).pad(0.1));
+}
+
+// ═══ COMPARISON CHART (§20) — FIX: always include model values ═══
+function drawCompChart(){
+  const Te=+document.getElementById('fx-Te').value,Ev=+document.getElementById('fx-E').value,nu=+document.getElementById('fx-nu').value,rhom=+document.getElementById('fx-rhom').value,rhof=+document.getElementById('fx-rhof').value,w0m=+document.getElementById('fx-w0m').value,w0n=+document.getElementById('fx-w0n').value,dt=+document.getElementById('fx-dt').value,xmdd=+document.getElementById('fx-xmdd').value,xfitz=+document.getElementById('fx-xfitz').value;
+  const D=(Ev*1e9*Math.pow(Te*1000,3))/(12*(1-nu*nu)),alpha=Math.pow((4*D)/((rhom-rhof)*9.81),0.25);
+  const modelMdd=dt>0?Math.round((fxDefl(xmdd,w0m,alpha)-fxDefl(xmdd,w0n,alpha))/dt):0;
+  const modelFitz=dt>0?Math.round((fxDefl(xfitz,w0m,alpha)-fxDefl(xfitz,w0n,alpha))/dt):0;
+  const entries=[
+    {label:'Fitzcarrald — surface [1]',lo:100,hi:125,cat:'andes'},
+    {label:'Fitzcarrald — rock [1]',lo:225,hi:300,cat:'andes'},
+    {label:'C. Andes foreland [2]',lo:25,hi:45,cat:'andes'},
+    {label:'Altiplano [3]',lo:200,hi:300,cat:'andes'},
+    {label:'Eastern Cordillera [4]',lo:600,hi:3000,cat:'andes'},
+    {label:'Nanga Parbat [5]',lo:5000,hi:10000,cat:'himalaya'},
+    {label:'Siwalik Hills [6]',lo:250,hi:800,cat:'himalaya'},
+    {label:'Sub-Himalayan [7]',lo:150,hi:500,cat:'himalaya'},
+    {label:'S.Nev. Plio [8]',lo:150,hi:200,cat:'sierra'},
+    {label:'S. Sierra tilt [9,11]',lo:200,hi:450,cat:'sierra'},
+    {label:'Kern Arch [10]',lo:1000,hi:1800,cat:'sierra'},
+    {label:'N. Alpine [12]',lo:50,hi:200,cat:'other'},
+    {label:'Parra req. [13]',lo:51,hi:51,cat:'target'},
+  ];
+  // ALWAYS add model values — give them a small spread so Chart.js renders visible bars
+  const mMdd=Math.max(1,Math.abs(modelMdd)),mFitz=Math.max(1,Math.abs(modelFitz));
+  entries.push({label:'§18 Flex: P.M. '+(modelMdd<0?'(sub)':'')+'[M]',lo:mMdd*0.85,hi:mMdd*1.15,cat:'model'});
+  entries.push({label:'§18 Flex: Fitz '+(modelFitz<0?'(sub)':'')+'[M]',lo:mFitz*0.85,hi:mFitz*1.15,cat:'model'});
+  // Combined values
+  const bsRhoc=+document.getElementById('bs-rhoc').value,bsRhom2=+document.getElementById('bs-rhom').value,bsDhmax=+document.getElementById('bs-dhmax').value,bsXcenter=+document.getElementById('bs-xcenter').value,bsSigma=+document.getElementById('bs-sigma').value,bsDt=+document.getElementById('bs-dt').value;
+  const bsIso=(bsRhom2-bsRhoc)/bsRhom2;
+  function bsU(x){const dx=x-bsXcenter;return bsDhmax*Math.exp(-(dx*dx)/(2*bsSigma*bsSigma))*1000*bsIso}
+  const combMdd=modelMdd+(bsDt>0?bsU(xmdd)/bsDt:0),combFitz=modelFitz+(bsDt>0?bsU(xfitz)/bsDt:0);
+  const cMdd=Math.max(1,Math.abs(Math.round(combMdd))),cFitz=Math.max(1,Math.abs(Math.round(combFitz)));
+  entries.push({label:'§18+19 Comb: P.M. [M]',lo:cMdd*0.85,hi:cMdd*1.15,cat:'combined'});
+  entries.push({label:'§18+19 Comb: Fitz [M]',lo:cFitz*0.85,hi:cFitz*1.15,cat:'combined'});
+
+  const colors={andes:'#0d9488',himalaya:'#2563eb',sierra:'#d97706',other:'#9c9a92',target:'#dc2626',model:'#dc2626',combined:'#dc2626'};
+  if(compChart){compChart.destroy()}
+  const cvEl=document.getElementById('cv5');cvEl.parentElement.style.height=Math.max(440,entries.length*28)+'px';
+  compChart=new Chart(cvEl,{type:'bar',data:{labels:entries.map(e=>e.label),datasets:[{label:'Rate',data:entries.map(e=>[Math.max(e.lo,0.5),Math.max(e.hi,0.5)]),backgroundColor:entries.map(e=>colors[e.cat]+'bb'),borderColor:entries.map(e=>colors[e.cat]),borderWidth:1,borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{type:'logarithmic',title:{display:true,text:'m/Myr — log',color:'#6b6a65',font:{size:9}},ticks:{color:'#6b6a65',font:{size:9,family:'IBM Plex Mono'},callback:function(v){if([1,5,10,25,50,100,250,500,1000,2500,5000,10000].includes(v))return v.toLocaleString();return ''}},min:1,max:15000},y:{ticks:{color:'#1a1a18',font:{size:9.5,family:'IBM Plex Sans'},autoSkip:false},grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){const d=entries[ctx.dataIndex];return Math.round(d.lo)===Math.round(d.hi)?'~'+Math.round((d.lo+d.hi)/2)+' m/Myr':Math.round(d.lo)+'–'+Math.round(d.hi)+' m/Myr'}}}}},plugins:[{id:'tl',beforeDraw:function(chart){const xs=chart.scales.x,ys=chart.scales.y,cx2=chart.ctx;const x51=xs.getPixelForValue(51);cx2.save();cx2.strokeStyle='#dc2626';cx2.lineWidth=1.5;cx2.setLineDash([6,4]);cx2.beginPath();cx2.moveTo(x51,ys.top);cx2.lineTo(x51,ys.bottom);cx2.stroke();cx2.setLineDash([]);cx2.fillStyle='#dc2626';cx2.font='9px IBM Plex Sans';cx2.textAlign='left';cx2.fillText('~51 req.',x51+3,ys.top+10);const x100=xs.getPixelForValue(100),x300=xs.getPixelForValue(300);cx2.fillStyle='rgba(13,148,136,0.08)';cx2.fillRect(x100,ys.top,x300-x100,ys.bottom-ys.top);cx2.restore()}}]});
+}
+
+// ═══ INIT ═══
+
+// Collapsible sections: wrap content between each collapsible h2 and the next h2/end into sec-body divs
+(function(){
+  document.querySelectorAll('h2.collapsible').forEach(function(h2){
+    // If next sibling is already a sec-body, skip
+    if(h2.nextElementSibling && h2.nextElementSibling.classList.contains('sec-body')) {
+      // Just set up toggle
+      var body = h2.nextElementSibling;
+      if(h2.classList.contains('collapsed')) body.classList.add('hidden');
+      h2.onclick = function(){ this.classList.toggle('collapsed'); body.classList.toggle('hidden'); };
+      return;
+    }
+    // Collect all siblings until next h2 or end of parent
+    var wrapper = document.createElement('div');
+    wrapper.className = 'sec-body';
+    var next = h2.nextSibling;
+    while(next){
+      var curr = next;
+      next = curr.nextSibling;
+      // Stop at next h2 or at refs div or resize handle
+      if(curr.nodeType === 1 && (curr.tagName === 'H2' || curr.classList.contains('resize-handle'))) break;
+      // Stop at another module div that contains an h2 (for col C structure)
+      wrapper.appendChild(curr);
+    }
+    h2.parentNode.insertBefore(wrapper, h2.nextSibling);
+    if(h2.classList.contains('collapsed')) wrapper.classList.add('hidden');
+    h2.onclick = function(){ this.classList.toggle('collapsed'); wrapper.classList.toggle('hidden'); };
+  });
+})();
+
+buildCitySelector();
+
+// Dynamic topography calculator with model presets
+const dtModels = {
+  flament3: {rate:4.0, since:50, label:'Flament et al. 2015 Case 3'},
+  flament1: {rate:4.5, since:50, label:'Flament et al. 2015 Case 1'},
+  davila:   {rate:6.0, since:50, label:'Dávila & Lithgow-Bertelloni 2015'},
+  sacek:    {rate:5.7, since:35, label:'Sacek 2014'},
+  rubey:    {rate:2.0, since:50, label:'Rubey et al. 2017'},
+  custom:   {rate:4.0, since:50, label:'Custom'}
+};
+function onDtModelChange(){
+  const key = document.getElementById('dt-model').value;
+  const m = dtModels[key];
+  if(key !== 'custom'){
+    document.getElementById('dt-rate').value = m.rate;
+    document.getElementById('dt-since').value = m.since;
+  }
+  calcDynTopo();
+  runBasalShear(); // update verdict with new dynamic topo params
+}
+function calcDynTopo(){
+  const rate = +document.getElementById('dt-rate').value;
+  const since = +document.getElementById('dt-since').value;
+  const parra = +document.getElementById('dt-parra').value;
+  const total = Math.round(rate * since);
+  const plio = Math.round(rate * parra);
+  document.getElementById('dt-result').value = plio;
+  document.getElementById('dt-total').textContent = total + ' m';
+  document.getElementById('dt-plio').textContent = plio + ' m';
+  // Update model note
+  const mkey = document.getElementById('dt-model') ? document.getElementById('dt-model').value : 'flament3';
+  const mnote = document.getElementById('dt-model-note');
+  if(mnote) mnote.textContent = (dtModels[mkey]||{label:'Custom'}).label + ', ' + since + ' Ma';
+  // Update shield warning if visible
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+    var sillNow = currentRoute==='B' ? 190 : 286;
+    var sillPlio = sillNow + plio;
+    var divName = currentRoute==='B'?'Paraguá/Guaporé watershed':'Chiquitano';
+    var el = document.getElementById('shield-plio-note');
+    if(el) el.innerHTML = 'At §14 subsidence rate ('+rate+' m/Ma), the <b>'+divName+'</b> sill was ~<b>'+sillPlio+' m</b> at '+parra+' Ma (vs. '+sillNow+' m today). Barrier was <b>higher</b> during Parra\'s claimed incursion.';
+  }
+}
+calcDynTopo();
+renderSegTable();run();runFlex();runBasalShear();setTimeout(drawCompChart,100);setTimeout(initInundationMap,300);
+window.addEventListener('resize',()=>{runAll()});
+function runAll(){run();runFlex();runBasalShear();drawCompChart();updateInundationMap()}
+</script>
 </body>
 </html>
