@@ -3,24 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winter 2026 - Saline Valley - Nicolas Anderson</title>
+    <title>Winter 2026 — Saline Valley — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .pdf-container {
+            width: 100%;
+            height: calc(100vh - 80px);
+            background: #f0f0f0;
+            margin: 0;
+            padding: 0 2rem 1rem 2rem;
+        }
+        .pdf-container iframe {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #000;
+        }
+        .project-detail-header {
+            padding: 1rem 2rem 0.5rem 2rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
     <div class="site-container">
-        <!-- Main Content Area (Full Width for Project Detail) -->
         <main class="main-content" style="margin-right: 0; max-width: 100%;">
             <div class="project-detail-header">
-                <div>
-                    <h1>WINTER 2026 - SALINE VALLEY <span class="subtitle">→ FIELD TRIP</span></h1>
-                </div>
+                <h1>WINTER 2026 — SALINE VALLEY</h1>
             </div>
-
-            <!-- PDF Viewer -->
             <div class="pdf-container">
-                <iframe src="fieldtrip-saline-valley.pdf"></iframe>
+                <iframe src="https://archive.org/download/ge-136-b-winter-2026-saline-valley_202604/GE136B_Winter_2026_Saline_Valley.pdf" allow="autoplay"></iframe>
             </div>
-
         </main>
     </div>
 </body>
