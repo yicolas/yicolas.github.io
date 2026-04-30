@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geologic Maps & Cross Sections — Nick Anderson</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { overflow-y: auto; }
+        .project-detail-header {
+            padding: 0.5rem 1.5rem;
+            border-bottom: 1px solid #000;
+            margin-bottom: 0;
+        }
+        .project-detail-header h1 { font-size: 1.1em; font-weight: normal; }
+        
+        .gallery-container {
+            padding: 1.5rem 2rem;
+            max-width: 1200px;
+        }
+        
+        .gallery-section {
+            margin-bottom: 2rem;
+        }
+        
+        .gallery-section h2 {
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .gallery-item {
+            border: 1px solid #e0e0e0;
+            background: #fafafa;
+            overflow: hidden;
+        }
+        
+        .gallery-item a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .gallery-item .preview {
+            width: 100%;
+            height: 200px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .gallery-item .preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .gallery-item .preview.pdf-preview {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+        }
+        
+        .gallery-item .preview.pdf-preview::after {
+            content: 'PDF';
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #999;
+        }
+        
+        .gallery-item .info {
+            padding: 0.75rem 1rem;
+        }
+        
+        .gallery-item .info h3 {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .gallery-item .info p {
+            font-size: 0.75em;
+            color: #666;
+            margin: 0;
+        }
+        
+        .gallery-item:hover {
+            border-color: #0000EE;
+        }
+        
+        .gallery-item:hover .info h3 {
+            color: #0000EE;
+        }
+    </style>
+</head>
+<body>
+    <div class="site-container">
+        <main class="main-content" style="margin-right: 0; max-width: 100%;">
+            <div class="project-detail-header">
+                <h1>GEOLOGIC MAPS & CROSS SECTIONS</h1>
+            </div>
+
+            <div class="gallery-container">
+                <div class="gallery-section">
+                    <h2>Geologic Maps</h2>
+                    <div class="gallery-grid">
+                        <div class="gallery-item">
+                            <a href="DV_Regional_Geologic_Map.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Death Valley Regional Geologic Map</h3>
+                                    <p>Regional overview map</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="DV w CA Inset.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Death Valley with California Inset</h3>
+                                    <p>Location context map</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Alexander _Hills _Geologic _Map.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Alexander Hills Geologic Map</h3>
+                                    <p>Detailed mapping</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Saratoga_Springs_Geologic_Map.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Saratoga Springs Geologic Map</h3>
+                                    <p>Detailed mapping</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Warm_Springs_Geologic_Map.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Warm Springs Geologic Map</h3>
+                                    <p>Detailed mapping</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Central_Ibex_Geologic_Map.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Central Ibex Geologic Map</h3>
+                                    <p>Detailed mapping</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Mud_Hills_map2.png" target="_blank">
+                                <div class="preview">
+                                    <img src="Mud_Hills_map2.png" alt="Mud Hills Map">
+                                </div>
+                                <div class="info">
+                                    <h3>Mud Hills Geologic Map</h3>
+                                    <p>Barstow Formation mapping</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gallery-section">
+                    <h2>Stratigraphic Columns & Cross Sections</h2>
+                    <div class="gallery-grid">
+                        <div class="gallery-item">
+                            <a href="Crystal Springs Strat.pdf" target="_blank">
+                                <div class="preview pdf-preview"></div>
+                                <div class="info">
+                                    <h3>Crystal Springs Stratigraphy</h3>
+                                    <p>Stratigraphic column</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="gallery-item">
+                            <a href="Fence_MudHills.png" target="_blank">
+                                <div class="preview">
+                                    <img src="Fence_MudHills.png" alt="Mud Hills Fence Diagram">
+                                </div>
+                                <div class="info">
+                                    <h3>Mud Hills Fence Diagram</h3>
+                                    <p>Cross section correlation</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
