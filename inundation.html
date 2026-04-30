@@ -330,7 +330,13 @@ Parra's estimated 2–16 ppt could result from evaporative concentration in floo
 • Prezzi, C.B. et al. (2009) Flexural isostasy in the Bolivian Andes: Chaco foreland basin development. <i>Tectonophysics</i> 474, 526–543. <a href="https://doi.org/10.1016/j.tecto.2009.04.037" target="_blank">doi:10.1016/j.tecto.2009.04.037</a><br>
 • Whitman, D. (1994) Moho geometry beneath the eastern margin of the Andes, NW Argentina: effective elastic thickness. <i>J. Geophys. Res.</i> 99, 15277–15289. <a href="https://doi.org/10.1029/94JB00342" target="_blank">doi:10.1029/94JB00342</a><br>
 • Strecker, M.R. et al. (2012) Structural, geomorphic, and depositional characteristics of contiguous and broken foreland basins. In <i>Tectonics of Sedimentary Basins</i>, Ch. 25.<br>
-• Tassara, A. et al. (2006) Elastic thickness of South America. <i>Earth Planet. Sci. Lett.</i> 253, 17–35.</br>
+• Tassara, A. et al. (2006) Elastic thickness of South America. <i>Earth Planet. Sci. Lett.</i> 253, 17–35.<br>
+• Hollyday, A. et al. (2023) A revised estimate of early Pliocene GMSL using geodynamic models of the Patagonian slab window. <i>Geochem. Geophys. Geosyst.</i> 24, e2022GC010648. <a href="https://doi.org/10.1029/2022GC010648" target="_blank">doi:10.1029/2022GC010648</a><br>
+• Richards, F.D. et al. (2023) Geodynamically corrected Pliocene shoreline elevations in Australia. <i>Sci. Adv.</i> 9(46). <a href="https://doi.org/10.1126/sciadv.adh3443" target="_blank">doi:10.1126/sciadv.adh3443</a><br>
+• Rovere, A. et al. (2024) Pliocene shorelines and the epeirogenic motion of continental margins. <i>Earth Surf. Dynam.</i> 12, 883–905. <a href="https://doi.org/10.5194/esurf-12-883-2024" target="_blank">doi:10.5194/esurf-12-883-2024</a><br>
+• Assumpção, M. et al. (2013) Crustal thickness map of Brazil. <i>Tectonophysics</i> 609, 390–402. <a href="https://doi.org/10.1016/j.tecto.2012.11.032" target="_blank">doi:10.1016/j.tecto.2012.11.032</a><br>
+• McQuarrie, N. (2002) The kinematic history of the central Andean fold-thrust belt, Bolivia. <i>Geol. Soc. Am. Bull.</i> 114, 950–963.<br>
+• Uba, C.E. et al. (2006) Sedimentation rate, facies and architecture of the Neogene Chaco foreland basin. <i>Sedimentology</i> 53, 169–191.</br>
 • Moizinho, G.R. et al. (2023) Late Miocene–Pliocene deformational and depositional evolution of the Eastern Cordillera and Sub-Andean Zone, southern Peru. <i>J. South Am. Earth Sci.</i> <a href="https://doi.org/10.1016/j.jsames.2023.104680" target="_blank">doi:10.1016/j.jsames.2023.104680</a><br>
 • Campbell, K.E. et al. (2006) The late Miocene geohistory of the Amazonian Madre de Dios basin. <i>J. South Am. Earth Sci.</i><br><br>
 
@@ -361,10 +367,12 @@ Parra's estimated 2–16 ppt could result from evaporative concentration in floo
 <label class="route-opt" id="route-b-label"><input type="radio" name="route" value="B" onchange="switchRoute('B')"> <b>B</b> — Paraná → Paraguá → MdD</label>
 <label class="route-opt" id="route-c-label"><input type="radio" name="route" value="C" onchange="switchRoute('C')"> <b>C</b> — Paraná → Chiquitano → MdD</label>
 <label class="route-opt" id="route-d-label"><input type="radio" name="route" value="D" onchange="switchRoute('D')"> <b>D</b> — Paraná → Chiquitano (user pts) → MdD</label>
+<label class="route-opt" id="route-f-label"><input type="radio" name="route" value="F" onchange="switchRoute('F')"> <b>F</b> — Optimal low path (rivers) → MdD</label>
 <label class="route-opt" id="route-e-label"><input type="radio" name="route" value="E" onchange="switchRoute('E')"> <b>E</b> — Custom (click on map)</label>
 </div>
 <div style="margin:0 0 6px;display:flex;gap:6px;flex-wrap:wrap">
 <button class="toggle-btn" onclick="reverseCurrentRoute()" style="font-size:9px">⇄ Reverse direction</button>
+<button class="toggle-btn" onclick="snapToLows()" style="font-size:9px" id="snap-btn">⬇ Snap to nearest lows</button>
 <button class="toggle-btn" onclick="exportRouteCSV()" style="font-size:9px">↓ Save CSV</button>
 <button class="toggle-btn" onclick="exportRouteKML()" style="font-size:9px">↓ Save KML</button>
 <label class="toggle-btn" style="font-size:9px;cursor:pointer">↑ Load CSV<input type="file" accept=".csv" style="display:none" onchange="importRouteCSV(event)"></label>
@@ -701,11 +709,17 @@ const routeB_coords=[{name:'Río de la Plata',lat:-34.9,lon:-57.5,e:1},{name:'Bu
 const routeC_coords=[{name:'Río de la Plata',lat:-34.9,lon:-57.5,e:1},{name:'Buenos Aires',lat:-34.6,lon:-58.38,e:1},{name:'Asunción',lat:-25.28,lon:-57.63,e:108},{name:'Corumbá',lat:-19.0,lon:-57.65,e:175},{name:'Chiquitano divide',lat:-16.5,lon:-61.0,e:248},{name:'Trinidad',lat:-14.83,lon:-64.9,e:155},{name:'Riberalta',lat:-11.01,lon:-66.06,e:130},{name:'P. Maldonado',lat:-12.59,lon:-69.19,e:183}];
 
 let currentRoute='A';let segs=routeA.map(s=>({...s}));
-const routeDescs={A:'Route A: Amazon → Madeira → Beni — eastern pathway. 75 HydroRIVERS waypoints.',B:'Route B: Paraná → Paraguay → Pantanal → Río Paraguá (via Florida) → Guaporé → MdD. Follows Amazon-side drainage, potentially avoiding the Parecis divide.',C:'Route C: Paraná → Paraguay → Chiquitano divide (286 m) → Llanos de Moxos → MdD. Sill: Precambrian shield (highest barrier).',D:'Route D: User-defined 34-point transect from Buenos Aires via Chiquitano divide to P. Maldonado. SRTM elevations.',E:'Custom route — click on §15 map to define waypoints. Elevations from Open-Meteo (SRTM 90m).'};
+const routeDescs={A:'Route A: Amazon → Madeira → Beni — eastern pathway. 75 HydroRIVERS waypoints.',B:'Route B: Paraná → Paraguay → Pantanal → Río Paraguá (via Florida) → Guaporé → MdD. Follows Amazon-side drainage, potentially avoiding the Parecis divide.',C:'Route C: Paraná → Paraguay → Chiquitano divide (286 m) → Llanos de Moxos → MdD. Sill: Precambrian shield (highest barrier).',D:'Route D: User-defined 34-point transect from Buenos Aires via Chiquitano divide to P. Maldonado. SRTM elevations.',E:'Custom route — click on §15 map to define waypoints. Elevations from Open-Meteo (SRTM 90m).',F:'Route F: Optimal low-elevation path following river valleys: Plata → Paraná → Paraguay → Pantanal → Guaporé → Llanos de Moxos → Beni → MdD. 26 waypoints, ~4735 km.'};
 
 // Route D — user-defined 34-point transect (Buenos Aires → P. Maldonado via Chiquitano)
 const routeD=[{d:0,e:2,name:"Buenos Aires"},{d:119,e:3,name:"km 119"},{d:361,e:37,name:"Rosario"},{d:412,e:98,name:"km 412"},{d:865,e:42,name:"km 865"},{d:1172,e:69,name:"Formosa"},{d:1399,e:69,name:"km 1399"},{d:1610,e:86,name:"km 1610"},{d:1824,e:85,name:"km 1824"},{d:1968,e:92,name:"km 1968"},{d:2098,e:91,name:"Pantanal"},{d:2219,e:96,name:"km 2219"},{d:2270,e:113,name:"km 2270"},{d:2339,e:241,name:"Chiquitano div."},{d:2454,e:196,name:"km 2454"},{d:2543,e:191,name:"km 2543"},{d:2609,e:185,name:"km 2609"},{d:2653,e:164,name:"km 2653"},{d:2695,e:158,name:"km 2695"},{d:2731,e:159,name:"km 2731"},{d:2789,e:152,name:"km 2789"},{d:2887,e:140,name:"km 2887"},{d:3004,e:139,name:"km 3004"},{d:3100,e:128,name:"km 3100"},{d:3167,e:140,name:"km 3167"},{d:3241,e:124,name:"km 3241"},{d:3275,e:137,name:"km 3275"},{d:3315,e:119,name:"km 3315"},{d:3357,e:112,name:"km 3357"},{d:3417,e:125,name:"km 3417"},{d:3489,e:130,name:"Riberalta"},{d:3600,e:152,name:"km 3600"},{d:3730,e:169,name:"km 3730"},{d:3805,e:207,name:"P. Maldonado"}];
-const routeD_coords=[{name:"Buenos Aires",lat:-34.12,lon:-58.64,e:2},{name:"",lat:-33.53,lon:-59.72,e:3},{name:"Rosario",lat:-31.62,lon:-60.96,e:37},{name:"",lat:-31.95,lon:-60.58,e:98},{name:"",lat:-28.07,lon:-59.17,e:42},{name:"Formosa",lat:-25.46,lon:-58.16,e:69},{name:"",lat:-23.51,lon:-57.49,e:69},{name:"",lat:-21.66,lon:-57.97,e:86},{name:"",lat:-19.83,lon:-57.35,e:85},{name:"",lat:-18.55,lon:-57.14,e:92},{name:"Pantanal",lat:-17.5,lon:-57.68,e:91},{name:"",lat:-16.73,lon:-58.49,e:96},{name:"",lat:-16.47,lon:-58.88,e:113},{name:"Chiquitano div.",lat:-16.25,lon:-59.49,e:241},{name:"",lat:-15.5,lon:-60.22,e:196},{name:"",lat:-14.87,lon:-60.73,e:191},{name:"",lat:-14.46,lon:-61.18,e:185},{name:"",lat:-14.12,lon:-61.38,e:164},{name:"",lat:-13.81,lon:-61.61,e:158},{name:"",lat:-13.49,lon:-61.68,e:159},{name:"",lat:-13.17,lon:-62.1,e:152},{name:"",lat:-12.76,lon:-62.9,e:140},{name:"",lat:-12.51,lon:-63.95,e:139},{name:"",lat:-12.11,lon:-64.73,e:128},{name:"",lat:-11.74,lon:-65.21,e:140},{name:"",lat:-11.08,lon:-65.3,e:124},{name:"",lat:-10.77,lon:-65.33,e:137},{name:"",lat:-10.42,lon:-65.4,e:119},{name:"",lat:-10.65,lon:-65.71,e:112},{name:"",lat:-11.02,lon:-66.1,e:125},{name:"Riberalta",lat:-11.2,lon:-66.74,e:130},{name:"",lat:-11.59,lon:-67.68,e:152},{name:"",lat:-12.42,lon:-68.52,e:169},{name:"P. Maldonado",lat:-12.58,lon:-69.19,e:207}];;
+const routeD_coords=[{name:"Buenos Aires",lat:-34.12,lon:-58.64,e:2},{name:"",lat:-33.53,lon:-59.72,e:3},{name:"Rosario",lat:-31.62,lon:-60.96,e:37},{name:"",lat:-31.95,lon:-60.58,e:98},{name:"",lat:-28.07,lon:-59.17,e:42},{name:"Formosa",lat:-25.46,lon:-58.16,e:69},{name:"",lat:-23.51,lon:-57.49,e:69},{name:"",lat:-21.66,lon:-57.97,e:86},{name:"",lat:-19.83,lon:-57.35,e:85},{name:"",lat:-18.55,lon:-57.14,e:92},{name:"Pantanal",lat:-17.5,lon:-57.68,e:91},{name:"",lat:-16.73,lon:-58.49,e:96},{name:"",lat:-16.47,lon:-58.88,e:113},{name:"Chiquitano div.",lat:-16.25,lon:-59.49,e:241},{name:"",lat:-15.5,lon:-60.22,e:196},{name:"",lat:-14.87,lon:-60.73,e:191},{name:"",lat:-14.46,lon:-61.18,e:185},{name:"",lat:-14.12,lon:-61.38,e:164},{name:"",lat:-13.81,lon:-61.61,e:158},{name:"",lat:-13.49,lon:-61.68,e:159},{name:"",lat:-13.17,lon:-62.1,e:152},{name:"",lat:-12.76,lon:-62.9,e:140},{name:"",lat:-12.51,lon:-63.95,e:139},{name:"",lat:-12.11,lon:-64.73,e:128},{name:"",lat:-11.74,lon:-65.21,e:140},{name:"",lat:-11.08,lon:-65.3,e:124},{name:"",lat:-10.77,lon:-65.33,e:137},{name:"",lat:-10.42,lon:-65.4,e:119},{name:"",lat:-10.65,lon:-65.71,e:112},{name:"",lat:-11.02,lon:-66.1,e:125},{name:"Riberalta",lat:-11.2,lon:-66.74,e:130},{name:"",lat:-11.59,lon:-67.68,e:152},{name:"",lat:-12.42,lon:-68.52,e:169},{name:"P. Maldonado",lat:-12.58,lon:-69.19,e:207}];
+
+// Route F — optimal low-elevation path BA → PM
+// Follows river valleys: Plata → Paraná → Paraguay → Pantanal → Guaporé → Llanos de Moxos → Beni → MdD
+// Elevations fetched at runtime from Open-Meteo SRTM
+const routeF=[{d:0,e:5,name:"Buenos Aires"},{d:81,e:8,name:"Zárate"},{d:278,e:25,name:"Rosario"},{d:425,e:15,name:"Santa Fe"},{d:719,e:45,name:"Reconquista"},{d:922,e:55,name:"Corrientes"},{d:1079,e:62,name:"Formosa"},{d:1194,e:61,name:"Asunción"},{d:1404,e:70,name:"Concepción PY"},{d:1670,e:85,name:"Fuerte Olimpo"},{d:1897,e:95,name:"Corumbá"},{d:2034,e:90,name:"Pantanal N"},{d:2229,e:120,name:"Cáceres"},{d:2499,e:195,name:"Vila Bela"},{d:2690,e:170,name:"Guaporé mid"},{d:2805,e:155,name:"Piso Firme"},{d:3010,e:140,name:"Río Blanco"},{d:3072,e:135,name:"Magdalena"},{d:3314,e:160,name:"S. Ign. Moxos"},{d:3392,e:150,name:"Trinidad"},{d:3591,e:170,name:"San Borja"},{d:3675,e:250,name:"Yucumo"},{d:4186,e:130,name:"Riberalta"},{d:4270,e:120,name:"Guayaramerín"},{d:4680,e:185,name:"Pto Heath"},{d:4735,e:207,name:"P. Maldonado"}];
+const routeF_coords=[{name:"Buenos Aires",lat:-34.6,lon:-58.38,e:5},{name:"Zárate",lat:-34.1,lon:-59.03,e:8},{name:"Rosario",lat:-32.95,lon:-60.65,e:25},{name:"Santa Fe",lat:-31.63,lon:-60.7,e:15},{name:"Reconquista",lat:-29.15,lon:-59.65,e:45},{name:"Corrientes",lat:-27.47,lon:-58.83,e:55},{name:"Formosa",lat:-26.18,lon:-58.18,e:62},{name:"Asunción",lat:-25.28,lon:-57.63,e:61},{name:"Concepción PY",lat:-23.4,lon:-57.43,e:70},{name:"Fuerte Olimpo",lat:-21.04,lon:-57.87,e:85},{name:"Corumbá",lat:-19.01,lon:-57.65,e:95},{name:"Pantanal N",lat:-17.8,lon:-57.4,e:90},{name:"Cáceres",lat:-16.07,lon:-57.68,e:120},{name:"Vila Bela",lat:-15.0,lon:-59.95,e:195},{name:"Guaporé mid",lat:-13.5,lon:-60.8,e:170},{name:"Piso Firme",lat:-13.7,lon:-61.85,e:155},{name:"Río Blanco",lat:-13.0,lon:-63.6,e:140},{name:"Magdalena",lat:-13.33,lon:-64.06,e:135},{name:"S. Ign. Moxos",lat:-14.9,lon:-65.62,e:160},{name:"Trinidad",lat:-14.81,lon:-64.9,e:150},{name:"San Borja",lat:-14.82,lon:-66.75,e:170},{name:"Yucumo",lat:-15.51,lon:-67.06,e:250},{name:"Riberalta",lat:-11.01,lon:-66.1,e:130},{name:"Guayaramerín",lat:-10.82,lon:-65.35,e:120},{name:"Pto Heath",lat:-12.5,lon:-68.7,e:185},{name:"P. Maldonado",lat:-12.6,lon:-69.19,e:207}];;
 
 // ═══ ROUTE D — Custom user-defined route ═══
 let routeE = []; // {lat, lon, e, name, d}
@@ -814,6 +828,62 @@ async function fetchAllElevsE(){
   }catch(e){console.warn('Batch elevation fetch failed:',e);}
 }
 
+// ═══ SNAP TO NEAREST LOWS ═══
+// For each waypoint, sample a grid of points within ~10 km and move to the lowest
+async function snapToLows(){
+  const btn=document.getElementById('snap-btn');
+  btn.textContent='⬇ Snapping...';btn.disabled=true;
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
+  if(!coords||coords.length<2){btn.textContent='⬇ Snap to nearest lows';btn.disabled=false;return;}
+  
+  // For each waypoint (skip first and last — keep endpoints fixed)
+  let changed=0;
+  for(let i=1;i<coords.length-1;i++){
+    const c=coords[i];
+    // Sample 5x5 grid: ±0.08° (~8-9 km)
+    const step=0.04;
+    const lats=[],lons=[];
+    for(let dy=-2;dy<=2;dy++){
+      for(let dx=-2;dx<=2;dx++){
+        lats.push((c.lat+dy*step).toFixed(4));
+        lons.push((c.lon+dx*step).toFixed(4));
+      }
+    }
+    try{
+      const r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lats.join(',')+'&longitude='+lons.join(','));
+      const j=await r.json();
+      if(j.elevation){
+        // Find minimum elevation point
+        let minE=Infinity, minIdx=12; // center point default
+        j.elevation.forEach((e,idx)=>{
+          if(e!=null && e<minE){minE=e;minIdx=idx;}
+        });
+        const newLat=parseFloat(lats[minIdx]);
+        const newLon=parseFloat(lons[minIdx]);
+        const newE=Math.round(minE);
+        if(newE<c.e){
+          c.lat=newLat;c.lon=newLon;c.e=newE;
+          if(i<segs.length) segs[i].e=newE;
+          changed++;
+        }
+      }
+    }catch(e){console.warn('Snap failed for point '+i,e);}
+    // Small delay to avoid rate limiting
+    await new Promise(r=>setTimeout(r,100));
+    btn.textContent='⬇ Snapping... '+(i)+'/'+(coords.length-2);
+  }
+  // Recompute distances
+  let cumD=0;
+  for(let j=0;j<coords.length;j++){
+    if(j>0) cumD+=haversine(coords[j-1].lat,coords[j-1].lon,coords[j].lat,coords[j].lon);
+    if(j<segs.length) segs[j].d=Math.round(cumD);
+  }
+  btn.textContent='⬇ Snap to nearest lows';btn.disabled=false;
+  renderSegTable();buildCitySelector();onCityChange();runAll();
+  if(inundMap)updateInundationMap();
+  alert('Snapped '+changed+' of '+(coords.length-2)+' waypoints to lower elevations');
+}
+
 function applyRouteE(){
   segs=routeE.map(s=>({...s}));
   renderRouteEPanel();
@@ -920,12 +990,12 @@ function switchRoute(r){
     document.getElementById('route-e-panel').style.display='block';
     enableMapDrawing();
   } else {
-    segs=(r==='A'?routeA:r==='B'?routeB:r==='C'?routeC:routeD).map(s=>({...s}));
+    segs=(r==='A'?routeA:r==='B'?routeB:r==='C'?routeC:r==='D'?routeD:routeF).map(s=>({...s}));
     document.getElementById('route-e-panel').style.display='none';
     disableMapDrawing();
   }
   document.getElementById('route-desc').textContent=routeDescs[r]||'';
-  ['a','b','c','d','e'].forEach(x=>document.getElementById('route-'+x+'-label').style.borderColor=x.toUpperCase()===r?'var(--coral)':'var(--bd)');
+  ['a','b','c','d','e','f'].forEach(x=>document.getElementById('route-'+x+'-label').style.borderColor=x.toUpperCase()===r?'var(--coral)':'var(--bd)');
   const sw=document.getElementById('shield-warning');
   if(r==='B'||r==='C'||r==='D'){sw.style.display='block';
     const divName=r==='B'?'Paraguá/Guaporé watershed':r==='C'?'Chiquitano':'Chiquitano (user pts)';
@@ -941,11 +1011,36 @@ function switchRoute(r){
   onCityChange();
   // Auto-suggest Tₑ based on route's average latitude
   updateTeSuggestion();
+  // Fetch real elevations for Route F if not yet loaded
+  if(r==='F' && !routeF._elevLoaded){
+    fetchRouteFElevations();
+  }
   runAll();
 }
 
+async function fetchRouteFElevations(){
+  const lats=routeF_coords.map(p=>p.lat.toFixed(4)).join(',');
+  const lons=routeF_coords.map(p=>p.lon.toFixed(4)).join(',');
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lats+'&longitude='+lons);
+    const j=await r.json();
+    if(j.elevation){
+      j.elevation.forEach((e,i)=>{
+        if(i<routeF_coords.length){routeF_coords[i].e=Math.round(e||0);}
+        if(i<routeF.length){routeF[i].e=Math.round(e||0);}
+      });
+      routeF._elevLoaded=true;
+      if(currentRoute==='F'){
+        segs=routeF.map(s=>({...s}));
+        renderSegTable();buildCitySelector();onCityChange();runAll();
+        if(inundMap)updateInundationMap();
+      }
+    }
+  }catch(e){console.warn('Route F elevation fetch failed:',e);}
+}
+
 function updateTeSuggestion(){
-  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
   if(!coords||coords.length<2){return;}
   // Compute average latitude along route
   const avgLat=coords.reduce((s,c)=>s+Math.abs(c.lat),0)/coords.length;
@@ -997,7 +1092,7 @@ function reverseCurrentRoute(){
 }
 
 function exportRouteCSV(){
-  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
   let csv='name,latitude,longitude,elevation_m,distance_km\n';
   coords.forEach((c,i)=>{
     const seg=i<segs.length?segs[i]:null;
@@ -1010,7 +1105,7 @@ function exportRouteCSV(){
 }
 
 function exportRouteKML(){
-  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
   let kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n';
   kml+='<name>MdD Incursion Model — Route '+currentRoute+'</name>\n';
   // Line
@@ -1133,6 +1228,21 @@ function drawCombinedProfile(sl,hT,dT,linSlope,linReach,conReach){
     ctx.fillStyle='rgba(217,119,6,0.4)';ctx.beginPath();ctx.arc(px(Math.min(cr,maxD)),py(sv),2,0,Math.PI*2);ctx.fill();
     ctx.font='9px "IBM Plex Sans"';ctx.textAlign='left';ctx.fillText(sv+'m→'+Math.round(cr)+'km',px(Math.min(cr,maxD))+4,py(sv)+3);
   });
+  // Published GMSL band — mid-Pliocene consensus range
+  // Hollyday et al. 2023: +12–32 m; Richards et al. 2023: +10.4–21.5 m; Rovere et al. 2024: +6–25 m
+  const gmslLo=10, gmslHi=25;
+  if(gmslHi<maxE){
+    const gmslLoY=py(gmslLo), gmslHiY=py(gmslHi);
+    ctx.fillStyle='rgba(5,150,105,0.08)';
+    ctx.fillRect(px(0),gmslHiY,pw,gmslLoY-gmslHiY);
+    ctx.strokeStyle='rgba(5,150,105,0.3)';ctx.lineWidth=0.5;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(px(0),gmslLoY);ctx.lineTo(px(maxD),gmslLoY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(0),gmslHiY);ctx.lineTo(px(maxD),gmslHiY);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(5,150,105,0.5)';ctx.font='8px "IBM Plex Sans"';ctx.textAlign='right';
+    ctx.fillText('Published Plio. GMSL: +'+gmslLo+'–'+gmslHi+' m',px(maxD)-2,gmslHiY-3);
+    ctx.fillText('(Hollyday 2023; Richards 2023; Rovere 2024)',px(maxD)-2,gmslHiY+8);
+  }
   // Inundation fill
   const sly=py(sl);ctx.fillStyle='rgba(37,99,235,0.08)';ctx.beginPath();ctx.moveTo(px(0),py(0));
   const crc=Math.min(conReach,maxD);for(let d=0;d<=crc;d+=5){ctx.lineTo(px(d),Math.max(py(elevAt(d)),sly))}
@@ -1158,7 +1268,7 @@ function drawCombinedProfile(sl,hT,dT,linSlope,linReach,conReach){
   const lrc=Math.min(linReach,maxD);ctx.fillStyle='#d97706';ctx.beginPath();ctx.arc(px(lrc),sly,3,0,Math.PI*2);ctx.fill();
   ctx.fillText('Linear: '+Math.round(linReach)+' km',px(lrc)+6,sly-6);
   // Sill / TDD / landmark labels
-  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'||currentRoute==='F'){
     // Find the maximum elevation point (the sill)
     let sillSeg=segs[0];segs.forEach(s=>{if(s.e>sillSeg.e)sillSeg=s});
     const sillX=px(sillSeg.d),sillY=py(sillSeg.e);
@@ -1434,18 +1544,29 @@ function paleoElevAt(d, alpha, w0m, w0n, fxdt, dhmax, xcenter, sigma, rhoc, rhom
   let modernE = elevAt(d);
   let paleoE = modernE;
 
-  // ── Regional geological adjustments — zone-classification-based ──
-  // Uses perpendicular distance to thrust front + latitude-dependent Tₑ
-  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  // ── Interpolate lat/lon at distance d along route ──
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
+
   if(currentRoute==='A'){
-    // Route A: Amazon corridor — mostly craton, special handling
+    // Route A: Amazon corridor — apply arch models + craton DT
+    // Cratonic arch perturbations: long-wavelength Paleozoic basement highs
+    const amazonArches=[
+      {center:800, amp:30, sig:200, name:'Purus Arch'},
+      {center:400, amp:20, sig:150, name:'Iquitos Arch'},
+    ];
+    amazonArches.forEach(arch=>{
+      const dx=d-arch.center;
+      paleoE += arch.amp*Math.exp(-(dx*dx)/(2*arch.sig*arch.sig));
+    });
+    // Dynamic topo on craton (TDD migration — Sacek 2014, Gomes 2025)
     if(d > 2500){
       const frac = Math.min(1, (d-2500)/(routeEnd-2500));
       paleoE += dtLower * frac * 0.3;
     }
+
   } else if(coords && coords.length>1 && segs.length>1){
-    // Routes B/C/D/E: use foreland zone classification
-    // Interpolate lat/lon at distance d along route
+    // ── Routes B/C/D/E: CONTINUOUS FLEXURAL DEFLECTION MODEL ──
+    // Replaces discrete zone adjustments with physics-based broken-plate equation
     let lat=coords[0].lat, lon=coords[0].lon;
     for(let j=0;j<segs.length-1;j++){
       if(d>=segs[j].d && d<=segs[j+1].d && j<coords.length-1){
@@ -1458,89 +1579,83 @@ function paleoElevAt(d, alpha, w0m, w0n, fxdt, dhmax, xcenter, sigma, rhoc, rhom
     }
     if(d>=segs[segs.length-1].d){lat=coords[coords.length-1].lat;lon=coords[coords.length-1].lon;}
 
-    const zInfo=classifyForelandZone(lat,lon);
-    const dTF=zInfo.dTF;
+    const dTF=distToThrustFront(lat,lon);
+    const Te_local=getTeForLatitude(lat);
 
-    // Apply zone-specific paleo adjustments
-    switch(zInfo.zone){
-      case 'wedgetop':
-        // Wedge-top: on the orogenic wedge itself — structurally active
-        // Minor adjustment: slightly more compressed at 3.45 Ma
-        paleoE += 5;
-        break;
-      case 'foredeep':
-        // Foredeep: overfilled basin (Horton 1997)
-        // At 3.45 Ma: ~15m less Plio-Pleistocene alluvial fill
-        paleoE -= 15;
-        break;
-      case 'forebulge':
-        // Forebulge: flexural uplift ~550 m (Repasch 2023)
-        // At 3.45 Ma: actively maintained by Andean loading
-        // Gaussian-shaped bulge peaking at center of zone
-        {const zones=getForelandZones(lat);
-        const fbCenter=(zones.foredeep+zones.forebulge)/2;
-        const fbSigma=(zones.forebulge-zones.foredeep)/4;
-        const fbFrac=Math.exp(-((dTF-fbCenter)**2)/(2*fbSigma*fbSigma));
-        paleoE += 15 * fbFrac;} // peak +15 m at forebulge crest
-        break;
-      case 'backbulge':
-        // Back-bulge: Pantanal/Chaco distal subsidence
-        // At 3.45 Ma: not fully subsided, surface ~40 m higher
-        paleoE += 40;
-        break;
-      case 'craton':
-        // Craton/shield: dynamic topography + TDD migration
-        // Higher at 3.45 Ma by dtLower + TDD effect
-        // Apply full adjustment near the TDD, tapering toward coast
-        {const shieldAdj = dtLower + 10;
-        // Taper: full at craton edge near backbulge, fading toward coast
-        const zones2=getForelandZones(lat);
-        if(dTF < zones2.backbulge + 500){
-          const taperFrac = Math.max(0, 1 - (dTF - zones2.backbulge)/500);
-          paleoE += shieldAdj * Math.max(0.3, taperFrac); // min 30% of shield adj on deep craton
-        } else {
-          paleoE += shieldAdj * 0.3; // distal craton: minimal adjustment
-        }}
-        break;
+    // ── 1. Continuous flexural deflection (Horton 1997 broken-plate) ──
+    // w(x) = w0 * exp(-x/alpha) * cos(x/alpha) for x >= 0
+    const Te_m=Te_local*1000;
+    const E_pa=70e9, nu_v=0.25;
+    const D_local=(E_pa*Math.pow(Te_m,3))/(12*(1-nu_v*nu_v));
+    const alpha_local=Math.pow((4*D_local)/((3300-1030)*9.81),0.25)/1000; // km
+
+    const x_km = Math.max(0, dTF);
+    // Miocene vs present deflection at this distance from thrust front
+    const fxMio = x_km > 0 ? w0m * Math.exp(-x_km/alpha_local) * Math.cos(x_km/alpha_local) : w0m;
+    const fxNow = x_km > 0 ? w0n * Math.exp(-x_km/alpha_local) * Math.cos(x_km/alpha_local) : w0n;
+    // Flexural change scaled to Parra age
+    const fxChange = (fxMio - fxNow) * (dtParra / fxdt);
+    // Apply: reverse the uplift that occurred since 3.45 Ma
+    if(dTF < alpha_local * 4){
+      paleoE -= fxChange;
+    }
+
+    // ── 2. Moho depth modulation (Assumpcao et al. 2013) ──
+    const mohoDepth = dTF < 200 ? 45 : dTF < 500 ? 38 : 35;
+    const mohoFactor = mohoDepth / 38;
+
+    // ── 3. Plio-Pleistocene sediment fill correction (Uba 2006; Prezzi 2009) ──
+    // Proximal foredeep had less fill at 3.45 Ma
+    if(dTF < 400){
+      const fillFrac = Math.max(0, 1 - dTF/400);
+      paleoE -= 15 * fillFrac * mohoFactor;
+    }
+
+    // ── 4. Cratonic shield + arch models ──
+    if(dTF > 600){
+      // Dynamic topography: craton was higher (Gomes 2025; Flament 2015)
+      const cratonFrac = Math.min(1, (dTF - 600) / 400);
+      const shieldAdj = (dtLower + 10) * cratonFrac;
+      // Chiquitano Shield arch (rigid Precambrian sill)
+      const dx2=dTF-800;
+      const chiqArch=20*Math.exp(-(dx2*dx2)/(2*150*150));
+      paleoE += shieldAdj + chiqArch;
+    }
+
+    // ── 5. Back-bulge incomplete subsidence (Pantanal; Horton 1997) ──
+    const zones=getForelandZones(lat);
+    if(dTF > zones.forebulge && dTF < zones.backbulge){
+      const bbCenter=(zones.forebulge+zones.backbulge)/2;
+      const bbSigma=(zones.backbulge-zones.forebulge)/4;
+      const bbFrac=Math.exp(-((dTF-bbCenter)**2)/(2*bbSigma*bbSigma));
+      paleoE += 30 * bbFrac;
+    }
+
+    // ── 6. Coastal dynamic topography (Hollyday et al. 2023) ──
+    if(dTF > 1200){
+      const coastalDT = 15 * Math.max(0, 1 - (routeEnd - d)/500);
+      paleoE += coastalDT;
     }
   }
 
   // ── Fitzcarrald Arch uplift removal ──
-  // Model as a broad dome (Gaussian) — NO hard boundary
-  // The Gaussian naturally decays to near-zero far from the arch center
-  // Arch apex: ~350 km from thrust front (Espurt 2007; Bishop 2018)
-  // Half-wavelength: >500 km (Bishop 2018)
+  // Gaussian dome (Bishop 2018; Espurt 2007; Regard 2009)
   const fitzStart = routeEnd - bsxmax;
-  // xFromThrust: distance from fitzStart (= distance into the arch zone from its far edge)
   const xFromThrust = d - fitzStart;
-  // Apply Gaussian everywhere — it naturally decays to ~0 beyond 3σ
   const sigmaRecon = Math.max(sigma, 250);
   const dx = xFromThrust - xcenter;
   const archUplift = dhmax*Math.exp(-(dx*dx)/(2*sigmaRecon*sigmaRecon))*1000*isoFrac;
-  // Only subtract if non-negligible (>0.5 m) to avoid floating point noise
   if(archUplift > 0.5){
     paleoE -= archUplift;
   }
-  // Smooth the EDGES of the foredeep transition — prevent sharp angular kinks
-  // where the profile drops from surface level into the deep foredeep.
-  // The issue: the Gaussian subtraction interacts with the modern profile's shape
-  // to create sharp angles at the entry/exit of the foredeep zone.
-  // Fix: apply a cosine taper to the arch uplift at the margins (first/last 150 km)
-  // This does NOT limit the depth — it just smooths the transition in/out.
-  // (The taper is already applied above via archUplift, so we re-add a correction
-  //  at the margins to soften the abruptness)
+  // Smooth foredeep edge transitions (cosine taper)
   const fillFloor = +(document.getElementById('bs-fillfloor')||{value:-20}).value;
   if(paleoE < fillFloor && xFromThrust > -100){
-    // Compute how far we are from the foredeep edges
-    // The foredeep zone roughly spans xFromThrust = 0 to xFromThrust = bsxmax
-    const edgeDist = Math.min(xFromThrust, bsxmax - xFromThrust); // distance from nearest edge
-    const taperZone = 150; // smooth over 150 km at each edge
+    const edgeDist = Math.min(xFromThrust, bsxmax - xFromThrust);
+    const taperZone = 150;
     if(edgeDist < taperZone && edgeDist >= 0){
-      // Cosine taper: at edge (edgeDist=0), depth is clamped to fillFloor
-      // At taperZone, full depth is allowed
       const taper = 0.5 * (1 - Math.cos(Math.PI * edgeDist / taperZone));
-      const fullDepth = paleoE;
-      paleoE = fillFloor + (fullDepth - fillFloor) * taper;
+      paleoE = fillFloor + (paleoE - fillFloor) * taper;
     }
   }
 
@@ -1580,7 +1695,7 @@ function computePaleoReach(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt
 
   // Shield sill info for Routes B/C
   let shieldSill = null;
-  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'||currentRoute==='F'){
     let sillSeg=segs[0]; segs.forEach(s=>{if(s.e>sillSeg.e)sillSeg=s});
     const sillPlio = sillSeg.e + Math.round(dtLower);
     shieldSill = {name:sillSeg.name, now:sillSeg.e, plio:sillPlio, d:sillSeg.d};
@@ -1647,7 +1762,7 @@ function buildVerdictBox(paleoMdd,paleoFitz,plioSL,pr,totalMdd,totalFitz,bsdt){
   // 2. Pathway
   html += '<b>2. Pathway analysis (can marine water GET there?):</b><br>';
   html += 'Marine water must traverse '+Math.round(dT).toLocaleString()+' km of river corridor from the coast to '+cityName.split('(')[0].trim()+'.<br>';
-  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'||currentRoute==='F'){
     html += '<i>Foreland zones (⊥ thrust front, Tₑ-dependent): Craton → Back-bulge (+40 m) → Forebulge (+15 m, Repasch 2023) → Foredeep (−15 m, Horton 1997) → Wedge-top (+5 m). Shield/TDD: +'+pr.dtLower+' m (Gomes 2025).</i><br>';
   }
   html += 'Sequential paleo flooding at +'+plioSL+' m SL reaches <b>'+pr.reachStr+'</b>';
@@ -1851,11 +1966,18 @@ function drawPreUplift(alpha,w0m,w0n,fxdt,dhmax,xcenter,sigma,rhoc,rhom,bsdt,xma
       cx.fillStyle='#8B451377';cx.font='italic 8px "IBM Plex Sans"';cx.textAlign='left';
       cx.fillText('← Foredeep basement ('+Math.round(deepPt.paleo)+' m)',px(deepPt.d)+5,py(deepPt.paleo)+4);
     }
+    // Isopach constraint annotation (Prezzi 2009; Uba 2006)
+    // Published: 3-4 km total near thrust, thinning to <0.5 km at forebulge
+    if(deepPt.paleo < -200){
+      cx.fillStyle='#785630';cx.font='italic 7px "IBM Plex Sans"';cx.textAlign='right';
+      cx.fillText('Isopach: 3–4 km proximal → <0.5 km at forebulge',px(deepPt.d)-5,py(deepPt.paleo)-8);
+      cx.fillText('(Prezzi 2009; Uba et al. 2006)',px(deepPt.d)-5,py(deepPt.paleo)+0);
+    }
   }
 
   // ── Geological zone shading — computed from perpendicular distance to thrust front ──
   // Uses latitude-dependent Tₑ and zone widths (Horton 1997; Whitman 1994; Repasch 2023)
-  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:routeE;
+  const coords=currentRoute==='A'?routeA_coords:currentRoute==='B'?routeB_coords:currentRoute==='C'?routeC_coords:currentRoute==='D'?routeD_coords:currentRoute==='F'?routeF_coords:routeE;
   if(coords && coords.length>1){
     // Classify each data point by its foreland zone
     let lastZone='',zoneStart=0;
@@ -2485,7 +2607,7 @@ function calcDynTopo(){
   const mnote = document.getElementById('dt-model-note');
   if(mnote) mnote.textContent = (dtModels[mkey]||{label:'Custom'}).label + ', ' + since + ' Ma';
   // Update shield warning if visible
-  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'){
+  if(currentRoute==='B'||currentRoute==='C'||currentRoute==='D'||currentRoute==='F'){
     var sillNow = currentRoute==='B' ? 190 : 286;
     var sillPlio = sillNow + plio;
     var divName = currentRoute==='B'?'Paraguá/Guaporé watershed':'Chiquitano';
