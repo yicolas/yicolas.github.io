@@ -1,198 +1,85 @@
-# Nicolas Anderson - Personal Website
+# Nick Anderson - Geology PhD Website
 
-A modern, responsive geology portfolio website featuring a side-panel layout with project showcase.
+Personal academic website for Nick Anderson, Geology PhD Candidate at the California Institute of Technology.
 
-## 📁 Files Included
+## About
 
-### HTML Pages
-- `index.html` - Home page with project listings
-- `cv.html` - Full curriculum vitae
-- `thesis.html` - GSA 2022 Honors Thesis
-- `sediment-mill.html` - Sediment Mill project
-- `sediment-press.html` - Sediment Pellet Press project
-- `stuff.html` - Geologic Maps & Field Work
+I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
 
-### CSS
-- `style.css` - Complete styling for all pages
+**Contact:** nickanderson@caltech.edu  
+**GitHub:** [github.com/yicolas](https://github.com/yicolas)  
+**Google Scholar:** [Scholar Profile](https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ)
 
-### JavaScript
-- `clock.js` - Digital clock functionality
-- `zoom.js` - Zoom in/out functionality
+## Website Structure
 
-## 🎨 Design Features
+The site uses a two-column layout with an iframe-based content loader and a fixed navigation panel.
 
-### Layout
-- **Desktop**: Side panel (right) with profile/bio, main content area (left) with projects
-- **Mobile**: Responsive stack layout with mobile header/footer
-- **Modern Grid System**: CSS Grid for flexible, responsive layouts
+### Papers
+- **Zhang et al. 2024** - Paleomagnetic Records from Pulsed Magmatism
+- **Mohr et al. 2024** - High-Precision U-Pb Geochronology
 
-### Key Features
-1. **Fixed Right Panel** (desktop) - Profile, contact info, and bio
-2. **Project Grid** - Clean project cards with images and descriptions
-3. **Digital Clock** - Live updating 24-hour clock
-4. **Zoom Controls** - Adjustable font size for accessibility
-5. **Responsive Design** - Works on desktop, tablet, and mobile
+### Interactive Models
+- **pyRockmag** - Rock magnetic analysis tool
+- **Pliocene Sea Level Inundation Model** - Evaluating marine incursion hypotheses
+- **Half-Channel Flume Erosion Model** - Sediment transport simulation
 
-## 📝 Setup Instructions
+### 3D Prints & Tools
+- **Sediment Mill** - Custom optical engineering for particle analysis
+- **Pellet Press** - 3D printable press for portable XRF analysis
 
-### 1. Upload to GitHub
+### Projects
+- **SWLLIP Undergraduate Thesis** - Paleomagnetism and Geochronology of the Southwestern Laurentia Large Igneous Province
+- **2022 GSA Cordilleran Presentation** - Conference presentation on SWLLIP research
 
-Upload all files to your GitHub repository. Your file structure should look like:
+### Reports & Maps
+- **Panum Crater Field Report**
+- **McGee Creek Field Report**
+- **Geologic Maps & Cross Sections** - Death Valley region mapping, stratigraphic columns
+
+### Field Guides
+- Fall 2024 — Owens Valley
+- Winter 2025 — San Diego & Salton Sea
+- Spring 2025 — Central Arizona
+- Fall 2025 — San Bernardino
+- Winter 2026 — Saline Valley
+
+### Historical Archives
+- **Kirschvink PhD Thesis** - Original thesis scans
+- **Lowenstam Biography** - Caltech oral history
+
+## Technical Details
+
+- **Framework:** Static HTML/CSS/JavaScript
+- **PDF Hosting:** Internet Archive (archive.org) for large files
+- **3D Models:** Google Model Viewer for GLB files
+- **Layout:** Resizable two-column design with iframe content loading
+
+## File Structure
 
 ```
-your-repo/
-├── index.html
-├── cv.html
-├── thesis.html
-├── sediment-mill.html
-├── sediment-press.html
-├── stuff.html
-├── style.css
-├── clock.js
-├── zoom.js
-├── geo_compass.png
-├── pill_press.png
-├── caulk_gun.png
-├── IMG_0819.JPG
-├── IMG_0822.JPG
-├── IMG_0823.JPG
-├── IMG_9366.JPG
-├── IMG_9553.JPG
-├── IMG_9569.JPG
-├── IMG_9584.JPG
-├── IMG_9600.JPG
-├── IMG_9816.JPG
-├── kim_floc_outline_labels.svg
-├── SWLLIP-GSA-Anderson-github.pdf
-├── maps.pdf
-├── lens_build.pdf
-└── caulk_pill_press_v5.stl
+├── index.html              # Main layout with navigation
+├── index-content.html      # ASCII welcome home page
+├── style.css               # Shared stylesheet
+├── clock.js                # Clock utility
+├── cv.html                 # Curriculum Vitae
+├── zhang-paper.html        # Zhang et al. 2024 paper
+├── mohr-paper.html         # Mohr et al. 2024 paper
+├── pyrockmag.html          # pyRockmag tool wrapper
+├── flume.html              # Flume model wrapper
+├── inundation.html         # Inundation model wrapper
+├── sediment-mill.html      # Sediment mill project page
+├── sediment-press.html     # Pellet press 3D viewer
+├── swllip-thesis.html      # Undergraduate thesis
+├── thesis.html             # GSA presentation
+├── maps.html               # Geologic maps gallery
+├── panum-report.html       # Panum Crater report
+├── mcgee-creek-report.html # McGee Creek report
+├── fieldtrip-*.html        # Field guide pages (5 total)
+├── kirschvink-thesis.html  # Kirschvink thesis archive
+├── lowenstam-bio.html      # Lowenstam biography
+└── *.pdf, *.png, *.glb     # Assets and documents
 ```
 
-### 2. Enable GitHub Pages
+## License
 
-1. Go to your repository Settings
-2. Navigate to "Pages" in the left sidebar
-3. Under "Source", select your main/master branch
-4. Click "Save"
-5. Your site will be published at: `https://yourusername.github.io/repository-name/`
-
-### 3. Required Assets
-
-Make sure these image/file assets are in your repository:
-
-**Images:**
-- `geo_compass.png` - Your geological compass image (for home page)
-- `pill_press.png` - Sediment press image
-- `caulk_gun.png` - Caulk gun assembly image
-- `IMG_0819.JPG` through `IMG_9816.JPG` - Sediment mill photos
-- `kim_floc_outline_labels.svg` - Floc outline diagram
-- `map_preview.png` - (Optional) Preview image for maps page
-
-**PDFs:**
-- `SWLLIP-GSA-Anderson-github.pdf` - Your thesis PDF
-- `maps.pdf` - Your geologic maps PDF
-- `lens_build.pdf` - Parts list and assembly guide
-
-**Downloads:**
-- `caulk_pill_press_v5.stl` - 3D printable file
-
-## 🎯 Customization
-
-### Changing Colors
-The design uses a clean black and white aesthetic. To customize colors, edit `style.css`:
-
-```css
-/* Main text color */
-color: #222;
-
-/* Muted text */
-color: rgba(0, 0, 0, 0.4);
-
-/* Borders */
-border-color: rgba(0, 0, 0, 0.15);
-```
-
-### Adjusting Layout Widths
-The right panel width can be adjusted in `style.css`:
-
-```css
-.right-panel {
-    width: 30%;  /* Change this percentage */
-    max-width: 400px;  /* Change max width */
-}
-```
-
-### Adding/Removing Projects
-Edit the `<article class="project-item">` sections in `index.html`:
-
-```html
-<article class="project-item">
-    <div class="project-image">
-        <a href="your-project.html">
-            <img src="your-image.png" alt="Your Project">
-        </a>
-    </div>
-    <div class="project-info">
-        <h3>005—YOUR PROJECT NAME</h3>
-        <div class="project-subtitle">PROJECT TYPE</div>
-        <p class="project-description">
-            Your project description here...
-        </p>
-        <a href="your-project.html" class="read-more">Read more…</a>
-    </div>
-    <div class="project-icon">
-        ⌘
-    </div>
-</article>
-```
-
-## 📱 Responsive Breakpoints
-
-- **Desktop**: > 1024px (side panel visible)
-- **Tablet**: 768px - 1024px (mobile layout)
-- **Mobile**: < 768px (full mobile layout)
-
-## 🔧 Browser Compatibility
-
-Tested and working in:
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
-- Mobile browsers (iOS Safari, Chrome Mobile)
-
-## 📄 Content Notes
-
-All content has been migrated from your original website including:
-- Full CV with all experience, publications, awards
-- Project descriptions and details
-- Contact information
-- External links (GitHub, Google Scholar)
-
-## 🐛 Troubleshooting
-
-### Images not showing?
-- Check file names match exactly (case-sensitive on Linux/Mac)
-- Verify images are in the same directory as HTML files
-- Check browser console for 404 errors
-
-### PDFs not loading?
-- Ensure PDF files are uploaded to repository
-- Some browsers block PDFs in iframes - test in multiple browsers
-- PDF file names are case-sensitive
-
-### Layout issues on mobile?
-- Clear browser cache
-- Check that viewport meta tag is present in HTML
-- Test responsive design using browser dev tools
-
-## 📞 Support
-
-For issues or questions, you can:
-1. Check browser console for errors
-2. Verify all files are uploaded correctly
-3. Test in different browsers
-
-## ✨ Credits
-
-Design inspired by modern portfolio layouts with a focus on clean typography and readability. Built with standard HTML5, CSS3, and vanilla JavaScript for maximum compatibility and performance.
+© 2025 Nick Anderson. All rights reserved.

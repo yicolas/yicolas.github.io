@@ -3,236 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nick Anderson - Geology PhD</title>
+    <title>Nick Anderson - Home</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Resizable layout */
-        .site-container {
+        .mobile-header, .mobile-footer { display: none !important; }
+        
+        .welcome-container {
             display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             min-height: 100vh;
-            position: relative;
+            padding: 2rem;
+            text-align: center;
         }
         
-        .main-content {
-            flex: 1;
-            min-width: 400px;
-            overflow: hidden;
-            margin-right: 0;
-            max-width: none;
-            padding: 0;
+        .ascii-welcome {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.0;
+            white-space: pre;
+            color: #000;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0;
         }
         
-        .content-iframe {
-            width: 100%;
-            height: 100vh;
-            border: none;
-            display: block;
+        .compass-img {
+            width: 200px;
+            margin: 1rem 0;
         }
         
-        .resize-handle {
-            width: 5px;
-            cursor: col-resize;
-            background: transparent;
-            position: relative;
-            flex-shrink: 0;
-            z-index: 101;
+        .welcome-text {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 7px;
+            color: rgba(0, 0, 0, 0.7);
+            max-width: 400px;
+            line-height: 1.6;
         }
         
-        .resize-handle:hover,
-        .resize-handle.dragging {
-            background: rgba(0, 0, 238, 0.15);
-        }
-        
-        .resize-handle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 3px;
-            height: 40px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 2px;
-            opacity: 0;
-            transition: opacity 0.15s;
-        }
-        
-        .resize-handle:hover::after {
-            opacity: 1;
-        }
-        
-        .right-panel {
-            position: relative;
-            width: 320px;
-            min-width: 250px;
-            max-width: 500px;
-            height: 100vh;
-            background: #ffffff;
-            border-left: 1px solid rgba(0,0,0,0.1);
-            padding: 1.5rem;
-            overflow-y: auto;
-            flex-shrink: 0;
+        @media (max-width: 600px) {
+            .ascii-welcome {
+                font-size: 6px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Mobile Header (visible on mobile only) -->
-    <div class="mobile-header">
-        <div class="panel-header">
-            <div class="site-title">
-                <a href="index.html">NICK ANDERSON</a>
-            </div>
-            <div class="clock">
-                <span id="mobile-clock">16:34:21</span>
-            </div>
-        </div>
-        <hr>
-        <div class="profile-grid">
-            <div class="profile-labels">
-                <h4>Geology PhD Candidate</h4>
-                <a href="mailto:nickanderson@caltech.edu">nickanderson@caltech.edu</a><br>
-                <a href="https://github.com/yicolas" target="_blank">GitHub</a><br>
-                <a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ" target="_blank">Google Scholar</a>
-            </div>
-            <div class="profile-bio">
-                <p class="text-muted">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
-                </p>
-                <p class="mt-2">
-                    <a href="cv.html">CV →</a>
-                </p>
-            </div>
-        </div>
+    <div class="welcome-container">
+        <pre class="ascii-welcome">
+      ___           ___           ___           ___           ___           ___           ___     
+     /\__\         /\  \         /\__\         /\  \         /\  \         /\__\         /\  \    
+    /:/ _/_       /::\  \       /:/  /        /::\  \       /::\  \       /::|  |       /::\  \   
+   /:/ /\__\     /:/\:\  \     /:/  /        /:/\:\  \     /:/\:\  \     /:|:|  |      /:/\:\  \  
+  /:/ /:/ _/_   /::\~\:\  \   /:/  /        /:/  \:\  \   /:/  \:\  \   /:/|:|__|__   /::\~\:\  \ 
+ /:/_/:/ /\__\ /:/\:\ \:\__\ /:/__/        /:/__/ \:\__\ /:/__/ \:\__\ /:/ |::::\__\ /:/\:\ \:\__\
+ \:\/:/ /:/  / \:\~\:\ \/__/ \:\  \        \:\  \ /:/  / \:\  \ /:/  / \/__/~~/:/  / \:\~\:\ \/__/
+  \::/_/:/  /   \:\ \:\__\    \:\  \        \:\  /:/  /   \:\  /:/  /        /:/  /   \:\ \:\__\  
+   \:\/:/  /     \:\ \/__/     \:\  \        \:\/:/  /     \:\/:/  /        /:/  /     \:\ \/__/  
+    \::/  /       \:\__\        \:\__\        \::/  /       \::/  /        /:/  /       \:\__\    
+     \/__/         \/__/         \/__/         \/__/         \/__/         \/__/         \/__/    
+</pre>
+        <pre class="ascii-welcome">
+      ___           ___     
+     /\  \         /\  \    
+     \:\  \       /::\  \   
+      \:\  \     /:/\:\  \  
+      /::\  \   /:/  \:\  \ 
+     /:/\:\__\ /:/__/ \:\__\
+    /:/  \/__/ \:\  \ /:/  /
+   /:/  /       \:\  /:/  / 
+   \/__/         \:\/:/  /  
+                  \::/  /   
+                   \/__/    
+</pre>
+        <pre class="ascii-welcome">
+      ___           ___           ___           ___                       ___           ___           ___           ___           ___           ___           ___     
+     /\__\         /\  \         /\  \         /\__\                     /\  \         /\  \         /\  \         /\__\         /\  \         /\  \         /\__\    
+    /::|  |       /::\  \       /::\  \       /:/  /                    /::\  \       /::\  \       /::\  \       /:/  /        /::\  \       /::\  \       /:/  /    
+   /:|:|  |      /:/\:\  \     /:/\:\  \     /:/__/                    /:/\:\  \     /:/\:\  \     /:/\:\  \     /:/  /        /:/\:\  \     /:/\:\  \     /:/  /     
+  /:/|:|  |__   /::\~\:\  \   /:/  \:\  \   /::\__\____               /:/  \:\  \   /::\~\:\  \   /:/  \:\  \   /:/  /        /:/  \:\  \   /:/  \:\  \   /:/  /      
+ /:/ |:| /\__\ /:/\:\ \:\__\ /:/__/ \:\__\ /:/\:::::\__\             /:/__/_\:\__\ /:/\:\ \:\__\ /:/__/ \:\__\ /:/__/        /:/__/ \:\__\ /:/__/_\:\__\ /:/__/       
+ \/__|:|/:/  / \/__\:\/:/  / \:\  \  \/__/ \/_|:|~~|~                \:\  /\ \/__/ \:\~\:\ \/__/ \:\  \ /:/  / \:\  \        \:\  \ /:/  / \:\  /\ \/__/ \:\  \       
+     |:/:/  /       \::/  /   \:\  \          |:|  |                  \:\ \:\__\    \:\ \:\__\    \:\  /:/  /   \:\  \        \:\  /:/  /   \:\ \:\__\    \:\  \      
+     |::/  /        /:/  /     \:\  \         |:|  |                   \:\/:/  /     \:\ \/__/     \:\/:/  /     \:\  \        \:\/:/  /     \:\/:/  /     \:\  \     
+     /:/  /        /:/  /       \:\__\        |:|  |                    \::/  /       \:\__\        \::/  /       \:\__\        \::/  /       \::/  /       \:\__\    
+     \/__/         \/__/         \/__/         \|__|                     \/__/         \/__/         \/__/         \/__/         \/__/         \/__/         \/__/    
+</pre>
+        <pre class="ascii-welcome">
+      ___           ___           ___           ___           ___           ___           ___     
+     /\__\         /\  \         /\  \         /\  \         |\__\         /\  \         /\  \    
+    /:/ _/_       /::\  \       /::\  \       /::\  \        |:|  |       /::\  \       /::\  \   
+   /:/ /\__\     /:/\:\  \     /:/\:\  \     /:/\ \  \       |:|  |      /:/\:\  \     /:/\:\  \  
+  /:/ /:/ _/_   /::\~\:\  \   /::\~\:\__\   _\:\~\ \  \      |:|__|__   /::\~\:\  \   /::\~\:\__\ 
+ /:/_/:/ /\__\ /:/\:\ \:\__\ /:/\:\ \:|__| /\ \:\ \ \__\     /::::\__\ /:/\:\ \:\__\ /:/\:\ \:|__|
+ \:\/:/ /:/  / \:\~\:\ \/__/ \:\~\:\/:/  / \:\ \:\ \/__/    /:/~~/~    \:\~\:\ \/__/ \:\~\:\/:/  /
+  \::/_/:/  /   \:\ \:\__\    \:\ \::/  /   \:\ \:\__\     /:/  /       \:\ \:\__\    \:\ \::/  / 
+   \:\/:/  /     \:\ \/__/     \:\/:/  /     \:\/:/  /     \/__/         \:\ \/__/     \:\/:/  /  
+    \::/  /       \:\__\        \::/__/       \::/  /                     \:\__\        \::/__/   
+     \/__/         \/__/         ~~            \/__/                       \/__/         ~~       
+</pre>
+        <img src="geo_compass.png" alt="Geology Compass" class="compass-img">
+        <p class="welcome-text">
+            Use the navigation panel on the right to browse my research,
+            publications, interactive models, tools, and field guides. Click
+            any link to load content here.
+        </p>
     </div>
-
-    <div class="site-container">
-        <!-- Main Content Area with Iframe -->
-        <main class="main-content">
-            <iframe name="content-frame" src="index-content.html" class="content-iframe"></iframe>
-        </main>
-
-        <!-- Resizable Handle -->
-        <div class="resize-handle" id="resize-handle"></div>
-
-        <!-- Right Side Panel (Desktop Profile/Bio) -->
-        <aside class="right-panel" id="right-panel">
-            <div class="panel-header">
-                <div class="site-title">NICK ANDERSON</div>
-                <div class="clock"><span id="desktop-clock">16:34:21</span></div>
-            </div>
-            
-            <div class="profile-section">
-                <h4><b>ABOUT</b></h4>
-                <div class="contact-info">
-                    <div class="info-item">Geology PhD Candidate</div>
-                    <div class="info-item"><a href="mailto:nickanderson@caltech.edu">nickanderson@caltech.edu</a></div>
-                </div>
-                
-                <div class="bio-text">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
-                </div>
-                
-                <h4><b>LINKS</b></h4>
-                <div class="nav-links">
-                    <div><a href="index-content.html" target="content-frame">Home</a></div>
-                    <div><a href="cv.html" target="content-frame">CV</a></div>
-                    <div><a href="https://github.com/yicolas" target="_blank">GitHub</a></div>
-                    <div><a href="https://scholar.google.com/citations?hl=en&user=gCFHsx8AAAAJ" target="_blank">Google Scholar</a></div>
-                </div>
-
-                <h4><b>PAPERS</b></h4>
-                <div class="nav-links">
-                    <div><a href="zhang-paper.html" target="content-frame">Paleomagnetic Records from Pulsed Magmatism (Zhang et al. 2024)</a></div>
-                    <div><a href="mohr-paper.html" target="content-frame">High-Precision U-Pb Geochronology (Mohr et al. 2024)</a></div>
-                </div>
-
-                <h4><b>INTERACTIVE MODELS</b></h4>
-                <div class="nav-links">
-                    <div><a href="pyrockmag.html" target="content-frame">pyRockmag</a></div>
-                    <div><a href="inundation.html" target="content-frame">Pliocene Sea Level Inundation Model</a></div>
-                    <div><a href="flume.html" target="content-frame">Half-Channel Flume Erosion Model</a></div>
-                </div>
-                
-                <h4><b>3D PRINTS & TOOLS</b></h4>
-                <div class="nav-links">
-                    <div><a href="sediment-mill.html" target="content-frame">Sediment Mill</a></div>
-                    <div><a href="sediment-press.html" target="content-frame">Pellet Press</a></div>
-                </div>
-
-                <h4><b>PROJECTS</b></h4>
-                <div class="nav-links">
-                    <div><a href="swllip-thesis.html" target="content-frame">SWLLIP Undergraduate Thesis</a></div>
-                    <div><a href="thesis.html" target="content-frame">2022 GSA Cordilleran Presentation</a></div>
-                </div>
-
-                <h4><b>REPORTS & MAPS</b></h4>
-                <div class="nav-links">
-                    <div><a href="panum-report.html" target="content-frame">Panum Crater Field Report</a></div>
-                    <div><a href="mcgee-creek-report.html" target="content-frame">McGee Creek Field Report</a></div>
-                    <div><a href="maps.html" target="content-frame">Geologic Maps &amp; Cross Sections</a></div>
-                </div>
-
-                <h4><b>FIELD GUIDES</b></h4>
-                <div class="nav-links">
-                    <div><a href="fieldtrip-owens-valley.html" target="content-frame">Fall 2025 — Owens Valley</a></div>
-                    <div><a href="fieldtrip-san-diego.html" target="content-frame">Winter 2025 — San Diego &amp; Salton Sea</a></div>
-                    <div><a href="fieldtrip-central-arizona.html" target="content-frame">Spring 2025 — Central Arizona</a></div>
-                    <div><a href="fieldtrip-san-bernardino.html" target="content-frame">Fall 2025 — San Bernardino</a></div>
-                    <div><a href="fieldtrip-saline-valley.html" target="content-frame">Winter 2026 — Saline Valley</a></div>
-                </div>
-
-                <h4><b>RANDOM</b></h4>
-                <div class="nav-links">
-                    <div><a href="kirschvink-thesis.html" target="content-frame">Kirschvink PhD Thesis Scans</a></div>
-                    <div><a href="lowenstam-bio.html" target="content-frame">Lowenstam Biography</a></div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Footer (Desktop) -->
-        <footer class="site-footer">
-            <div class="copyright">©2025 NICK ANDERSON</div>
-        </footer>
-    </div>
-
-    <!-- Mobile Footer -->
-    <div class="mobile-footer">
-        <hr>
-        <div class="footer-nav">
-            <a href="index.html">INDEX</a>
-            <a href="#top">↑ TOP</a>
-        </div>
-    </div>
-
-    <script src="clock.js"></script>
-    <script>
-        // Resizable panel
-        const handle = document.getElementById('resize-handle');
-        const panel = document.getElementById('right-panel');
-        let isResizing = false;
-
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            handle.classList.add('dragging');
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const containerWidth = document.querySelector('.site-container').offsetWidth;
-            const newWidth = containerWidth - e.clientX;
-            if (newWidth >= 250 && newWidth <= 500) {
-                panel.style.width = newWidth + 'px';
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isResizing = false;
-            handle.classList.remove('dragging');
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        });
-    </script>
 </body>
 </html>
