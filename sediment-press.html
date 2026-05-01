@@ -159,7 +159,7 @@
     <div class="site-container">
         <main class="main-content" style="margin-right: 0; max-width: 100%;">
             <div class="project-detail-header">
-                <h1>PELLET PRESS <span class="subtitle">→ FIELD INSTRUMENTATION</span></h1>
+                <h1>PELLET PRESS</h1>
             </div>
 
             <div class="press-container">
@@ -172,9 +172,13 @@
                             camera-controls
                             auto-rotate
                             shadow-intensity="1"
-                            camera-orbit="45deg 55deg 105%"
-                            field-of-view="45deg"
-                            style="width: 100%; height: 100%; background: transparent;">
+                            exposure="1"
+                            camera-orbit="45deg 55deg 2.5m"
+                            min-camera-orbit="auto auto 0.5m"
+                            max-camera-orbit="auto auto 10m"
+                            environment-image="neutral"
+                            skybox-image=""
+                            style="width: 100%; height: 100%; background-color: #1a1f22;">
                         </model-viewer>
                         <div class="model-hint">Drag to rotate · Scroll to zoom</div>
                     </div>
