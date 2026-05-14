@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies & TV</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: #ffffff;
+        }
+
+        .video-library {
+            padding: 2rem 3rem 3rem 3rem;
+        }
+
+        .video-library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #000;
+        }
+
+        .video-library-header h1 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.4em;
+            font-weight: normal;
+            text-transform: uppercase;
+        }
+
+        .video-library-header p {
+            max-width: 520px;
+            color: rgba(0, 0, 0, 0.7);
+            line-height: 1.5;
+        }
+
+        .video-library-layout {
+            display: grid;
+            grid-template-columns: minmax(220px, 280px) 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .video-list {
+            border-right: 1px solid #000;
+            padding-right: 1.5rem;
+        }
+
+        .video-list h2,
+        .video-player-panel h2 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.05em;
+            font-weight: normal;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .video-list ul {
+            list-style: none;
+        }
+
+        .video-list li {
+            margin-bottom: 0.65rem;
+        }
+
+        .video-list button {
+            width: 100%;
+            border: none;
+            background: none;
+            padding: 0;
+            text-align: left;
+            font: inherit;
+            color: #0000EE;
+            cursor: pointer;
+        }
+
+        .video-list button:hover,
+        .video-list button:focus {
+            text-decoration: underline;
+            text-transform: uppercase;
+            outline: none;
+        }
+
+        .video-list button.active {
+            color: #000000;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+
+        .video-note {
+            margin-top: 1rem;
+            color: rgba(0, 0, 0, 0.7);
+            line-height: 1.5;
+        }
+
+        .video-player-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 1px solid #000;
+            background: #f5f5f5;
+        }
+
+        .video-meta {
+            margin-top: 1rem;
+            line-height: 1.5;
+        }
+
+        .video-meta p {
+            margin-bottom: 0.75rem;
+        }
+
+        .video-meta a {
+            word-break: break-word;
+        }
+
+        @media (max-width: 900px) {
+            .video-library {
+                padding: 1.5rem;
+            }
+
+            .video-library-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .video-list {
+                border-right: none;
+                border-bottom: 1px solid #000;
+                padding-right: 0;
+                padding-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-library">
+        <div class="video-library-header">
+            <div>
+                <h1>Movies &amp; TV</h1>
+            </div>
+            <p>
+                A small Archive.org watch list embedded directly on the site. Select a title from the left to load its Archive player in the frame.
+            </p>
+        </div>
+
+        <div class="video-library-layout">
+            <section class="video-list" aria-label="Video list">
+                <h2>TV Shows</h2>
+                <ul>
+                    <li><button class="video-link active" data-title="Spawn" data-type="Animated series" data-source="https://archive.org/details/spawn-disc-1" data-embed="https://archive.org/embed/spawn-disc-1">Spawn</button></li>
+                    <li><button class="video-link" data-title="So Weird" data-type="TV series" data-source="https://archive.org/details/SoWeird" data-embed="https://archive.org/embed/SoWeird">So Weird</button></li>
+                    <li><button class="video-link" data-title="Aeon Flux" data-type="Animated series" data-source="https://archive.org/details/hnbt_aeonflux" data-embed="https://archive.org/embed/hnbt_aeonflux">Aeon Flux</button></li>
+                </ul>
+                <p class="video-note">
+                    Titles are based on the linked Archive.org item metadata and identifiers. The player loads the Archive embed page rather than direct video files for better compatibility.
+                </p>
+            </section>
+
+            <section class="video-player-panel">
+                <h2 id="video-title">Spawn</h2>
+                <iframe
+                    id="video-player"
+                    class="video-player-frame"
+                    src="https://archive.org/embed/spawn-disc-1"
+                    title="Spawn"
+                    loading="lazy"
+                    allowfullscreen>
+                </iframe>
+                <div class="video-meta">
+                    <p id="video-type">Animated series</p>
+                    <p>
+                        Source item:
+                        <a id="video-source" href="https://archive.org/details/spawn-disc-1" target="_blank" rel="noopener noreferrer">https://archive.org/details/spawn-disc-1</a>
+                    </p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const videoButtons = document.querySelectorAll('.video-link');
+        const videoPlayer = document.getElementById('video-player');
+        const videoTitle = document.getElementById('video-title');
+        const videoType = document.getElementById('video-type');
+        const videoSource = document.getElementById('video-source');
+
+        videoButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                videoButtons.forEach((item) => item.classList.remove('active'));
+                button.classList.add('active');
+
+                const { title, type, source, embed } = button.dataset;
+                videoPlayer.src = embed;
+                videoPlayer.title = title;
+                videoTitle.textContent = title;
+                videoType.textContent = type;
+                videoSource.href = source;
+                videoSource.textContent = source;
+            });
+        });
+    </script>
+</body>
+</html>
