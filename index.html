@@ -13,6 +13,19 @@
             position: relative;
         }
         
+        .media-nav-panel {
+            position: relative;
+            width: 240px;
+            min-width: 180px;
+            max-width: 420px;
+            height: 100vh;
+            background: #ffffff;
+            border-right: 1px solid rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
         .main-content {
             flex: 1;
             min-width: 400px;
@@ -73,6 +86,25 @@
             overflow-y: auto;
             flex-shrink: 0;
         }
+
+        .media-nav-panel .nav-links details {
+            margin-bottom: 0.5rem;
+        }
+
+        .media-nav-panel summary {
+            cursor: pointer;
+        }
+
+        .media-list,
+        .server-list {
+            margin: 0.45rem 0 0.75rem 1rem;
+            padding-left: 0.5rem;
+        }
+
+        .media-list li,
+        .server-list li {
+            margin-bottom: 0.35rem;
+        }
     </style>
 </head>
 <body>
@@ -96,7 +128,7 @@
             </div>
             <div class="profile-bio">
                 <p class="text-muted">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
+                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of tectonics, landscape evolution and sediment routing in extensional systems.
                 </p>
                 <p class="mt-2">
                     <a href="cv.html">CV →</a>
@@ -106,6 +138,73 @@
     </div>
 
     <div class="site-container">
+        <aside class="media-nav-panel" id="media-nav-panel">
+            <div class="panel-header">
+                <div class="site-title">MEDIA</div>
+            </div>
+
+            <div class="profile-section">
+                <h4><b>TV</b></h4>
+                <div class="nav-links">
+                    <details>
+                        <summary>One Piece</summary>
+                        <ul class="media-list">
+                            <li>
+                                <details>
+                                    <summary>Episode 1</summary>
+                                    <ul class="server-list">
+                                        <li><a href="https://yomi.to/watch/43/1" target="content-frame">Dub</a></li>
+                                        <li><a href="https://yomi.to/watch/43/1" target="content-frame">Sub</a></li>
+                                    </ul>
+                                </details>
+                            </li>
+                            <li>
+                                <details>
+                                    <summary>Episode 2</summary>
+                                    <ul class="server-list">
+                                        <li><a href="https://yomi.to/watch/43/2" target="content-frame">Dub</a></li>
+                                        <li><a href="https://yomi.to/watch/43/2" target="content-frame">Sub</a></li>
+                                    </ul>
+                                </details>
+                            </li>
+                        </ul>
+                    </details>
+                    <details>
+                        <summary>Antarctica: Life at the Edge</summary>
+                        <ul class="media-list">
+                            <li><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="content-frame">PBS Stream</a></li>
+                        </ul>
+                    </details>
+                </div>
+
+                <h4><b>Movies</b></h4>
+                <div class="nav-links">
+                    <details>
+                        <summary>Batman Beyond: The Movie</summary>
+                        <ul class="media-list">
+                            <li><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="content-frame">Internet Archive</a></li>
+                        </ul>
+                    </details>
+                    <details>
+                        <summary>Vampire Hunter D: Bloodlust</summary>
+                        <ul class="media-list">
+                            <li><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="content-frame">Internet Archive</a></li>
+                        </ul>
+                    </details>
+                </div>
+
+                <h4><b>Sites</b></h4>
+                <div class="nav-links">
+                    <div><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="content-frame">PBS</a></div>
+                    <div><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="content-frame">Internet Archive — Batman Beyond</a></div>
+                    <div><a href="https://yomi.to/watch/43/1" target="content-frame">Yomi</a></div>
+                    <div><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="content-frame">Internet Archive — Vampire Hunter D</a></div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="resize-handle" id="left-resize-handle"></div>
+
         <!-- Main Content Area with Iframe -->
         <main class="main-content">
             <iframe name="content-frame" src="index-content.html" class="content-iframe"></iframe>
@@ -129,7 +228,7 @@
                 </div>
                 
                 <div class="bio-text">
-                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of true polar wander events, meteorite impacts and sedimentation rates.
+                    I am a geologist currently pursuing a PhD at Caltech using field observation, paleomagnetism, geochemistry, geochronology and petrology to better improve our understanding of tectonics, landscape evolution and sediment routing in extensional systems.
                 </div>
                 
                 <h4><b>LINKS</b></h4>
@@ -206,30 +305,50 @@
 
     <script src="clock.js"></script>
     <script>
-        // Resizable panel
         const handle = document.getElementById('resize-handle');
         const panel = document.getElementById('right-panel');
+        const leftHandle = document.getElementById('left-resize-handle');
+        const leftPanel = document.getElementById('media-nav-panel');
         let isResizing = false;
+        let isLeftResizing = false;
 
-        handle.addEventListener('mousedown', (e) => {
+        handle.addEventListener('mousedown', () => {
             isResizing = true;
             handle.classList.add('dragging');
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
         });
 
+        leftHandle.addEventListener('mousedown', () => {
+            isLeftResizing = true;
+            leftHandle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
         document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const containerWidth = document.querySelector('.site-container').offsetWidth;
-            const newWidth = containerWidth - e.clientX;
-            if (newWidth >= 250 && newWidth <= 500) {
-                panel.style.width = newWidth + 'px';
+            const containerRect = document.querySelector('.site-container').getBoundingClientRect();
+
+            if (isResizing) {
+                const newWidth = containerRect.right - e.clientX;
+                if (newWidth >= 250 && newWidth <= 500) {
+                    panel.style.width = newWidth + 'px';
+                }
+            }
+
+            if (isLeftResizing) {
+                const newWidth = e.clientX - containerRect.left;
+                if (newWidth >= 180 && newWidth <= 420) {
+                    leftPanel.style.width = newWidth + 'px';
+                }
             }
         });
 
         document.addEventListener('mouseup', () => {
             isResizing = false;
+            isLeftResizing = false;
             handle.classList.remove('dragging');
+            leftHandle.classList.remove('dragging');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
         });
