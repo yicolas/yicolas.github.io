@@ -12,7 +12,7 @@
             min-height: 100vh;
             position: relative;
         }
-        
+
         .media-nav-panel {
             position: relative;
             width: 240px;
@@ -20,12 +20,89 @@
             max-width: 420px;
             height: 100vh;
             background: #ffffff;
-            border-right: 1px solid rgba(0,0,0,0.1);
-            padding: 1.5rem;
+            border-right: 0.1rem solid rgba(0, 0, 0, 0.15);
+            padding: 2rem;
             overflow-y: auto;
             flex-shrink: 0;
+            font-size: var(--right-panel-font-size);
+            display: none;
         }
 
+        .media-nav-panel.open {
+            display: block;
+        }
+
+        .media-nav-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #000;
+        }
+
+        .media-nav-panel .site-title {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+        }
+
+        .media-nav-panel .profile-section {
+            margin-top: 1rem;
+        }
+
+        .media-nav-panel .nav-links {
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .media-nav-panel .nav-links div,
+        .media-nav-panel .nav-links details {
+            margin-bottom: 0.1rem;
+        }
+
+        .media-nav-panel h4 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.1em;
+            font-weight: normal;
+            margin-bottom: 0.2rem;
+            margin-top: 0.6rem;
+        }
+
+        .media-nav-panel h4:first-child {
+            margin-top: 0;
+        }
+
+        .media-nav-panel summary {
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .media-nav-panel summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .media-nav-panel summary::before {
+            content: '+ ';
+        }
+
+        .media-nav-panel details[open] > summary::before {
+            content: '− ';
+        }
+
+        .media-list,
+        .server-list {
+            margin: 0.15rem 0 0.45rem 1rem;
+            padding-left: 0;
+            list-style: none;
+            line-height: 1.1;
+        }
+
+        .media-list li,
+        .server-list li {
+            margin-bottom: 0.1rem;
+        }
+        
         .main-content {
             flex: 1;
             min-width: 400px;
@@ -87,23 +164,45 @@
             flex-shrink: 0;
         }
 
-        .media-nav-panel .nav-links details {
-            margin-bottom: 0.5rem;
+        .embedded-video-page {
+            width: 100%;
+            min-height: 100vh;
+            background: #ffffff;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-sizing: border-box;
         }
 
-        .media-nav-panel summary {
-            cursor: pointer;
+        .embedded-video-page h1 {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 1.2em;
+            font-weight: normal;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 1rem;
         }
 
-        .media-list,
-        .server-list {
-            margin: 0.45rem 0 0.75rem 1rem;
-            padding-left: 0.5rem;
+        .embedded-video-page p {
+            color: rgba(0, 0, 0, 0.7);
+            line-height: 1.4;
         }
 
-        .media-list li,
-        .server-list li {
-            margin-bottom: 0.35rem;
+        .video-shell {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 1px solid rgba(0,0,0,0.15);
+            background: #000;
+        }
+
+        .video-shell iframe,
+        .video-shell video {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+            background: #000;
         }
     </style>
 </head>
@@ -140,7 +239,7 @@
     <div class="site-container">
         <aside class="media-nav-panel" id="media-nav-panel">
             <div class="panel-header">
-                <div class="site-title">MEDIA</div>
+                <div class="site-title">TV + MOVIES</div>
             </div>
 
             <div class="profile-section">
@@ -153,8 +252,8 @@
                                 <details>
                                     <summary>Episode 1</summary>
                                     <ul class="server-list">
-                                        <li><a href="https://yomi.to/watch/43/1" target="content-frame">Dub</a></li>
-                                        <li><a href="https://yomi.to/watch/43/1" target="content-frame">Sub</a></li>
+                                        <li><a href="#" data-embed-title="One Piece — Episode 1 (Dub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/1">Dub</a></li>
+                                        <li><a href="#" data-embed-title="One Piece — Episode 1 (Sub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/1">Sub</a></li>
                                     </ul>
                                 </details>
                             </li>
@@ -162,8 +261,8 @@
                                 <details>
                                     <summary>Episode 2</summary>
                                     <ul class="server-list">
-                                        <li><a href="https://yomi.to/watch/43/2" target="content-frame">Dub</a></li>
-                                        <li><a href="https://yomi.to/watch/43/2" target="content-frame">Sub</a></li>
+                                        <li><a href="#" data-embed-title="One Piece — Episode 2 (Dub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/2">Dub</a></li>
+                                        <li><a href="#" data-embed-title="One Piece — Episode 2 (Sub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/2">Sub</a></li>
                                     </ul>
                                 </details>
                             </li>
@@ -172,42 +271,42 @@
                     <details>
                         <summary>Antarctica: Life at the Edge</summary>
                         <ul class="media-list">
-                            <li><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="content-frame">PBS Stream</a></li>
+                            <li><a href="#" data-embed-title="Antarctica: Life at the Edge" data-embed-type="iframe" data-embed-src="https://player.pbs.org/viralplayer/antartica-life-at-the-edge-fksztw/">PBS Stream</a></li>
                         </ul>
                     </details>
                 </div>
 
-                <h4><b>Movies</b></h4>
+                <h4><b>MOVIES</b></h4>
                 <div class="nav-links">
                     <details>
                         <summary>Batman Beyond: The Movie</summary>
                         <ul class="media-list">
-                            <li><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="content-frame">Internet Archive</a></li>
+                            <li><a href="#" data-embed-title="Batman Beyond: The Movie" data-embed-type="iframe" data-embed-src="https://archive.org/embed/batmanbeyond-themovie-ultimate">Internet Archive</a></li>
                         </ul>
                     </details>
                     <details>
                         <summary>Vampire Hunter D: Bloodlust</summary>
                         <ul class="media-list">
-                            <li><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="content-frame">Internet Archive</a></li>
+                            <li><a href="#" data-embed-title="Vampire Hunter D: Bloodlust" data-embed-type="iframe" data-embed-src="https://archive.org/embed/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510">Internet Archive</a></li>
                         </ul>
                     </details>
                 </div>
 
-                <h4><b>Sites</b></h4>
+                <h4><b>SITES</b></h4>
                 <div class="nav-links">
-                    <div><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="content-frame">PBS</a></div>
-                    <div><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="content-frame">Internet Archive — Batman Beyond</a></div>
-                    <div><a href="https://yomi.to/watch/43/1" target="content-frame">Yomi</a></div>
-                    <div><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="content-frame">Internet Archive — Vampire Hunter D</a></div>
+                    <div><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="_blank">PBS</a></div>
+                    <div><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="_blank">Internet Archive — Batman Beyond</a></div>
+                    <div><a href="https://yomi.to/watch/43/1" target="_blank">Yomi</a></div>
+                    <div><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="_blank">Internet Archive — Vampire Hunter D</a></div>
                 </div>
             </div>
         </aside>
 
-        <div class="resize-handle" id="left-resize-handle"></div>
+        <div class="resize-handle" id="left-resize-handle" style="display:none;"></div>
 
         <!-- Main Content Area with Iframe -->
         <main class="main-content">
-            <iframe name="content-frame" src="index-content.html" class="content-iframe"></iframe>
+            <iframe name="content-frame" src="index-content.html" class="content-iframe" id="content-frame"></iframe>
         </main>
 
         <!-- Resizable Handle -->
@@ -284,6 +383,7 @@
                 <div class="nav-links">
                     <div><a href="kirschvink-thesis.html" target="content-frame">Kirschvink PhD Thesis Scans</a></div>
                     <div><a href="lowenstam-bio.html" target="content-frame">Lowenstam Biography</a></div>
+                    <div><a href="#" id="toggle-media-panel-link">TV and Movies</a></div>
                 </div>
             </div>
         </aside>
@@ -309,8 +409,73 @@
         const panel = document.getElementById('right-panel');
         const leftHandle = document.getElementById('left-resize-handle');
         const leftPanel = document.getElementById('media-nav-panel');
+        const toggleMediaPanelLink = document.getElementById('toggle-media-panel-link');
+        const contentFrame = document.getElementById('content-frame');
         let isResizing = false;
         let isLeftResizing = false;
+
+        function syncLeftPanelVisibility() {
+            const isOpen = leftPanel.classList.contains('open');
+            leftHandle.style.display = isOpen ? 'block' : 'none';
+        }
+
+        function openEmbeddedMedia(title, type, src) {
+            const embeddedDocument = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<style>
+body {
+    margin: 0;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: #ffffff;
+    color: #000000;
+}
+.wrapper {
+    padding: 2rem;
+}
+h1 {
+    font-size: 1.2em;
+    font-weight: normal;
+    text-transform: uppercase;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+p {
+    color: rgba(0, 0, 0, 0.7);
+    line-height: 1.4;
+    margin-bottom: 1rem;
+}
+.player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.player iframe,
+.player video {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+</style>
+</head>
+<body>
+    <div class="wrapper">
+        <h1>${title}</h1>
+        <p>Embedded source player.</p>
+        <div class="player">
+            ${type === 'video' ? `<video controls src="${src}"></video>` : `<iframe src="${src}" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>`}
+        </div>
+    </div>
+</body>
+</html>`;
+            contentFrame.srcdoc = embeddedDocument;
+        }
 
         handle.addEventListener('mousedown', () => {
             isResizing = true;
@@ -326,6 +491,20 @@
             document.body.style.userSelect = 'none';
         });
 
+        toggleMediaPanelLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            leftPanel.classList.toggle('open');
+            syncLeftPanelVisibility();
+        });
+
+        document.querySelectorAll('[data-embed-src]').forEach((link) => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const { embedTitle, embedType, embedSrc } = link.dataset;
+                openEmbeddedMedia(embedTitle, embedType, embedSrc);
+            });
+        });
+
         document.addEventListener('mousemove', (e) => {
             const containerRect = document.querySelector('.site-container').getBoundingClientRect();
 
@@ -336,7 +515,7 @@
                 }
             }
 
-            if (isLeftResizing) {
+            if (isLeftResizing && leftPanel.classList.contains('open')) {
                 const newWidth = e.clientX - containerRect.left;
                 if (newWidth >= 180 && newWidth <= 420) {
                     leftPanel.style.width = newWidth + 'px';
@@ -352,6 +531,8 @@
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
         });
+
+        syncLeftPanelVisibility();
     </script>
 </body>
 </html>
