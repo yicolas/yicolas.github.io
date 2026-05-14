@@ -7,9 +7,177 @@
     <link rel="stylesheet" href="style.css">
     <!-- Model Viewer for 3D STL -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        .site-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .media-panel {
+            width: 220px;
+            min-width: 160px;
+            max-width: 380px;
+            background: #111111;
+            color: #f5f5f5;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 24px 18px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .media-panel .nav-section {
+            margin-top: 22px;
+        }
+
+        .media-panel details {
+            margin-bottom: 10px;
+        }
+
+        .media-panel summary {
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .media-panel summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .media-panel summary::before {
+            content: "+";
+            display: inline-block;
+            width: 14px;
+            margin-right: 6px;
+            color: #888;
+        }
+
+        .media-panel details[open] > summary::before {
+            content: "−";
+        }
+
+        .media-panel .nav-link,
+        .media-panel a {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            margin: 6px 0;
+            opacity: 0.9;
+        }
+
+        .media-panel .nav-link:hover,
+        .media-panel a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .media-list,
+        .server-list {
+            margin: 6px 0 8px 18px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .server-list {
+            margin-left: 16px;
+        }
+
+        .media-resize-handle {
+            width: 6px;
+            cursor: col-resize;
+            background: transparent;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .media-resize-handle:hover,
+        .media-resize-handle.dragging {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .media-resize-handle::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 42px;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .media-resize-handle:hover::after,
+        .media-resize-handle.dragging::after {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
     <div class="site-container">
+        <!-- Appended Media Navigation Panel -->
+        <aside class="media-panel" id="media-panel">
+            <div class="nav-header">
+                <div class="nav-name">Media</div>
+                <div class="nav-title">Quick watch links</div>
+            </div>
+
+            <div class="nav-sections">
+                <div class="nav-section">TV</div>
+                <details>
+                    <summary>One Piece</summary>
+                    <ul class="media-list">
+                        <li>
+                            <details>
+                                <summary>Episode 1</summary>
+                                <ul class="server-list">
+                                    <li><a href="https://yomi.to/watch/43/1" target="_blank">Dub · Server 1</a></li>
+                                    <li><a href="https://yomi.to/watch/43/1" target="_blank">Sub · Server 1</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details>
+                                <summary>Episode 2</summary>
+                                <ul class="server-list">
+                                    <li><a href="https://yomi.to/watch/43/1" target="_blank">Dub · Server 1</a></li>
+                                    <li><a href="https://yomi.to/watch/43/1" target="_blank">Sub · Server 1</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                    </ul>
+                </details>
+                <details>
+                    <summary>Antarctica: Life at the Edge</summary>
+                    <ul class="media-list">
+                        <li><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="_blank">PBS stream</a></li>
+                    </ul>
+                </details>
+
+                <div class="nav-section">Movies</div>
+                <details>
+                    <summary>Batman Beyond: The Movie</summary>
+                    <ul class="media-list">
+                        <li><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="_blank">Internet Archive</a></li>
+                    </ul>
+                </details>
+                <details>
+                    <summary>Vampire Hunter D: Bloodlust</summary>
+                    <ul class="media-list">
+                        <li><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="_blank">Internet Archive</a></li>
+                    </ul>
+                </details>
+
+                <div class="nav-section">Sites</div>
+                <a class="nav-link external" href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="_blank">PBS</a>
+                <a class="nav-link external" href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="_blank">Internet Archive · Batman Beyond</a>
+                <a class="nav-link external" href="https://yomi.to/watch/43/1" target="_blank">Yomi</a>
+                <a class="nav-link external" href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="_blank">Internet Archive · Vampire Hunter D</a>
+            </div>
+        </aside>
+
+        <div class="media-resize-handle" id="media-resize-handle"></div>
+
         <!-- Content Panel -->
         <main class="content-panel" id="content-panel">
             <!-- Content loaded dynamically via JS -->
@@ -59,6 +227,35 @@
         <button class="lightbox-nav next" onclick="nextImage()">›</button>
     </div>
 
+    <script>
+        const mediaResizeHandle = document.getElementById('media-resize-handle');
+        const mediaPanel = document.getElementById('media-panel');
+        let isMediaResizing = false;
+
+        mediaResizeHandle.addEventListener('mousedown', () => {
+            isMediaResizing = true;
+            mediaResizeHandle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            if (!isMediaResizing) return;
+            const containerLeft = document.querySelector('.site-container').getBoundingClientRect().left;
+            const newWidth = event.clientX - containerLeft;
+            if (newWidth >= 160 && newWidth <= 380) {
+                mediaPanel.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isMediaResizing) return;
+            isMediaResizing = false;
+            mediaResizeHandle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
