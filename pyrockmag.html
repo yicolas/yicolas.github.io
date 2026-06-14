@@ -2041,6 +2041,30 @@ function buildLayout(samples, op){
         margin:M(68,16,36,72),
         showlegend:true
       });
+    case 'FORC_DCD':
+      return Object.assign({}, common, {
+        title:TT(`FORC backfield (DCD)${n}`),
+        xaxis:logX,
+        yaxis:ax('Mr / SIRM'),
+        margin:M(60,16,36,72),
+        showlegend:true
+      });
+    case 'FORC_COERSPEC':
+      return Object.assign({}, common, {
+        title:TT(`FORC coercivity spectrum${n}`),
+        xaxis:logX,
+        yaxis:ax('-dMr/d(log B)'),
+        margin:M(60,16,36,72),
+        showlegend:true
+      });
+    case 'FORC_IRMACQ':
+      return Object.assign({}, common, {
+        title:TT(`FORC IRM acquisition${n}`),
+        xaxis:ax('Applied field (mT)'),
+        yaxis:ax('Mr / SIRM'),
+        margin:M(60,16,36,72),
+        showlegend:true
+      });
     case 'FORC_DIAG': {
       const sf = ForcDiagState.smoothingFactor, gsz = ForcDiagState.gridSize;
       const sname = samples.length === 1 ? samples[0].samplename : '';
@@ -2306,6 +2330,63 @@ function tFuller(samples){
   return tr;
 }
 
+// ── FORC-derived rockmag panels — port of rmg_forc.forc_extract_reversal_remanence ──
+function forcExtractReversalRemanence(forc){
+  if(!forc || !forc.exists || !forc.curves || forc.curves.length < 3) return null;
+  function collapse(H, Marr){
+    const m=new Map();
+    for(let i=0;i<H.length;i++){ const h=H[i], v=Marr[i];
+      if(isFinite(h) && isFinite(v) && h>0){ const k=h.toFixed(9); if(!m.has(k)) m.set(k,[]); m.get(k).push(v); } }
+    const keys=[...m.keys()].map(Number).sort((a,b)=>a-b);
+    const med=keys.map(h=>{ const a=m.get(h.toFixed(9)).slice().sort((x,y)=>x-y); return a[Math.floor(a.length/2)]; });
+    return [keys, med];
+  }
+  function zc(H, Marr){ for(let i=0;i<H.length-1;i++){ if((Marr[i]>0)!==(Marr[i+1]>0)) return H[i]+(H[i+1]-H[i])*(0-Marr[i])/(Marr[i+1]-Marr[i]); } return NaN; }
+  const Hd=[], Md=[], sat=[]; let deep=null;
+  for(const c of forc.curves){
+    let k=0; for(let m=1;m<c.Ha.length;m++) if(c.Ha[m]<c.Ha[k]) k=m;
+    const Hrev=Math.abs(c.Hr), Mr=c.M[k], last=c.M[c.M.length-1];
+    if(isFinite(last)) sat.push(last);
+    if(Hrev>0 && isFinite(Mr)){ Hd.push(Hrev); Md.push(Mr); }
+    if(deep===null || c.Hr<deep.Hr) deep=c;
+  }
+  const cd=collapse(Hd,Md); const Hdesc=cd[0], Mdesc=cd[1];
+  if(Hdesc.length<2 || !sat.length || !deep) return null;
+  const ca=collapse(deep.Ha, deep.M); const Hasc=ca[0], Masc=ca[1];
+  const ss=sat.slice().sort((a,b)=>a-b); const SIRM=Math.abs(ss[Math.floor(ss.length/2)]);
+  const norm=(isFinite(SIRM)&&SIRM!==0)?SIRM:NaN;
+  const MdescN=Mdesc.map(v=>v/norm), MascN=Masc.map(v=>v/norm);
+  const Bcr=zc(Hdesc,MdescN);
+  const lf=Hdesc.map(h=>Math.log10(h)); const spec=[];
+  for(let i=0;i<Hdesc.length;i++){ const lo=Math.max(0,i-1),hi=Math.min(Hdesc.length-1,i+1);
+    const dL=lf[hi]-lf[lo], dM=MdescN[hi]-MdescN[lo]; spec.push(dL!==0?-dM/dL:0); }
+  let modal=NaN,best=-Infinity; for(let i=0;i<spec.length;i++) if(isFinite(spec[i])&&spec[i]>best){best=spec[i];modal=Hdesc[i];}
+  return {H_backfield:Hdesc, M_backfield_norm:MdescN, H_irm:Hasc, M_irm_norm:MascN, SIRM:SIRM, Bcr:Bcr, spectrum_field:Hdesc, spectrum:spec, modal:modal};
+}
+function _forcRem(d){ try{ return forcExtractReversalRemanence(rmgExtractForcData(d)); }catch(e){ console.warn('FORC rem', d.samplename, e); return null; } }
+function tForcDcd(samples){
+  const tr=[];
+  samples.forEach((d,i)=>{ const r=_forcRem(d); if(!r) return; const c=col(i);
+    tr.push({x:r.H_backfield.map(v=>v*1000), y:r.M_backfield_norm, mode:'lines+markers', name:d.samplename, line:{color:c,width:1.8}, marker:{size:5,color:c}, type:'scatter'});
+    if(isFinite(r.Bcr)) tr.push({x:[r.Bcr*1000,r.Bcr*1000], y:[-1.05,1.05], mode:'lines', showlegend:false, line:{color:c,width:1,dash:'dot'}, type:'scatter'}); });
+  if(tr.length){ const xs=tr.flatMap(t=>t.x.filter(v=>v!=null&&isFinite(v))); if(xs.length) tr.push({x:[Math.min(...xs),Math.max(...xs)], y:[0,0], mode:'lines', showlegend:false, line:{color:'#666',width:1,dash:'dash'}, type:'scatter'}); }
+  return tr;
+}
+function tForcCoer(samples){
+  const tr=[];
+  samples.forEach((d,i)=>{ const r=_forcRem(d); if(!r) return; const c=col(i);
+    tr.push({x:r.spectrum_field.map(v=>v*1000), y:r.spectrum, mode:'lines+markers', name:d.samplename, line:{color:c,width:1.8}, marker:{size:5,color:c}, type:'scatter'});
+    const fin=r.spectrum.filter(v=>isFinite(v));
+    if(isFinite(r.modal) && fin.length) tr.push({x:[r.modal*1000,r.modal*1000], y:[0, Math.max.apply(null,fin)], mode:'lines', showlegend:false, line:{color:c,width:1,dash:'dot'}, type:'scatter'}); });
+  return tr;
+}
+function tForcIrmAcq(samples){
+  const tr=[];
+  samples.forEach((d,i)=>{ const r=_forcRem(d); if(!r) return; const c=col(i);
+    tr.push({x:r.H_irm.map(v=>v*1000), y:r.M_irm_norm, mode:'lines+markers', name:d.samplename, line:{color:c,width:1.8}, marker:{size:5,color:c}, type:'scatter'}); });
+  if(tr.length){ const xs=tr.flatMap(t=>t.x.filter(v=>v!=null&&isFinite(v))); if(xs.length) tr.push({x:[Math.min(0,...xs),Math.max(...xs)], y:[0,0], mode:'lines', showlegend:false, line:{color:'#666',width:1,dash:'dash'}, type:'scatter'}); }
+  return tr;
+}
 function tBackfield(samples){
   const tr = [];
   samples.forEach((d, i) => {
@@ -2727,6 +2808,9 @@ function buildTraces(samples, op){
     case 'BACKFIELD': return tBackfield(samples);
     case 'COERCIVITY':return tCoercivity(samples);
     case 'FORC_CURVES': return tForcCurves(samples);
+    case 'FORC_DCD':      return tForcDcd(samples);
+    case 'FORC_COERSPEC': return tForcCoer(samples);
+    case 'FORC_IRMACQ':   return tForcIrmAcq(samples);
     case 'FORC_DIAG':   return tForcDiag(samples);
     case 'FORC_HYST':   return tForcHyst(samples);
     default: return [];
@@ -4124,6 +4208,36 @@ function griddata2DBicubic(Hr_in, Ha_in, M_2d, Hr_out, Ha_out){
 //   smoothingFactor  default 3  (FORCinel recommended 2-4)
 //   gridSize         default 100
 // ═════════════════════════════════════════════════════════════════════════════
+// ── measureForcBuOffset — per-file Bu baseline offset δ (Tesla) ──────────────
+// δ = half the gap between the descending (backfield) and ascending-branch
+// remanence coercivities. Adding δ to Hr & Ha registers the Bu axis to y=0
+// (Hc=(Ha-Hr)/2 is unchanged). Self-calibrating per file; no global constant.
+function measureForcBuOffset(curves){
+  if (!curves || curves.length < 3) return 0;
+  // descending branch (backfield): reversal point of each curve = (|Hr|, Mr)
+  const desc = curves.map(function(c){
+    let k = 0;
+    for (let m = 1; m < c.Ha.length; m++) if (c.Ha[m] < c.Ha[k]) k = m; // min-Ha = reversal pt
+    return { H: Math.abs(c.Hr), M: c.M[k] };
+  }).sort(function(a, b){ return a.H - b.H; });
+  // ascending branch: deepest-reversal curve, positive-field sweep
+  let deep = curves[0];
+  for (const c of curves) if (c.Hr < deep.Hr) deep = c;
+  const asc = [];
+  for (let k = 0; k < deep.Ha.length; k++) if (deep.Ha[k] >= 0) asc.push({ H: deep.Ha[k], M: deep.M[k] });
+  asc.sort(function(a, b){ return a.H - b.H; });
+  function zc(pts){
+    for (let m = 0; m < pts.length - 1; m++){
+      const a = pts[m], b = pts[m + 1];
+      if ((a.M > 0) !== (b.M > 0)) return a.H + (b.H - a.H) * (0 - a.M) / (b.M - a.M);
+    }
+    return null;
+  }
+  const hd = zc(desc), ha = zc(asc);
+  if (hd === null || ha === null) return 0;
+  return (hd - ha) / 2; // Tesla
+}
+
 function processForcForcinelWorkflow(data, opts){
   const smoothingFactor = (opts && opts.smoothingFactor !== undefined) ? opts.smoothingFactor : 3;
   const gridSize = (opts && opts.gridSize !== undefined) ? opts.gridSize : 100;
@@ -4135,6 +4249,13 @@ function processForcForcinelWorkflow(data, opts){
   }
   if (forc.curves.length < 3){
     throw new Error(`Insufficient FORC data (need ≥3 curves, found ${forc.curves.length})`);
+  }
+
+  // ─── y=0 baseline registration (remove coil Bu offset δ) ──────────────
+  const buOffsetT = measureForcBuOffset(forc.curves);
+  for (const c of forc.curves){
+    c.Hr += buOffsetT;
+    for (let _k = 0; _k < c.Ha.length; _k++) c.Ha[_k] += buOffsetT;
   }
 
   // ─── Step 2: Collect scattered points ────────────────────────────────────
@@ -4291,6 +4412,9 @@ const OPS = [
     {key:'FORC_CURVES', label:'FORC raw curves (M vs Ha)'},
     {key:'FORC_DIAG',   label:'FORC diagram (ρ in Hc/Hu)'},
     {key:'FORC_HYST',   label:'FORC hysteresis (full M vs B)'},
+    {key:'FORC_DCD',     label:'FORC backfield (DCD)'},
+    {key:'FORC_COERSPEC',label:'FORC coercivity spectrum'},
+    {key:'FORC_IRMACQ',  label:'FORC IRM acquisition'},
   ]},
   {sec:'tools', items:[
     {key:'SAM_GEN',  label:'.sam generator (CIT format)'},
