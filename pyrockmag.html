@@ -151,6 +151,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 .run-card .rt{color:var(--ac);font-weight:500;margin-bottom:3px}
 .run-card .rs{color:var(--tx3);font-size:10px}
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -171,13 +172,16 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
              ondragover="event.preventDefault();this.classList.add('over')"
              ondragleave="this.classList.remove('over')"
              ondrop="onDrop(event)">
-        <div>⬆ drop .rmg files</div>
+        <div>⬆ drop files</div>
+        <div style="font-size:9px;margin-top:2px;opacity:.7">.rmg · .frc · .hys · .hcr · .irm · .dcd · .txt · .csv · .xls</div>
         <div style="font-size:9px;margin-top:4px">or click to browse</div>
       </div>
-      <input id="fi" type="file" accept=".rmg,.cor,.coe,.dat,.txt,.sam,*" multiple onchange="onFiles(this.files)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      <input id="fi" type="file" multiple onchange="onFiles(this.files)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      <button id="restore-btn" class="btn xs" style="display:none;width:100%;margin-top:6px" onclick="restoreSession()">↺ restore last session</button>
       <div id="sample-toolbar" style="display:none;gap:4px;padding:6px 0 4px;border-bottom:1px solid var(--bdr);margin-bottom:4px">
         <button class="btn xs" onclick="samplesSelectAll()" title="Select all loaded samples">select all</button>
         <button class="btn xs" onclick="samplesClearAll()" title="Deselect all samples">clear all</button>
+        <button class="btn xs" id="group-btn" onclick="toggleGroupByType()" title="Group samples into collapsible folders by type">⊞ group</button>
         <button class="btn xs" onclick="samplesRemoveAll()" title="Remove all samples" style="margin-left:auto;color:var(--red)">remove all</button>
       </div>
       <div id="sample-sortbar" style="display:none;gap:4px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:4px;align-items:center;font-size:9px;color:var(--tx3)">
@@ -2065,6 +2069,20 @@ function buildLayout(samples, op){
         margin:M(60,16,36,72),
         showlegend:true
       });
+    case 'HYST_LOOP':
+      return Object.assign({}, common, { title:TT(`Hysteresis loop${n}`),
+        yaxis2:{title:'Am²/kg', overlaying:'y', side:'right', showgrid:false},
+        xaxis:ax('Field B (mT)'), yaxis:ax('Moment (Am²)'), margin:M(64,16,40,78), showlegend:true });
+    case 'DCD_CURVE':
+      return Object.assign({}, common, { title:TT(`DCD backfield${n}`),
+        yaxis2:{title:'Am²/kg', overlaying:'y', side:'right', showgrid:false},
+        xaxis:ax('Field B (mT)'), yaxis:ax('Remanence (Am²)'), margin:M(64,16,40,78), showlegend:true });
+    case 'DAY':
+      return Object.assign({}, common, { title:TT(`Day diagram${n}`),
+        xaxis:Object.assign(ax('Hcr / Hc'),{range:[1,8],autorange:false}), yaxis:Object.assign(ax('Mrs / Ms'),{range:[0,0.6],autorange:false}),
+        margin:M(64,16,40,72), showlegend:true });
+    case 'TABLE':
+      return Object.assign({}, common, { title:TT(`Data table${n}`), margin:M(50,12,12,12) });
     case 'FORC_DIAG': {
       const sf = ForcDiagState.smoothingFactor, gsz = ForcDiagState.gridSize;
       const sname = samples.length === 1 ? samples[0].samplename : '';
@@ -2387,6 +2405,269 @@ function tForcIrmAcq(samples){
   if(tr.length){ const xs=tr.flatMap(t=>t.x.filter(v=>v!=null&&isFinite(v))); if(xs.length) tr.push({x:[Math.min(0,...xs),Math.max(...xs)], y:[0,0], mode:'lines', showlegend:false, line:{color:'#666',width:1,dash:'dash'}, type:'scatter'}); }
   return tr;
 }
+/* ===== v18 VSM module ===== */
+/* ========================= pyRockmag v18 — VSM / MicroMag / Day module ========================= */
+/* Additive: parses Princeton/Lake Shore MicroMag 2900/3900 files (hysteresis, DCD), old Model 2900
+   exports, and hand-built summary tables; normalizes to SI (Tesla, Am^2); builds hysteresis-loop,
+   DCD-backfield, and Day-diagram plots. Does not touch the FORC/.rmg code paths. */
+const VSM_OE_TO_T = 1e-4, VSM_EMU_TO_AM2 = 1e-3;
+
+function vsmSniffMicromag(text){
+  const head = text.slice(0, 4000);
+  if(!/MicroMag\s+2900\/3900/.test(head)) return null;
+  const lines = head.split(/\r?\n/);
+  const second = (lines[1]||'').trim().toLowerCase();
+  let measType = 'unknown';
+  if(/direct moment/.test(second) && /reversal/.test(second)) measType = 'hyst+forc';
+  else if(/hysteresis/.test(second) || /direct moment/.test(second)) measType = 'hysteresis';
+  else if(/first-order reversal/.test(second)) measType = 'forc';
+  else if(/remanence curves:\s*dcd/.test(second)) measType = 'dcd';
+  else if(/remanence curves:\s*irm|isothermal/.test(second)) measType = 'irm';
+  let units = /units of measure[ :]+cgs/i.test(head) ? 'cgs' : 'si';
+  const series = (head.match(/Series\s+([0-9.]+)/)||[])[1] || '?';
+  let name = (head.match(/Description\s+"([^"]*)"/)||[])[1];
+  if(!name){ const q = head.match(/^"([^"]+)"\s*$/m); name = q ? q[1] : ''; }
+  return { series, measType, units, samplename:name };
+}
+function vsmSegments(text){
+  const isFloat = s => /^[+-]?\d*\.?\d+(?:E[+-]?\d+)?$/i.test(s.trim());
+  const segs = []; let cur = null;
+  for(const ln of text.split(/\r?\n/)){
+    const parts = ln.split(',');
+    const ok = parts.length >= 2 && parts.every(isFloat) && parts.some(p => /[.E]/i.test(p));
+    if(ok){ const row = parts.map(Number);
+      if(!cur || cur.ncol !== row.length){ cur = {ncol:row.length, rows:[]}; segs.push(cur); }
+      cur.rows.push(row);
+    } else cur = null;
+  }
+  return segs.filter(s => s.rows.length >= 4);
+}
+function vsmToSI(F, M, units){
+  const fk = units==='cgs' ? VSM_OE_TO_T : 1, mk = units==='cgs' ? VSM_EMU_TO_AM2 : 1;
+  return [F.map(v=>v*fk), M.map(v=>v*mk)];
+}
+function vsmParseMicromag(text){
+  const info = vsmSniffMicromag(text); if(!info) return null;
+  const segs = vsmSegments(text);
+  if(info.measType==='hysteresis' || info.measType==='hyst+forc'){
+    const hy = segs.filter(s=>s.ncol===4||s.ncol===2).sort((a,b)=>b.rows.length-a.rows.length)[0];
+    if(hy){ const [F,M]=vsmToSI(hy.rows.map(r=>r[0]),hy.rows.map(r=>r[1]),info.units);
+      info.hyst={field:F,moment:M,n:F.length};
+      if(hy.ncol===4){ const [Fa,Ma]=vsmToSI(hy.rows.map(r=>r[2]),hy.rows.map(r=>r[3]),info.units);
+        info.hyst.adjField=Fa; info.hyst.adjMoment=Ma; } } }
+  if(info.measType==='dcd' || info.measType==='irm'){
+    const rc = segs.filter(s=>s.ncol===2).sort((a,b)=>b.rows.length-a.rows.length)[0];
+    if(rc){ const [F,M]=vsmToSI(rc.rows.map(r=>r[0]),rc.rows.map(r=>r[1]),info.units);
+      info.remanence={field:F,moment:M,n:F.length}; } }
+  return info;
+}
+function vsmFitSlope(pts){ const k=pts.length; if(k<2)return 0; let sx=0,sy=0,sxx=0,sxy=0;
+  for(const[x,y]of pts){sx+=x;sy+=y;sxx+=x*x;sxy+=x*y;} const d=k*sxx-sx*sx; return d?(k*sxy-sx*sy)/d:0; }
+function vsmHystParams(field, moment, frac){
+  frac = frac||0.7; const n=field.length; if(n<12) return {valid:false, reason:'too few points'};
+  const Hmax=Math.max.apply(null, field.map(Math.abs));
+  const pos=[],neg=[];
+  for(let i=0;i<n;i++){ if(field[i]>frac*Hmax) pos.push([field[i],moment[i]]);
+                        else if(field[i]<-frac*Hmax) neg.push([field[i],moment[i]]); }
+  const chi=(vsmFitSlope(pos)+vsmFitSlope(neg))/2;
+  const Mc=field.map((h,i)=>moment[i]-chi*h);
+  const Ms=Math.max.apply(null, Mc.map(Math.abs));
+  let imin=0; for(let i=1;i<n;i++) if(field[i]<field[imin]) imin=i;
+  const atH0=(lo,hi)=>{ for(let i=lo;i<hi;i++){ if((field[i]<0)!==(field[i+1]<0)){const t=(0-field[i])/((field[i+1]-field[i])||1e-30);return Mc[i]+t*(Mc[i+1]-Mc[i]);}} return NaN; };
+  const HatM0=(lo,hi)=>{ for(let i=lo;i<hi;i++){ if((Mc[i]<0)!==(Mc[i+1]<0)){const t=(0-Mc[i])/((Mc[i+1]-Mc[i])||1e-30);return field[i]+t*(field[i+1]-field[i]);}} return NaN; };
+  const mrs=[atH0(0,imin),atH0(imin,n-1)].filter(isFinite).map(Math.abs);
+  const hc =[HatM0(0,imin),HatM0(imin,n-1)].filter(isFinite).map(Math.abs);
+  const Mrs=mrs.length?mrs.reduce((a,b)=>a+b)/mrs.length:NaN;
+  const Hc = hc.length? hc.reduce((a,b)=>a+b)/hc.length :NaN;
+  const sqr=Mrs/Ms, valid=isFinite(Hc)&&isFinite(Mrs)&&sqr>0.01;
+  return {valid,Ms,Mrs,Hc,chi,squareness:sqr,reason:valid?'':'low squareness — paramagnetic/standard, params unreliable',mc:Mc};
+}
+function vsmDcdParams(field, moment){
+  for(let i=0;i<field.length-1;i++){
+    if((moment[i]>0)!==(moment[i+1]>0)){ const t=(0-moment[i])/((moment[i+1]-moment[i])||1e-30);
+      return {Hcr:Math.abs(field[i]+t*(field[i+1]-field[i])), Mr:Math.max.apply(null,moment.map(Math.abs))}; } }
+  return {Hcr:NaN, Mr:Math.max.apply(null,moment.map(Math.abs))};
+}
+
+/* selectable Day-diagram reference schemes */
+const VSM_DAY_SCHEMES = {
+  day1977:        { name:'Day et al. 1977',        type:'box',   HcrHc:[1.5,4.0], MrsMs:[0.5,0.05] },
+  dunlop2002_sdmd:{ name:'Dunlop 2002 SD-MD',      type:'curve', pts:[[1.5,0.5],[2.0,0.34],[2.5,0.24],[3.0,0.17],[3.5,0.12],[4.0,0.085],[4.5,0.06],[5.0,0.04],[5.5,0.025]] },
+  dunlop2002_sdsp:{ name:'Dunlop 2002 SD-SP 10nm', type:'curve', pts:[[1.5,0.5],[2.0,0.42],[3.0,0.30],[5.0,0.16],[8.0,0.08],[12,0.04],[20,0.02]] },
+};
+const VSM_SYMBOLS={'^':'triangle-up','v':'triangle-down','o':'circle','p':'pentagon','x':'x','s':'square','d':'diamond','*':'star','+':'cross','□':'square','△':'triangle-up'};
+const VSM_COLORMAP={red:'#e6194b',orange:'#f58231',green:'#3cb44b',blue:'#4363d8',purple:'#911eb4',salmon:'#fa8072',fuchsia:'#f032e6',yellow:'#ffe119',cyan:'#42d4f4',magenta:'#f032e6',black:'#000',gray:'#888',grey:'#888'};
+
+/* parse a summary table given a 2-D array of cells (rows of arrays); header in row 0 */
+function vsmParseSummaryRows(grid){
+  if(!grid || grid.length<2) return null;
+  const hdr = grid[0].map(c => String(c==null?'':c).trim().replace(/\ufeff/,''));
+  const ix = (...keys)=>{ for(const k of keys){ const j=hdr.findIndex(h=>h.toLowerCase().includes(k)); if(j>=0) return j; } return -1; };
+  const c={name:ix('sample #','sample'),hch:ix('hcr/hc'),mm:ix('mr/ms'),hc:ix('hc(','hc '),hcr:ix('hcr('),ms:ix('ms('),mr:ix('mr('),mass:ix('mass'),group:ix('group 2','group'),color:ix('color'),symbol:ix('symbol')};
+  const rows=[];
+  for(let r=1;r<grid.length;r++){ const row=grid[r]; if(!row) continue;
+    const g=j=>j>=0?row[j]:undefined, num=v=>{const x=parseFloat(v);return isFinite(x)?x:NaN;};
+    let x=num(g(c.hch)), y=num(g(c.mm));
+    const hc=num(g(c.hc)), hcr=num(g(c.hcr)), msV=num(g(c.ms)), mrV=num(g(c.mr));
+    if(!isFinite(x) && isFinite(hcr)&&isFinite(hc)&&hc) x=hcr/hc;     // derive Hcr/Hc if absent
+    if(!isFinite(y) && isFinite(mrV)&&isFinite(msV)&&msV) y=mrV/msV;  // derive Mr/Ms if absent
+    if(!isFinite(x)||!isFinite(y)) continue;
+    rows.push({name:String(g(c.name)||('row'+r)),x,y,Hc:hc,Hcr:hcr,Ms:num(g(c.ms)),Mr:num(g(c.mr)),
+      mass:num(g(c.mass)),group:String(g(c.group)||''),color:String(g(c.color)||'').toLowerCase().trim(),symbol:String(g(c.symbol)||'').trim()});
+  }
+  return rows.length ? rows : null;
+}
+function vsmParseSummaryText(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length);
+  const grid=lines.map(l=>l.split(','));
+  return vsmParseSummaryRows(grid);
+}
+/* detect text-based VSM files (xls handled in the loader via SheetJS) */
+function vsmDetect(name, text){
+  if(/MicroMag\s+2900\/3900/.test(text.slice(0,200))) return 'micromag';
+  if(/hcr\/hc|mr\/ms/i.test(text.slice(0,400)) && /,/.test(text)) return 'summary';
+  return null;
+}
+function vsmImport(name, text, kind){
+  if(kind==='micromag'){
+    const info0 = vsmSniffMicromag(text);
+    if(info0 && (info0.measType==='forc' || info0.measType==='hyst+forc')){
+      const curves = vsmExtractMicromagForc(text, 1);
+      return { samplename:(info0.samplename||name.replace(/\.[^.]+$/,'')), vsm:{ kind:'micromag-forc', units:info0.units, series:info0.series, forcCurves:curves } };
+    }
+    const mm = vsmParseMicromag(text);
+    const sn = mm.samplename || name.replace(/\.[^.]+$/,'');
+    const _d = { samplename:sn, vsm:{ kind:mm.measType==='dcd'?'dcd':(mm.remanence?'dcd':'hysteresis'),
+      units:mm.units, series:mm.series } };
+    if(mm.hyst){ _d.vsm.kind='hysteresis'; _d.vsm.hyst=mm.hyst; _d.vsm.params=vsmHystParams(mm.hyst.adjField||mm.hyst.field, mm.hyst.adjMoment||mm.hyst.moment); }
+    if(mm.remanence){ _d.vsm.kind='dcd'; _d.vsm.remanence=mm.remanence; _d.vsm.dcd=vsmDcdParams(mm.remanence.field,mm.remanence.moment); }
+    return _d;
+  }
+  if(kind==='summary'){
+    const rows = vsmParseSummaryText(text);
+    return { samplename:name.replace(/\.[^.]+$/,'')+' (table)', vsm:{ kind:'daytable', rows:rows||[] } };
+  }
+  return null;
+}
+
+/* aggregate Day-diagram points across all loaded samples (table source + raw-computed source) */
+function vsmCollectDayPoints(samples){
+  const table=[], raw=[];
+  const hyst={}, dcd={};
+  for(const s of samples){ const v=s&&s.vsm; if(!v) continue;
+    if(v.kind==='daytable' && v.rows){ for(const r of v.rows) table.push(r); }
+    if(v.kind==='hysteresis' && v.params && v.params.valid){ hyst[s.samplename]={Hc:v.params.Hc,Mrs:v.params.Mrs,Ms:v.params.Ms}; }
+    if(v.kind==='dcd' && v.dcd){ dcd[s.samplename]={Hcr:v.dcd.Hcr}; }
+  }
+  // pair hysteresis + dcd by sample name (exact, then loose contains)
+  for(const nm in hyst){ let d=dcd[nm];
+    if(!d){ const k=Object.keys(dcd).find(k=>k.includes(nm)||nm.includes(k)); if(k) d=dcd[k]; }
+    if(d && isFinite(d.Hcr) && hyst[nm].Hc){ raw.push({name:nm, x:d.Hcr/hyst[nm].Hc, y:hyst[nm].Mrs/hyst[nm].Ms}); }
+  }
+  return {table, raw};
+}
+
+
+function vsmSegmentsForc(text){ const isF=s=>/^[+-]?\d*\.?\d+(?:E[+-]?\d+)?$/i.test(s.trim());
+  const segs=[]; let cur=null;
+  for(const ln of text.split(/\r?\n/)){ const p=ln.split(',');
+    const ok=p.length===2 && p.every(isF) && p.some(x=>/[.E]/i.test(x));
+    if(ok){ const r=p.map(Number); if(!cur){cur=[];segs.push(cur);} cur.push(r);} else cur=null; }
+  return segs.filter(s=>s.length>=3); }
+function vsmExtractMicromagForc(text, stepmT){ stepmT=stepmT||1;
+  const segs=vsmSegmentsForc(text); const curves=[];
+  for(const s of segs){ const F=s.map(r=>r[0]), M=s.map(r=>r[1]); const Hr=F[0];
+    const seen=new Map();
+    for(let i=0;i<F.length;i++){ const k=Math.round(F[i]*1000/stepmT)*stepmT;
+      if(!seen.has(k)) seen.set(k,[]); seen.get(k).push(M[i]); }
+    const keys=[...seen.keys()].sort((a,b)=>a-b);
+    curves.push({Hr, Ha:keys.map(k=>k/1000), M:keys.map(k=>{const a=seen.get(k);return a.reduce((x,y)=>x+y)/a.length;})}); }
+  return curves; }
+function vsmMassFor(name){ try{ if(typeof S==='undefined'||!S.samples) return NaN;
+  for(const s of S.samples){ const v=s._d&&s._d.vsm; if(v&&v.kind==='daytable'&&v.rows){
+    const r=v.rows.find(rr=>rr.name && (rr.name===name||name.includes(rr.name)||rr.name.includes(name)));
+    if(r&&isFinite(r.mass)&&r.mass>0) return r.mass; } } }catch(_){} return NaN; }
+
+/* ---- plot builders (return Plotly trace arrays; layouts handled in buildLayout) ---- */
+function tHystLoop(samples){
+  const tr=[];
+  samples.forEach((s,i)=>{ const v=s&&s.vsm; if(!v||v.kind!=='hysteresis'||!v.hyst) return;
+    const c=col(i), h=v.hyst, mT=x=>x*1000;
+    tr.push({x:h.field.map(mT), y:h.moment, mode:'lines', name:s.samplename+' (raw)',
+      line:{color:c,width:1}, opacity:0.45, type:'scatter'});
+    if(h.adjField) tr.push({x:h.adjField.map(mT), y:h.adjMoment, mode:'lines', name:s.samplename+' (slope-corr.)',
+      line:{color:c,width:1.8}, type:'scatter'});
+    const mass=(isFinite(s.massG)&&s.massG>0)?s.massG:vsmMassFor(s.samplename);
+    if(isFinite(mass)&&mass>0){ const kg=mass/1000, FF=(h.adjField||h.field).map(mT), MM=(h.adjMoment||h.moment);
+      tr.push({x:FF, y:MM.map(m=>m/kg), mode:'lines', name:s.samplename+' (Am²/kg)', yaxis:'y2', line:{color:c,width:1.2,dash:'dot'}, type:'scatter'}); }
+  });
+  return tr;
+}
+function tDcdCurve(samples){
+  const tr=[];
+  samples.forEach((s,i)=>{ const v=s&&s.vsm; if(!v||v.kind!=='dcd'||!v.remanence) return;
+    const c=col(i), r=v.remanence;
+    tr.push({x:r.field.map(x=>x*1000), y:r.moment, mode:'lines+markers', name:s.samplename,
+      line:{color:c,width:1.8}, marker:{size:4,color:c}, type:'scatter'});
+    if(v.dcd&&isFinite(v.dcd.Hcr)) tr.push({x:[-v.dcd.Hcr*1000,-v.dcd.Hcr*1000], y:[-v.dcd.Mr,v.dcd.Mr],
+      mode:'lines', showlegend:false, line:{color:c,width:1,dash:'dot'}, type:'scatter'});
+    const mass=(isFinite(s.massG)&&s.massG>0)?s.massG:vsmMassFor(s.samplename);
+    if(isFinite(mass)&&mass>0){ const kg=mass/1000;
+      tr.push({x:r.field.map(x=>x*1000), y:r.moment.map(m=>m/kg), mode:'lines', name:s.samplename+' (Am²/kg)', yaxis:'y2', line:{color:c,width:1.2,dash:'dot'}, type:'scatter'}); } });
+  if(tr.length) tr.push({x:[-1000,1000],y:[0,0],mode:'lines',showlegend:false,line:{color:'#888',width:1,dash:'dash'},type:'scatter'});
+  return tr;
+}
+function tDayTable(samples){
+  const rows=[]; for(const s of samples){ const v=s&&s.vsm; if(v&&v.kind==='daytable'&&v.rows) for(const r of v.rows) rows.push(r); }
+  if(!rows.length) return [];
+  const num=(v,dg)=> (v==null||(typeof v==='number'&&!isFinite(v)))?'':(typeof v==='number'? (+v.toFixed(dg==null?3:dg)) : v);
+  const hdr=['Sample','Hc (mT)','Hcr (mT)','Ms','Mr','Mr/Ms','Hcr/Hc','mass (g)','group'];
+  const cols=[ rows.map(r=>r.name), rows.map(r=>num(r.Hc,2)), rows.map(r=>num(r.Hcr,2)),
+    rows.map(r=>num(r.Ms)), rows.map(r=>num(r.Mr)), rows.map(r=>num(r.y,3)), rows.map(r=>num(r.x,3)),
+    rows.map(r=>num(r.mass)), rows.map(r=>r.group||'') ];
+  return [{ type:'table',
+    header:{values:hdr, align:'left', height:26, fill:{color:'rgba(127,127,127,.18)'}, font:{size:11.5}},
+    cells:{values:cols, align:'left', height:20, font:{size:11}, fill:{color:'rgba(127,127,127,.04)'}} }];
+}
+function tDayDiagram(samples){
+  const day=vsmCollectDayPoints(samples); const tr=[];
+  if(day.table.length){ tr.push({x:day.table.map(p=>p.x), y:day.table.map(p=>p.y), text:day.table.map(p=>p.name),
+    mode:'markers', name:'table', type:'scatter',
+    marker:{size:11, line:{width:0.6,color:'#333'},
+      color:day.table.map(p=>VSM_COLORMAP[p.color]||p.color||'#4363d8'),
+      symbol:day.table.map(p=>VSM_SYMBOLS[p.symbol]||'circle')},
+    hovertemplate:'%{text}<br>Hcr/Hc=%{x:.2f}<br>Mrs/Ms=%{y:.3f}<extra></extra>'}); }
+  if(day.raw.length){ tr.push({x:day.raw.map(p=>p.x), y:day.raw.map(p=>p.y), text:day.raw.map(p=>p.name),
+    mode:'markers', name:'recomputed (raw)', type:'scatter',
+    marker:{size:9, symbol:'circle-open', color:'#111', line:{width:1.5}},
+    hovertemplate:'%{text} (raw)<br>Hcr/Hc=%{x:.2f}<br>Mrs/Ms=%{y:.3f}<extra></extra>'}); }
+  // reference schemes — each a toggleable legend entry
+  for(const key in VSM_DAY_SCHEMES){ const sc=VSM_DAY_SCHEMES[key];
+    if(sc.type==='box'){
+      const yb=[0.001,0.7];
+      sc.HcrHc.forEach((xv,k)=> tr.push({x:[xv,xv], y:yb, mode:'lines', name:sc.name, legendgroup:key,
+        showlegend:k===0, line:{color:'#aaa',width:1,dash:'dash'}, hoverinfo:'skip', type:'scatter'}));
+      sc.MrsMs.forEach(yv=> tr.push({x:[1,8], y:[yv,yv], mode:'lines', name:sc.name, legendgroup:key,
+        showlegend:false, line:{color:'#aaa',width:1,dash:'dash'}, hoverinfo:'skip', type:'scatter'}));
+    } else {
+      tr.push({x:sc.pts.map(p=>p[0]), y:sc.pts.map(p=>p[1]), mode:'lines', name:sc.name, legendgroup:key,
+        line:{width:1.6,dash:'dot'}, hoverinfo:'skip', type:'scatter'});
+    }
+  }
+  return tr;
+}
+
+function vsmImportOld2900(name, grid){
+  const F=[],M=[];
+  for(let r=2;r<grid.length;r++){ if(!grid[r]) continue;
+    const a=parseFloat(grid[r][0]), b=parseFloat(grid[r][1]);
+    if(isFinite(a)&&isFinite(b)){ F.push(a*VSM_OE_TO_T); M.push(b*VSM_EMU_TO_AM2); } }
+  const _d={samplename:name.replace(/\.[^.]+$/,''), vsm:{kind:'hysteresis', units:'cgs', hyst:{field:F,moment:M,n:F.length}}};
+  _d.vsm.params=vsmHystParams(F,M);
+  return _d;
+}
+
+/* ===== end v18 VSM module ===== */
 function tBackfield(samples){
   const tr = [];
   samples.forEach((d, i) => {
@@ -2817,6 +3098,10 @@ function buildTraces(samples, op){
     case 'FORC_DCD':      return tForcDcd(samples);
     case 'FORC_COERSPEC': return tForcCoer(samples);
     case 'FORC_IRMACQ':   return tForcIrmAcq(samples);
+    case 'HYST_LOOP':     return tHystLoop(samples);
+    case 'DCD_CURVE':     return tDcdCurve(samples);
+    case 'DAY':           return tDayDiagram(samples);
+    case 'TABLE':         return tDayTable(samples);
     case 'FORC_DIAG':   return tForcDiag(samples);
     case 'FORC_HYST':   return tForcHyst(samples);
     default: return [];
@@ -3534,6 +3819,8 @@ function findForcSteps(data){
 // Negative field = new reversal curve; positive/zero = measurement point.
 // Skips the initial positive saturation pulse.
 function rmgExtractForcData(data){
+  if(data && data.vsm && data.vsm.forcCurves)
+    return { exists:true, curves:data.vsm.forcCurves.map(c=>({Hr:c.Hr, Ha:c.Ha.slice(), M:c.M.slice()})) };
   const out = { exists: false, curves: [] };
   const forcSteps = findForcSteps(data);
   if (forcSteps.length === 0) return out;
@@ -4428,6 +4715,12 @@ const OPS = [
     {key:'FORC_COERSPEC',label:'FORC coercivity spectrum'},
     {key:'FORC_IRMACQ',  label:'FORC IRM acquisition'},
   ]},
+  {sec:'VSM / hysteresis', items:[
+    {key:'HYST_LOOP', label:'hysteresis loop (M vs B)'},
+    {key:'DCD_CURVE', label:'DCD backfield (remanence)'},
+    {key:'DAY',       label:'Day diagram (Mrs/Ms vs Hcr/Hc)'},
+    {key:'TABLE',     label:'data table (raw values)'},
+  ]},
   {sec:'tools', items:[
     {key:'SAM_GEN',  label:'.sam generator (CIT format)'},
     {key:'FORC_GEN', label:'FORC script generator'},
@@ -4459,7 +4752,10 @@ function opsForKind(kind){
   const ROCK=['IRM','DIRM','ARM','LF','LF_ARM','FULLER','BACKFIELD','COERCIVITY','DASH','STATS','COER','SAM_GEN'];
   const IRMK=['IRM','DIRM','BACKFIELD','COERCIVITY','STATS','COER','SAM_GEN'];
   const ARMK=['ARM','STATS','COER','SAM_GEN'];
-  const map={FORC:FORC, rockmag:ROCK, IRM:IRMK, ARM:ARMK};
+  const HYS=['HYST_LOOP','DAY','STATS'];
+  const DCDK=['DCD_CURVE','DAY','STATS'];
+  const TBL=['DAY','TABLE'];
+  const map={FORC:FORC, rockmag:ROCK, IRM:IRMK, ARM:ARMK, hysteresis:HYS, dcd:DCDK, daytable:TBL};
   const arr=map[kind];
   return arr ? new Set(arr) : null;
 }
@@ -4524,12 +4820,81 @@ function onDrop(e){
   onFiles(e.dataTransfer.files);
 }
 let nextId = 1;
+const PYRM_KEY='pyrm_uploads_v1';
+function saveSession(){
+  try{ if(typeof localStorage==='undefined') return;
+    const uploads=[], seen=new Set();
+    for(let i=S.samples.length-1;i>=0;i--){ const sm=S.samples[i], u=sm.up;
+      if(u&&u.text&&!seen.has(u.name)){ seen.add(u.name); uploads.unshift({name:u.name, text:u.text, massG:(sm.massG!=null?sm.massG:null)}); } }
+    while(uploads.length>20) uploads.shift();
+    let total=uploads.reduce((s,u)=>s+u.text.length,0);
+    while(total>4500000 && uploads.length>1){ total-=uploads.shift().text.length; }
+    const state={ uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])] };
+    localStorage.setItem(PYRM_KEY, JSON.stringify(state));
+  }catch(e){ /* quota exceeded or storage unavailable */ }
+}
+function savedSessionInfo(){
+  try{ if(typeof localStorage==='undefined') return null;
+    const raw=localStorage.getItem(PYRM_KEY); if(!raw) return null;
+    const st=JSON.parse(raw); const ups=Array.isArray(st)?st:(st.uploads||[]);
+    return ups.length ? {count:ups.length} : null;
+  }catch(e){ return null; }
+}
+function maybeShowRestore(){
+  const info=savedSessionInfo(); const btn=document.getElementById('restore-btn');
+  if(!btn) return;
+  if(info){ btn.style.display='block'; btn.textContent='↺ restore last session ('+info.count+' file'+(info.count>1?'s':'')+')'; }
+  else { btn.style.display='none'; }
+}
+async function restoreSession(){
+  try{ if(typeof localStorage==='undefined') return;
+    const raw=localStorage.getItem(PYRM_KEY); if(!raw){ log('no saved session','warn'); return; }
+    let state=JSON.parse(raw);
+    if(Array.isArray(state)) state={uploads:state, groupByType:false, collapsed:[]};
+    const uploads=state.uploads||[];
+    if(!uploads.length){ log('no saved session','warn'); return; }
+    const files=uploads.map(u=>({ name:u.name, async text(){return u.text;},
+      async arrayBuffer(){return new TextEncoder().encode(u.text).buffer;} }));
+    await onFiles(files);
+    for(const u of uploads){ if(u.massG!=null){ const sm=S.samples.find(s=>s.up&&s.up.name===u.name); if(sm){ sm.massG=u.massG; if(sm._d) sm._d.massG=u.massG; } } }
+    S.groupByType=!!state.groupByType; S.collapsedGroups=new Set(state.collapsed||[]);
+    const gb=document.getElementById('group-btn'); if(gb){ gb.textContent=S.groupByType?'▦ flat':'⊞ group'; gb.style.fontWeight=S.groupByType?'700':''; }
+    const rb=document.getElementById('restore-btn'); if(rb) rb.style.display='none';
+    renderSamples();
+    if(S.samples.some(x=>x.selected)) runAnalysis();
+    saveSession();
+    log('↺ restored '+uploads.length+' file(s) from last session','ok');
+  }catch(e){ log('could not restore: '+e.message,'err'); }
+}
 async function onFiles(files){
   const filesList = Array.from(files);
   for(const f of filesList){
     try{
       setStatus('busy','parsing ' + f.name);
+      // ── VSM / MicroMag / table routing (by extension, then by content) ──
+      const _ext = (f.name.split('.').pop()||'').toLowerCase();
+      if(_ext==='xls' || _ext==='xlsx'){
+        if(typeof XLSX==='undefined'){ log('✗ '+f.name+': spreadsheet reader not loaded (offline?). Export to .csv and retry.','err'); continue; }
+        const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+        const grid=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true});
+        let vd=null;
+        if(grid[0] && /Model 2900/.test(String(grid[0][0]))) vd=vsmImportOld2900(f.name, grid);
+        else { const rows=vsmParseSummaryRows(grid); if(rows) vd={samplename:f.name.replace(/\.[^.]+$/,'')+' (table)', vsm:{kind:'daytable', rows}}; }
+        if(vd){ S.samples.push({_d:vd, selected:true, id:nextId++}); log(vd.samplename+' added ('+(vd.vsm.rows?vd.vsm.rows.length+' rows':'loop')+')','ok'); }
+        else log('✗ '+f.name+': could not read as a summary table or Model 2900 export','err');
+        continue;
+      }
+      if(_ext==='csv' || _ext==='tsv'){
+        const text=await f.text();
+        const rows=vsmParseSummaryText(text);
+        if(rows && rows.length){ S.samples.push({_d:{samplename:f.name.replace(/\.[^.]+$/,'')+' (table)', vsm:{kind:'daytable', rows}}, selected:true, id:nextId++, up:{name:f.name, text}}); log(f.name+' added ('+rows.length+' rows)','ok'); }
+        else log('✗ '+f.name+': no Hcr/Hc, Mr/Ms, or Hc+Hcr+Ms+Mr columns found','err');
+        continue;
+      }
       const text = await f.text();
+      const vk = vsmDetect(f.name, text);
+      if(vk){ const vd=vsmImport(f.name, text, vk);
+        S.samples.push({_d:vd, selected:true, id:nextId++, up:{name:f.name, text}}); log(vd.samplename+' added','ok'); continue; }
       const d = rmgImport(f.name, text);  // auto-trimmed to last run
 
       // Detect protocol-template files (placeholder Mz values ≈ 1e-12 Am²).
@@ -4547,7 +4912,7 @@ async function onFiles(files){
         showRunPickerAsync(f.name, text, runs, d);
         continue;  // wait for modal, don't add yet
       }
-      S.samples.push({_d:d, selected:true, id:nextId++});
+      S.samples.push({_d:d, selected:true, id:nextId++, up:{name:f.name, text}});
       log(d.samplename + ' added', 'ok');
     } catch(e){
       log('✗ ' + f.name + ': ' + e.message, 'err');
@@ -4556,6 +4921,8 @@ async function onFiles(files){
   }
   sortSamples();
   renderSamples();
+  saveSession();
+  { const _rb=document.getElementById('restore-btn'); if(_rb) _rb.style.display='none'; }
   setStatus('ok','ready');
   if(S.samples.length > 0) runAnalysis();
 }
@@ -4572,6 +4939,7 @@ function showRunPickerAsync(filename, text, runs, defaultData){
 // Classify a parsed RmgData into a short "kind" label for sort/display.
 // Priority: FORC > rockmag > AF-demag > cor/coe > other
 function rmgKind(d){
+  if(d && d.vsm) return d.vsm.kind==='micromag-forc' ? 'FORC' : d.vsm.kind;
   if(!d || !d.BlockType) return 'other';
   const bt = new Set(d.BlockType.map(t => (t || '').toUpperCase()));
   if(bt.has('FORCZ')) return 'FORC';
@@ -4630,6 +4998,7 @@ function samplesRemoveAll(){
   if(!S.samples || S.samples.length === 0) return;
   if(!confirm('Remove all ' + S.samples.length + ' samples?')) return;
   S.samples = [];
+  saveSession();
   renderSamples();
   hideAll();
 }
@@ -4726,6 +5095,64 @@ function cleanForcSample(id){
   renderSamples(); renderOps(); runAnalysis();
   log((cleaned._nCleaned || 0) + ' spike(s) interpolated -> ' + cleaned.samplename, 'ok');
 }
+function sampleCategory(d){
+  if(d && d.vsm){ return ({hysteresis:'Hysteresis loops', dcd:'DCD / backfield', daytable:'Summary tables', 'micromag-forc':'FORC'})[d.vsm.kind] || 'VSM'; }
+  const k=rmgKind(d);
+  return ({FORC:'FORC', rockmag:'Rock magnetics', IRM:'IRM', ARM:'ARM'})[k] || 'Other';
+}
+const CATEGORY_ORDER=['FORC','Hysteresis loops','DCD / backfield','Summary tables','Rock magnetics','IRM','ARM','VSM','Other'];
+
+function renderSampleItem(s, parentEl){
+  const d = s._d;
+  const div = document.createElement('div');
+  div.className = 'sample-item' + (s.selected ? ' sel' : '');
+  const _meta = (d.vsm) ? (rmgKind(d) + ' · ' + (
+      d.vsm.kind==='hysteresis' ? ((d.vsm.hyst?d.vsm.hyst.n:0) + ' pts')
+    : d.vsm.kind==='dcd' ? ((d.vsm.remanence?d.vsm.remanence.n:0) + ' pts')
+    : d.vsm.kind==='daytable' ? ((d.vsm.rows?d.vsm.rows.length:0) + ' samples')
+    : d.vsm.kind==='micromag-forc' ? ((d.vsm.forcCurves?d.vsm.forcCurves.length:0) + ' FORC curves')
+    : 'VSM'))
+    : (rmgKind(d) + ' · ' + d.steptypes.length + ' steps · ' + d.BlockType.length + ' blocks');
+  const _massKind = d.vsm && (d.vsm.kind==='hysteresis' || d.vsm.kind==='dcd');
+  div.innerHTML = `
+    <input type="checkbox" class="chk" ${s.selected?'checked':''}>
+    <div style="flex:1;min-width:0;overflow:hidden">
+      <div class="name" style="text-overflow:ellipsis;overflow:hidden">${d.samplename}</div>
+      <div class="meta">${_meta}</div>
+      ${_massKind ? `<div class="meta" style="margin-top:3px;display:flex;align-items:center;gap:4px">mass <input type="number" step="any" min="0" class="mass" value="${s.massG!=null?s.massG:''}" placeholder="g" style="width:62px;font-size:11px;padding:1px 3px"> g <span style="opacity:.6">(Am²/kg)</span></div>` : ''}
+    </div>
+    <span class="x">×</span>
+  `;
+  const chk = div.querySelector('.chk');
+  chk.onchange = () => { s.selected = chk.checked; div.classList.toggle('sel', s.selected); renderOps(); if(S.samples.some(x=>x.selected)) runAnalysis(); };
+  div.querySelector('.x').onclick = e => {
+    e.stopPropagation();
+    S.samples = S.samples.filter(x => x.id !== s.id);
+    saveSession();
+    renderSamples();
+    if(S.samples.length > 0) runAnalysis(); else hideAll();
+  };
+  parentEl.appendChild(div);
+  const _mi = div.querySelector('.mass');
+  if(_mi){ _mi.onclick = e => e.stopPropagation();
+    _mi.onchange = () => { const v=parseFloat(_mi.value); s.massG = (isFinite(v)&&v>0)?v:null; if(s._d) s._d.massG = s.massG; saveSession();
+      if(S.samples.some(x=>x.selected)) runAnalysis(); }; }
+  if(s.selected && !s.cleaned && !(d&&d.vsm) && (function(){ try { return rmgExtractForcData(d).exists; } catch(_e){ return rmgKind(d)==='FORC'; } })()){
+    const cb = document.createElement('button');
+    cb.className = 'clean-btn';
+    cb.textContent = '⟲ clean data (interpolate spikes)';
+    cb.onclick = (e) => { e.stopPropagation(); cleanForcSample(s.id); };
+    parentEl.appendChild(cb);
+  }
+}
+
+function toggleGroupByType(){
+  S.groupByType = !S.groupByType;
+  const b = document.getElementById('group-btn');
+  if(b){ b.textContent = S.groupByType ? '▦ flat' : '⊞ group'; b.style.fontWeight = S.groupByType ? '700' : ''; }
+  saveSession(); renderSamples();
+}
+
 function renderSamples(){
   const el = document.getElementById('sample-list');
   const count = document.getElementById('n-samples');
@@ -4733,38 +5160,33 @@ function renderSamples(){
   const sb = document.getElementById('sample-sortbar');
   count.textContent = S.samples.length ? '(' + S.samples.length + ')' : '';
   if(tb) tb.style.display = S.samples.length > 0 ? 'flex' : 'none';
-  if(sb) sb.style.display = S.samples.length > 1 ? 'flex' : 'none';  // only show sort UI with ≥2 samples
+  if(sb) sb.style.display = S.samples.length > 1 ? 'flex' : 'none';
   el.innerHTML = '';
-  for(const s of S.samples){
-    const d = s._d;
-    const div = document.createElement('div');
-    div.className = 'sample-item' + (s.selected ? ' sel' : '');
-    div.innerHTML = `
-      <input type="checkbox" class="chk" ${s.selected?'checked':''}>
-      <div style="flex:1;min-width:0;overflow:hidden">
-        <div class="name" style="text-overflow:ellipsis;overflow:hidden">${d.samplename}</div>
-        <div class="meta">${rmgKind(d)} · ${d.steptypes.length} steps · ${d.BlockType.length} blocks</div>
-      </div>
-      <span class="x">×</span>
-    `;
-    const chk = div.querySelector('.chk');
-    chk.onchange = () => { s.selected = chk.checked; div.classList.toggle('sel', s.selected); renderOps(); if(S.samples.some(x=>x.selected)) runAnalysis(); };
-    div.querySelector('.x').onclick = e => {
-      e.stopPropagation();
-      S.samples = S.samples.filter(x => x.id !== s.id);
-      renderSamples();
-      if(S.samples.length > 0) runAnalysis(); else hideAll();
-    };
-    el.appendChild(div);
-    if(s.selected && !s.cleaned && (function(){ try { return rmgExtractForcData(d).exists; } catch(_e){ return rmgKind(d)==='FORC'; } })()){
-      const cb = document.createElement('button');
-      cb.className = 'clean-btn';
-      cb.textContent = '⟲ clean data (interpolate spikes)';
-      cb.onclick = (e) => { e.stopPropagation(); cleanForcSample(s.id); };
-      el.appendChild(cb);
+  if(S.groupByType && S.samples.length){
+    if(!S.collapsedGroups) S.collapsedGroups = new Set();
+    const groups = {};
+    for(const s of S.samples){ const c = sampleCategory(s._d); (groups[c] = groups[c] || []).push(s); }
+    const cats = Object.keys(groups).sort((a,b)=>{
+      const ia=CATEGORY_ORDER.indexOf(a), ib=CATEGORY_ORDER.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib); });
+    for(const cat of cats){
+      const collapsed = S.collapsedGroups.has(cat);
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 6px;margin-top:5px;font-size:11px;font-weight:600;border-radius:4px;background:rgba(127,127,127,.10)';
+      hdr.innerHTML = `<span style="width:10px;display:inline-block;text-align:center">${collapsed?'▸':'▾'}</span><span style="flex:1">${cat}</span><span style="opacity:.6;font-weight:400">${groups[cat].length}</span>`;
+      hdr.onclick = () => { if(S.collapsedGroups.has(cat)) S.collapsedGroups.delete(cat); else S.collapsedGroups.add(cat); saveSession(); renderSamples(); };
+      el.appendChild(hdr);
+      if(!collapsed){
+        const box = document.createElement('div'); box.style.cssText = 'padding-left:4px';
+        el.appendChild(box);
+        for(const s of groups[cat]) renderSampleItem(s, box);
+      }
     }
+  } else {
+    for(const s of S.samples) renderSampleItem(s, el);
   }
 }
+
 function getSelected(){ return S.samples.filter(s => s.selected); }
 
 // ── Analysis runner ──────────────────────────────────────────────────────────
@@ -5935,6 +6357,7 @@ renderOps();
 renderSamples();
 setStatus('ok','ready — drop .rmg files to begin');
 log('pure JavaScript — instant startup, no Python runtime needed', 'ok');
+maybeShowRestore();
 </script>
 </body>
 </html>
