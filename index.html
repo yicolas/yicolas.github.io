@@ -195,6 +195,27 @@
             color: #fff;
         }
 
+        .form-actions .icon-button {
+            padding: 0.35rem 0.6rem;
+            line-height: 1;
+        }
+
+        /* Download button calls attention to itself while tv.csv is out of date. */
+        .form-actions .icon-button.has-changes {
+            border-color: #00e;
+            color: #00e;
+            font-weight: bold;
+        }
+
+        .form-actions .icon-button.has-changes:hover {
+            background: #00e;
+            color: #fff;
+        }
+
+        .unsaved-dot {
+            color: #00e;
+        }
+
         /* Inline edit / remove controls, shown only in edit mode. */
         .media-list li .entry-action {
             border: 0;
@@ -398,7 +419,8 @@
 
                 <div class="form-actions">
                     <button type="submit" id="submit-entry">Send</button>
-                    <button type="button" id="edit-mode-button">Edit Entry</button>
+                    <button type="button" id="edit-mode-button">Edit</button>
+                    <button type="button" id="download-csv" class="icon-button" title="Download tv.csv" aria-label="Download tv.csv">↓</button>
                     <button type="button" id="cancel-edit" style="display:none;">Cancel</button>
                 </div>
             </form>
@@ -523,23 +545,24 @@
 
         /* ---------------------------------------------------------------
            MEDIA LIBRARY
-           Built-in entries live in BUILT_IN_ENTRIES. Anything added through
-           the form is appended to localStorage under STORAGE_KEY. Both are
-           merged, sorted and rendered together on every page load.
+
+           tv.csv is the source of truth. It is fetched on load and seeded into
+           localStorage, which then acts as a scratch layer for anything you add
+           or edit in the browser. The ↓ button exports the current list back out
+           as tv.csv — drop that file in the repo, commit, and it becomes canon.
+
+           When tv.csv changes on disk, its fingerprint no longer matches the one
+           saved alongside the scratch layer, so the file wins and the scratch
+           layer is rebuilt from it. That is what stops an index.html update from
+           ever making you retype the list.
         --------------------------------------------------------------- */
-        const STORAGE_KEY = 'media-library-entries-v2';
+        const CSV_PATH = 'tv.csv';
+        const STORAGE_KEY = 'media-library-entries-v3';
 
         const SECTIONS = [
             { type: 'anime', label: 'ANIME' },
             { type: 'movie', label: 'MOVIES' },
             { type: 'tv',    label: 'TV' }
-        ];
-
-        const BUILT_IN_ENTRIES = [
-            { title: 'Ghost in the Shell', type: 'anime', url: 'https://yomi.to/watch/43/1' },
-            { title: 'Batman Beyond: The Movie', type: 'movie', url: 'https://archive.org/embed/batmanbeyond-themovie-ultimate' },
-            { title: 'Vampire Hunter D: Bloodlust', type: 'movie', url: 'https://archive.org/embed/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510' },
-            { title: 'Antarctica: Life at the Edge', type: 'tv', url: 'https://player.pbs.org/viralplayer/antartica-life-at-the-edge-fksztw/' }
         ];
 
         const SITE_NAMES = {
@@ -555,46 +578,175 @@
         const submitButton = document.getElementById('submit-entry');
         const editModeButton = document.getElementById('edit-mode-button');
         const cancelButton = document.getElementById('cancel-edit');
+        const downloadButton = document.getElementById('download-csv');
 
         let editMode = false;
         let editingId = null;
+        let entries = [];        /* working list, mirrored into localStorage */
+        let csvBaseline = [];    /* what tv.csv said, for unsaved-change detection */
 
         function newId() {
             return 'e-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
         }
 
-        /* On first run the built-ins are seeded into storage, which makes every
-           entry — including the originals — editable and removable. */
-        function loadStoredEntries() {
-            let parsed = null;
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                parsed = raw ? JSON.parse(raw) : null;
-            } catch (error) {
-                parsed = null;
-            }
+        /* --- CSV ------------------------------------------------------ */
 
-            if (!Array.isArray(parsed)) {
-                const seeded = BUILT_IN_ENTRIES.map((entry) => ({ ...entry, id: newId() }));
-                saveStoredEntries(seeded);
-                return seeded;
-            }
+        /* Split one CSV line, honouring "quoted, fields" and "" escapes. */
+        function parseCsvLine(line) {
+            const out = [];
+            let field = '';
+            let inQuotes = false;
 
-            /* Backfill ids for anything saved before ids existed. */
-            let changed = false;
-            parsed.forEach((entry) => {
-                if (!entry.id) {
-                    entry.id = newId();
-                    changed = true;
+            for (let i = 0; i < line.length; i += 1) {
+                const char = line[i];
+
+                if (inQuotes) {
+                    if (char === '"' && line[i + 1] === '"') {
+                        field += '"';
+                        i += 1;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        field += char;
+                    }
+                } else if (char === '"') {
+                    inQuotes = true;
+                } else if (char === ',') {
+                    out.push(field);
+                    field = '';
+                } else {
+                    field += char;
                 }
-            });
-            if (changed) saveStoredEntries(parsed);
+            }
 
-            return parsed;
+            out.push(field);
+            return out.map((value) => value.trim());
         }
 
-        function saveStoredEntries(entries) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        function parseCsv(text) {
+            const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+            if (!lines.length) return [];
+
+            const header = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+            const idx = {
+                type: header.indexOf('type'),
+                title: header.indexOf('title'),
+                url: header.indexOf('url')
+            };
+            if (idx.type < 0 || idx.title < 0 || idx.url < 0) return [];
+
+            const validTypes = SECTIONS.map((section) => section.type);
+
+            return lines.slice(1).map((line) => {
+                const cells = parseCsvLine(line);
+                const type = (cells[idx.type] || '').toLowerCase();
+                return {
+                    type: validTypes.includes(type) ? type : 'tv',
+                    title: (cells[idx.title] || '').slice(0, 60),
+                    url: cells[idx.url] || ''
+                };
+            }).filter((entry) => entry.title && entry.url);
+        }
+
+        function toCsv(list) {
+            const escape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+            const rows = [...list]
+                .sort((a, b) => a.type.localeCompare(b.type) || sortByTitle(a, b))
+                .map((entry) => [entry.type, escape(entry.title), escape(entry.url)].join(','));
+            return ['type,title,url', ...rows].join('\n') + '\n';
+        }
+
+        /* Order-independent fingerprint of a list, used to tell whether tv.csv
+           has changed and whether there are unsaved local edits. */
+        function fingerprint(list) {
+            return list
+                .map((entry) => `${entry.type} ${entry.title} ${entry.url}`)
+                .sort()
+                .join('');
+        }
+
+        function isUnsaved(entry) {
+            const key = `${entry.type} ${entry.title} ${entry.url}`;
+            return !csvBaseline.some((row) => `${row.type} ${row.title} ${row.url}` === key);
+        }
+
+        function hasUnsavedChanges() {
+            return fingerprint(entries) !== fingerprint(csvBaseline);
+        }
+
+        /* --- storage -------------------------------------------------- */
+
+        function readStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : null;
+                if (parsed && Array.isArray(parsed.entries)) return parsed;
+            } catch (error) {
+                /* fall through */
+            }
+            return null;
+        }
+
+        function saveEntries() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                csvFingerprint: fingerprint(csvBaseline),
+                entries
+            }));
+        }
+
+        async function initLibrary() {
+            let csvEntries = null;
+
+            try {
+                const response = await fetch(CSV_PATH, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                csvEntries = parseCsv(await response.text());
+            } catch (error) {
+                csvEntries = null;
+            }
+
+            const stored = readStorage();
+
+            if (csvEntries) {
+                csvBaseline = csvEntries;
+
+                /* tv.csv changed since we last synced → the file wins. */
+                if (stored && stored.csvFingerprint === fingerprint(csvBaseline)) {
+                    entries = stored.entries.map((entry) => ({ ...entry, id: entry.id || newId() }));
+                } else {
+                    entries = csvBaseline.map((entry) => ({ ...entry, id: newId() }));
+                }
+
+                saveEntries();
+            } else {
+                /* tv.csv unreachable (opened via file://, or missing). Fall back
+                   to whatever is cached locally rather than showing nothing. */
+                csvBaseline = [];
+                entries = stored ? stored.entries.map((e) => ({ ...e, id: e.id || newId() })) : [];
+
+                formStatus.classList.add('error');
+                formStatus.textContent = entries.length
+                    ? 'Could not load tv.csv — showing your local copy.'
+                    : 'Could not load tv.csv. Serve the site over http:// rather than opening the file directly.';
+            }
+
+            renderMediaPanel();
+        }
+
+        /* Export the working list as tv.csv. */
+        function downloadCsv() {
+            const blob = new Blob([toCsv(entries)], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'tv.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            formStatus.classList.remove('error');
+            formStatus.textContent = 'tv.csv downloaded — replace the one in your repo and commit.';
         }
 
         /* Base host, stripped of www./player./embed. prefixes. */
@@ -621,14 +773,15 @@
         }
 
         function renderMediaPanel() {
-            const all = loadStoredEntries();
+            const all = entries;
 
             mediaSections.textContent = '';
             leftPanel.classList.toggle('editing', editMode);
+            downloadButton.classList.toggle('has-changes', hasUnsavedChanges());
 
             SECTIONS.forEach((section) => {
-                const entries = all.filter((entry) => entry.type === section.type).sort(sortByTitle);
-                if (!entries.length) return;
+                const sectionEntries = all.filter((entry) => entry.type === section.type).sort(sortByTitle);
+                if (!sectionEntries.length) return;
 
                 const heading = document.createElement('h4');
                 heading.innerHTML = `<b>${section.label}</b>`;
@@ -637,13 +790,23 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'nav-links';
 
-                entries.forEach((entry) => {
+                sectionEntries.forEach((entry) => {
                     const details = document.createElement('details');
                     if (entry.id === editingId) details.open = true;
 
                     const summary = document.createElement('summary');
                     summary.textContent = entry.title;
                     if (entry.id === editingId) summary.classList.add('being-edited');
+
+                    /* Dot marks an entry that isn't in tv.csv yet. */
+                    if (isUnsaved(entry)) {
+                        const dot = document.createElement('span');
+                        dot.className = 'unsaved-dot';
+                        dot.textContent = ' •';
+                        dot.title = 'Not saved to tv.csv yet';
+                        summary.appendChild(dot);
+                    }
+
                     details.appendChild(summary);
 
                     const list = document.createElement('ul');
@@ -676,8 +839,8 @@
                         remove.title = 'Remove entry';
                         remove.addEventListener('click', () => {
                             if (!confirm(`Remove “${entry.title}”?`)) return;
-                            const current = loadStoredEntries().filter((row) => row.id !== entry.id);
-                            saveStoredEntries(current);
+                            entries = entries.filter((row) => row.id !== entry.id);
+                            saveEntries();
                             if (editingId === entry.id) resetForm();
                             renderMediaPanel();
                         });
@@ -757,7 +920,7 @@
 
         /* Load an existing entry into the form for editing. */
         function beginEdit(id) {
-            const entry = loadStoredEntries().find((row) => row.id === id);
+            const entry = entries.find((row) => row.id === id);
             if (!entry) return;
 
             editingId = id;
@@ -777,11 +940,13 @@
             fields.title.focus();
         }
 
-        /* The Edit Entry button turns edit controls on and off. */
+        downloadButton.addEventListener('click', downloadCsv);
+
+        /* The Edit button turns edit controls on and off. */
         editModeButton.addEventListener('click', () => {
             editMode = !editMode;
             editModeButton.classList.toggle('active', editMode);
-            editModeButton.textContent = editMode ? 'Done' : 'Edit Entry';
+            editModeButton.textContent = editMode ? 'Done' : 'Edit';
 
             if (!editMode) {
                 resetForm();
@@ -821,7 +986,6 @@
                 return;
             }
 
-            const entries = loadStoredEntries();
             const wasEditing = editingId;
 
             if (wasEditing) {
@@ -831,11 +995,12 @@
                 entries.push({ id: newId(), title: title.slice(0, 60), type, url });
             }
 
-            saveStoredEntries(entries);
+            saveEntries();
             resetForm();
             renderMediaPanel();
 
-            formStatus.textContent = wasEditing ? `Updated “${title}”.` : `Added “${title}”.`;
+            formStatus.textContent = (wasEditing ? `Updated “${title}”.` : `Added “${title}”.`)
+                + ' Click ↓ to export tv.csv.';
             addMediaForm.elements.title.focus();
         });
 
@@ -945,7 +1110,7 @@ p {
         });
 
         syncLeftPanelVisibility();
-        renderMediaPanel();
+        initLibrary();
     </script>
 </body>
 </html>
