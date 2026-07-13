@@ -102,7 +102,100 @@
         .server-list li {
             margin-bottom: 0.1rem;
         }
-        
+
+        .media-list li .remove-entry {
+            border: 0;
+            background: none;
+            padding: 0 0 0 0.4rem;
+            cursor: pointer;
+            color: rgba(0, 0, 0, 0.35);
+            font-size: 0.9em;
+            line-height: 1;
+        }
+
+        .media-list li .remove-entry:hover {
+            color: #000;
+        }
+
+        /* Add-entry form */
+        .add-media-form {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #000;
+        }
+
+        .add-media-form h4 {
+            margin-top: 0;
+        }
+
+        .add-media-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .add-media-form input[type="text"],
+        .add-media-form input[type="url"] {
+            width: 100%;
+            box-sizing: border-box;
+            font: inherit;
+            padding: 0.3rem 0.4rem;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            background: #fff;
+            color: #000;
+        }
+
+        .add-media-form input:focus {
+            outline: 1px solid #00e;
+        }
+
+        .add-media-form .type-choices {
+            display: flex;
+            gap: 0.75rem;
+            margin: 0.3rem 0 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .add-media-form .type-choices label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .add-media-form .field-hint {
+            display: block;
+            color: rgba(0, 0, 0, 0.45);
+            font-size: 0.85em;
+            margin-top: 0.15rem;
+        }
+
+        .add-media-form button[type="submit"] {
+            font: inherit;
+            padding: 0.35rem 1rem;
+            border: 1px solid #000;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+        }
+
+        .add-media-form button[type="submit"]:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .form-status {
+            margin-top: 0.5rem;
+            min-height: 1.1em;
+            font-size: 0.9em;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .form-status.error {
+            color: #b00;
+        }
+
+
         .main-content {
             flex: 1;
             min-width: 400px;
@@ -242,64 +335,29 @@
                 <div class="site-title">TV + MOVIES</div>
             </div>
 
-            <div class="profile-section">
-                <h4><b>TV</b></h4>
-                <div class="nav-links">
-                    <details>
-                        <summary>One Piece</summary>
-                        <ul class="media-list">
-                            <li>
-                                <details>
-                                    <summary>Episode 1</summary>
-                                    <ul class="server-list">
-                                        <li><a href="#" data-embed-title="One Piece — Episode 1 (Dub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/1">Dub</a></li>
-                                        <li><a href="#" data-embed-title="One Piece — Episode 1 (Sub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/1">Sub</a></li>
-                                    </ul>
-                                </details>
-                            </li>
-                            <li>
-                                <details>
-                                    <summary>Episode 2</summary>
-                                    <ul class="server-list">
-                                        <li><a href="#" data-embed-title="One Piece — Episode 2 (Dub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/2">Dub</a></li>
-                                        <li><a href="#" data-embed-title="One Piece — Episode 2 (Sub)" data-embed-type="iframe" data-embed-src="https://yomi.to/watch/43/2">Sub</a></li>
-                                    </ul>
-                                </details>
-                            </li>
-                        </ul>
-                    </details>
-                    <details>
-                        <summary>Antarctica: Life at the Edge</summary>
-                        <ul class="media-list">
-                            <li><a href="#" data-embed-title="Antarctica: Life at the Edge" data-embed-type="iframe" data-embed-src="https://player.pbs.org/viralplayer/antartica-life-at-the-edge-fksztw/">PBS Stream</a></li>
-                        </ul>
-                    </details>
+            <!-- Sections + Sites are rendered by JS from the entry list -->
+            <div class="profile-section" id="media-sections"></div>
+
+            <form class="add-media-form" id="add-media-form" autocomplete="off">
+                <h4><b>ADD ENTRY</b></h4>
+
+                <label for="entry-title">Title</label>
+                <input type="text" id="entry-title" name="title" maxlength="60" placeholder="e.g. Cowboy Bebop" required>
+                <span class="field-hint">60 character limit</span>
+
+                <div class="type-choices" role="radiogroup" aria-label="Type">
+                    <label><input type="radio" name="type" value="anime" checked> Anime</label>
+                    <label><input type="radio" name="type" value="movie"> Movie</label>
+                    <label><input type="radio" name="type" value="tv"> TV</label>
                 </div>
 
-                <h4><b>MOVIES</b></h4>
-                <div class="nav-links">
-                    <details>
-                        <summary>Batman Beyond: The Movie</summary>
-                        <ul class="media-list">
-                            <li><a href="#" data-embed-title="Batman Beyond: The Movie" data-embed-type="iframe" data-embed-src="https://archive.org/embed/batmanbeyond-themovie-ultimate">Internet Archive</a></li>
-                        </ul>
-                    </details>
-                    <details>
-                        <summary>Vampire Hunter D: Bloodlust</summary>
-                        <ul class="media-list">
-                            <li><a href="#" data-embed-title="Vampire Hunter D: Bloodlust" data-embed-type="iframe" data-embed-src="https://archive.org/embed/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510">Internet Archive</a></li>
-                        </ul>
-                    </details>
-                </div>
+                <label for="entry-url">Site URL</label>
+                <input type="url" id="entry-url" name="url" placeholder="https://…" required>
+                <span class="field-hint">Embed link or host page</span>
 
-                <h4><b>SITES</b></h4>
-                <div class="nav-links">
-                    <div><a href="https://www.pbs.org/video/antartica-life-at-the-edge-fksztw/" target="_blank">PBS</a></div>
-                    <div><a href="https://archive.org/details/batmanbeyond-themovie-ultimate" target="_blank">Internet Archive — Batman Beyond</a></div>
-                    <div><a href="https://yomi.to/watch/43/1" target="_blank">Yomi</a></div>
-                    <div><a href="https://archive.org/details/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510" target="_blank">Internet Archive — Vampire Hunter D</a></div>
-                </div>
-            </div>
+                <div class="form-status" id="form-status" role="status"></div>
+                <button type="submit">Send</button>
+            </form>
         </aside>
 
         <div class="resize-handle" id="left-resize-handle" style="display:none;"></div>
@@ -419,6 +477,210 @@
             leftHandle.style.display = isOpen ? 'block' : 'none';
         }
 
+        /* ---------------------------------------------------------------
+           MEDIA LIBRARY
+           Built-in entries live in BUILT_IN_ENTRIES. Anything added through
+           the form is appended to localStorage under STORAGE_KEY. Both are
+           merged, sorted and rendered together on every page load.
+        --------------------------------------------------------------- */
+        const STORAGE_KEY = 'media-library-entries';
+
+        const SECTIONS = [
+            { type: 'anime', label: 'ANIME' },
+            { type: 'movie', label: 'MOVIES' },
+            { type: 'tv',    label: 'TV' }
+        ];
+
+        const BUILT_IN_ENTRIES = [
+            { title: 'One Piece', type: 'anime', url: 'https://yomi.to/watch/43/1' },
+            { title: 'Batman Beyond: The Movie', type: 'movie', url: 'https://archive.org/embed/batmanbeyond-themovie-ultimate' },
+            { title: 'Vampire Hunter D: Bloodlust', type: 'movie', url: 'https://archive.org/embed/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510' },
+            { title: 'Antarctica: Life at the Edge', type: 'tv', url: 'https://player.pbs.org/viralplayer/antartica-life-at-the-edge-fksztw/' }
+        ];
+
+        const SITE_NAMES = {
+            'archive.org': 'Internet Archive',
+            'pbs.org': 'PBS',
+            'yomi.to': 'Yomi'
+        };
+
+        const mediaSections = document.getElementById('media-sections');
+        const addMediaForm = document.getElementById('add-media-form');
+        const formStatus = document.getElementById('form-status');
+
+        function loadStoredEntries() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveStoredEntries(entries) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        }
+
+        /* Base host, stripped of www./player./embed. prefixes. */
+        function baseHost(url) {
+            try {
+                return new URL(url).hostname.replace(/^(www|player|embed)\./, '');
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function siteLabel(url) {
+            const host = baseHost(url);
+            return SITE_NAMES[host] || host;
+        }
+
+        /* Host pages that need a different URL to actually embed. */
+        function toEmbedUrl(url) {
+            return url.replace(/^(https?:\/\/(?:www\.)?archive\.org)\/details\//i, '$1/embed/');
+        }
+
+        function sortByTitle(a, b) {
+            return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+        }
+
+        function renderMediaPanel() {
+            const stored = loadStoredEntries();
+            const all = [
+                ...BUILT_IN_ENTRIES.map((entry) => ({ ...entry, builtin: true })),
+                ...stored.map((entry, index) => ({ ...entry, builtin: false, index }))
+            ];
+
+            mediaSections.textContent = '';
+
+            SECTIONS.forEach((section) => {
+                const entries = all.filter((entry) => entry.type === section.type).sort(sortByTitle);
+                if (!entries.length) return;
+
+                const heading = document.createElement('h4');
+                heading.innerHTML = `<b>${section.label}</b>`;
+                mediaSections.appendChild(heading);
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'nav-links';
+
+                entries.forEach((entry) => {
+                    const details = document.createElement('details');
+
+                    const summary = document.createElement('summary');
+                    summary.textContent = entry.title;
+                    details.appendChild(summary);
+
+                    const list = document.createElement('ul');
+                    list.className = 'media-list';
+
+                    const item = document.createElement('li');
+
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = siteLabel(entry.url) || 'Watch';
+                    link.dataset.embedTitle = entry.title;
+                    link.dataset.embedType = 'iframe';
+                    link.dataset.embedSrc = toEmbedUrl(entry.url);
+                    item.appendChild(link);
+
+                    if (!entry.builtin) {
+                        const remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.className = 'remove-entry';
+                        remove.textContent = '×';
+                        remove.title = 'Remove entry';
+                        remove.addEventListener('click', () => {
+                            const current = loadStoredEntries();
+                            current.splice(entry.index, 1);
+                            saveStoredEntries(current);
+                            renderMediaPanel();
+                        });
+                        item.appendChild(remove);
+                    }
+
+                    list.appendChild(item);
+                    details.appendChild(list);
+                    wrapper.appendChild(details);
+                });
+
+                mediaSections.appendChild(wrapper);
+            });
+
+            /* SITES — one deduped entry per base host, alphabetical. */
+            const hosts = [...new Set(all.map((entry) => baseHost(entry.url)).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b));
+
+            if (hosts.length) {
+                const heading = document.createElement('h4');
+                heading.innerHTML = '<b>SITES</b>';
+                mediaSections.appendChild(heading);
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'nav-links';
+
+                hosts.forEach((host) => {
+                    const row = document.createElement('div');
+                    const link = document.createElement('a');
+                    link.href = `https://${host}`;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.textContent = host;
+                    row.appendChild(link);
+                    wrapper.appendChild(row);
+                });
+
+                mediaSections.appendChild(wrapper);
+            }
+
+            bindEmbedLinks();
+        }
+
+        function bindEmbedLinks() {
+            document.querySelectorAll('[data-embed-src]').forEach((link) => {
+                if (link.dataset.embedBound) return;
+                link.dataset.embedBound = 'true';
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const { embedTitle, embedType, embedSrc } = link.dataset;
+                    openEmbeddedMedia(embedTitle, embedType, embedSrc);
+                });
+            });
+        }
+
+        addMediaForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            formStatus.classList.remove('error');
+
+            const fields = addMediaForm.elements;
+            const title = fields.title.value.trim();
+            const url = fields.url.value.trim();
+            const type = fields.type.value;
+
+            if (!title || !url) {
+                formStatus.textContent = 'Title and URL are required.';
+                formStatus.classList.add('error');
+                return;
+            }
+
+            if (!/^https?:\/\//i.test(url) || !baseHost(url)) {
+                formStatus.textContent = 'Enter a full URL starting with http:// or https://';
+                formStatus.classList.add('error');
+                return;
+            }
+
+            const entries = loadStoredEntries();
+            entries.push({ title: title.slice(0, 60), type, url });
+            saveStoredEntries(entries);
+            renderMediaPanel();
+
+            addMediaForm.reset();
+            addMediaForm.querySelector('input[name="type"][value="anime"]').checked = true;
+            formStatus.textContent = `Added “${title}”.`;
+            fields.title.focus();
+        });
+
         function openEmbeddedMedia(title, type, src) {
             const embeddedDocument = `<!DOCTYPE html>
 <html lang="en">
@@ -497,14 +759,6 @@ p {
             syncLeftPanelVisibility();
         });
 
-        document.querySelectorAll('[data-embed-src]').forEach((link) => {
-            link.addEventListener('click', (event) => {
-                event.preventDefault();
-                const { embedTitle, embedType, embedSrc } = link.dataset;
-                openEmbeddedMedia(embedTitle, embedType, embedSrc);
-            });
-        });
-
         document.addEventListener('mousemove', (e) => {
             const containerRect = document.querySelector('.site-container').getBoundingClientRect();
 
@@ -533,6 +787,7 @@ p {
         });
 
         syncLeftPanelVisibility();
+        renderMediaPanel();
     </script>
 </body>
 </html>
