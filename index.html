@@ -103,18 +103,18 @@
             margin-bottom: 0.1rem;
         }
 
-        .media-list li .remove-entry {
-            border: 0;
-            background: none;
-            padding: 0 0 0 0.4rem;
-            cursor: pointer;
-            color: rgba(0, 0, 0, 0.35);
-            font-size: 0.9em;
-            line-height: 1;
+        .media-list li.entry-url {
+            margin-top: 0.05rem;
+            word-break: break-all;
         }
 
-        .media-list li .remove-entry:hover {
-            color: #000;
+        .media-list li.entry-url a {
+            font-size: 0.85em;
+            color: rgba(0, 0, 0, 0.45);
+        }
+
+        .media-list li.entry-url a:hover {
+            color: #00e;
         }
 
         /* Add-entry form */
@@ -170,18 +170,57 @@
             margin-top: 0.15rem;
         }
 
-        .add-media-form button[type="submit"] {
+        .form-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .form-actions button {
             font: inherit;
-            padding: 0.35rem 1rem;
+            padding: 0.35rem 0.9rem;
             border: 1px solid #000;
             background: #fff;
             color: #000;
             cursor: pointer;
         }
 
-        .add-media-form button[type="submit"]:hover {
+        .form-actions button:hover {
             background: #000;
             color: #fff;
+        }
+
+        .form-actions button.active {
+            background: #000;
+            color: #fff;
+        }
+
+        /* Inline edit / remove controls, shown only in edit mode. */
+        .media-list li .entry-action {
+            border: 0;
+            background: none;
+            padding: 0 0 0 0.4rem;
+            cursor: pointer;
+            color: rgba(0, 0, 0, 0.4);
+            font: inherit;
+            font-size: 0.85em;
+            line-height: 1;
+        }
+
+        .media-list li .entry-action:hover {
+            color: #00e;
+        }
+
+        .media-list li .remove-entry:hover {
+            color: #b00;
+        }
+
+        .media-nav-panel.editing summary {
+            color: #00e;
+        }
+
+        .media-nav-panel summary.being-edited {
+            font-weight: bold;
         }
 
         .form-status {
@@ -339,7 +378,7 @@
             <div class="profile-section" id="media-sections"></div>
 
             <form class="add-media-form" id="add-media-form" autocomplete="off">
-                <h4><b>ADD ENTRY</b></h4>
+                <h4><b id="form-heading">ADD ENTRY</b></h4>
 
                 <label for="entry-title">Title</label>
                 <input type="text" id="entry-title" name="title" maxlength="60" placeholder="e.g. Cowboy Bebop" required>
@@ -356,7 +395,12 @@
                 <span class="field-hint">Embed link or host page</span>
 
                 <div class="form-status" id="form-status" role="status"></div>
-                <button type="submit">Send</button>
+
+                <div class="form-actions">
+                    <button type="submit" id="submit-entry">Send</button>
+                    <button type="button" id="edit-mode-button">Edit Entry</button>
+                    <button type="button" id="cancel-edit" style="display:none;">Cancel</button>
+                </div>
             </form>
         </aside>
 
@@ -483,7 +527,7 @@
            the form is appended to localStorage under STORAGE_KEY. Both are
            merged, sorted and rendered together on every page load.
         --------------------------------------------------------------- */
-        const STORAGE_KEY = 'media-library-entries';
+        const STORAGE_KEY = 'media-library-entries-v2';
 
         const SECTIONS = [
             { type: 'anime', label: 'ANIME' },
@@ -492,7 +536,7 @@
         ];
 
         const BUILT_IN_ENTRIES = [
-            { title: 'One Piece', type: 'anime', url: 'https://yomi.to/watch/43/1' },
+            { title: 'Ghost in the Shell', type: 'anime', url: 'https://yomi.to/watch/43/1' },
             { title: 'Batman Beyond: The Movie', type: 'movie', url: 'https://archive.org/embed/batmanbeyond-themovie-ultimate' },
             { title: 'Vampire Hunter D: Bloodlust', type: 'movie', url: 'https://archive.org/embed/vampire.-hunter.-d.-bloodlust.-2000.1080p.-blu-ray.x-264.-aac-etrg_202510' },
             { title: 'Antarctica: Life at the Edge', type: 'tv', url: 'https://player.pbs.org/viralplayer/antartica-life-at-the-edge-fksztw/' }
@@ -507,15 +551,46 @@
         const mediaSections = document.getElementById('media-sections');
         const addMediaForm = document.getElementById('add-media-form');
         const formStatus = document.getElementById('form-status');
+        const formHeading = document.getElementById('form-heading');
+        const submitButton = document.getElementById('submit-entry');
+        const editModeButton = document.getElementById('edit-mode-button');
+        const cancelButton = document.getElementById('cancel-edit');
 
+        let editMode = false;
+        let editingId = null;
+
+        function newId() {
+            return 'e-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        /* On first run the built-ins are seeded into storage, which makes every
+           entry — including the originals — editable and removable. */
         function loadStoredEntries() {
+            let parsed = null;
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
-                const parsed = raw ? JSON.parse(raw) : [];
-                return Array.isArray(parsed) ? parsed : [];
+                parsed = raw ? JSON.parse(raw) : null;
             } catch (error) {
-                return [];
+                parsed = null;
             }
+
+            if (!Array.isArray(parsed)) {
+                const seeded = BUILT_IN_ENTRIES.map((entry) => ({ ...entry, id: newId() }));
+                saveStoredEntries(seeded);
+                return seeded;
+            }
+
+            /* Backfill ids for anything saved before ids existed. */
+            let changed = false;
+            parsed.forEach((entry) => {
+                if (!entry.id) {
+                    entry.id = newId();
+                    changed = true;
+                }
+            });
+            if (changed) saveStoredEntries(parsed);
+
+            return parsed;
         }
 
         function saveStoredEntries(entries) {
@@ -546,13 +621,10 @@
         }
 
         function renderMediaPanel() {
-            const stored = loadStoredEntries();
-            const all = [
-                ...BUILT_IN_ENTRIES.map((entry) => ({ ...entry, builtin: true })),
-                ...stored.map((entry, index) => ({ ...entry, builtin: false, index }))
-            ];
+            const all = loadStoredEntries();
 
             mediaSections.textContent = '';
+            leftPanel.classList.toggle('editing', editMode);
 
             SECTIONS.forEach((section) => {
                 const entries = all.filter((entry) => entry.type === section.type).sort(sortByTitle);
@@ -567,9 +639,11 @@
 
                 entries.forEach((entry) => {
                     const details = document.createElement('details');
+                    if (entry.id === editingId) details.open = true;
 
                     const summary = document.createElement('summary');
                     summary.textContent = entry.title;
+                    if (entry.id === editingId) summary.classList.add('being-edited');
                     details.appendChild(summary);
 
                     const list = document.createElement('ul');
@@ -585,22 +659,44 @@
                     link.dataset.embedSrc = toEmbedUrl(entry.url);
                     item.appendChild(link);
 
-                    if (!entry.builtin) {
+                    /* Edit + remove controls only appear while edit mode is on. */
+                    if (editMode) {
+                        const edit = document.createElement('button');
+                        edit.type = 'button';
+                        edit.className = 'entry-action';
+                        edit.textContent = 'edit';
+                        edit.title = 'Edit this entry';
+                        edit.addEventListener('click', () => beginEdit(entry.id));
+                        item.appendChild(edit);
+
                         const remove = document.createElement('button');
                         remove.type = 'button';
-                        remove.className = 'remove-entry';
+                        remove.className = 'entry-action remove-entry';
                         remove.textContent = '×';
                         remove.title = 'Remove entry';
                         remove.addEventListener('click', () => {
-                            const current = loadStoredEntries();
-                            current.splice(entry.index, 1);
+                            if (!confirm(`Remove “${entry.title}”?`)) return;
+                            const current = loadStoredEntries().filter((row) => row.id !== entry.id);
                             saveStoredEntries(current);
+                            if (editingId === entry.id) resetForm();
                             renderMediaPanel();
                         });
                         item.appendChild(remove);
                     }
 
                     list.appendChild(item);
+
+                    /* Full source URL for this show, shown under the play link. */
+                    const urlItem = document.createElement('li');
+                    urlItem.className = 'entry-url';
+                    const urlLink = document.createElement('a');
+                    urlLink.href = entry.url;
+                    urlLink.target = '_blank';
+                    urlLink.rel = 'noopener noreferrer';
+                    urlLink.textContent = entry.url;
+                    urlItem.appendChild(urlLink);
+                    list.appendChild(urlItem);
+
                     details.appendChild(list);
                     wrapper.appendChild(details);
                 });
@@ -649,6 +745,61 @@
             });
         }
 
+        /* Clear the form and drop out of "updating" state (edit mode stays as-is). */
+        function resetForm() {
+            editingId = null;
+            addMediaForm.reset();
+            addMediaForm.querySelector('input[name="type"][value="anime"]').checked = true;
+            formHeading.textContent = 'ADD ENTRY';
+            submitButton.textContent = 'Send';
+            cancelButton.style.display = 'none';
+        }
+
+        /* Load an existing entry into the form for editing. */
+        function beginEdit(id) {
+            const entry = loadStoredEntries().find((row) => row.id === id);
+            if (!entry) return;
+
+            editingId = id;
+            const fields = addMediaForm.elements;
+            fields.title.value = entry.title;
+            fields.url.value = entry.url;
+            const typeInput = addMediaForm.querySelector(`input[name="type"][value="${entry.type}"]`);
+            if (typeInput) typeInput.checked = true;
+
+            formHeading.textContent = 'EDIT ENTRY';
+            submitButton.textContent = 'Update';
+            cancelButton.style.display = 'inline-block';
+            formStatus.classList.remove('error');
+            formStatus.textContent = `Editing “${entry.title}”.`;
+
+            renderMediaPanel();
+            fields.title.focus();
+        }
+
+        /* The Edit Entry button turns edit controls on and off. */
+        editModeButton.addEventListener('click', () => {
+            editMode = !editMode;
+            editModeButton.classList.toggle('active', editMode);
+            editModeButton.textContent = editMode ? 'Done' : 'Edit Entry';
+
+            if (!editMode) {
+                resetForm();
+                formStatus.textContent = '';
+            } else {
+                formStatus.classList.remove('error');
+                formStatus.textContent = 'Pick an entry to edit or remove.';
+            }
+
+            renderMediaPanel();
+        });
+
+        cancelButton.addEventListener('click', () => {
+            resetForm();
+            formStatus.textContent = 'Edit cancelled.';
+            renderMediaPanel();
+        });
+
         addMediaForm.addEventListener('submit', (event) => {
             event.preventDefault();
             formStatus.classList.remove('error');
@@ -671,14 +822,21 @@
             }
 
             const entries = loadStoredEntries();
-            entries.push({ title: title.slice(0, 60), type, url });
+            const wasEditing = editingId;
+
+            if (wasEditing) {
+                const target = entries.find((row) => row.id === wasEditing);
+                if (target) Object.assign(target, { title: title.slice(0, 60), type, url });
+            } else {
+                entries.push({ id: newId(), title: title.slice(0, 60), type, url });
+            }
+
             saveStoredEntries(entries);
+            resetForm();
             renderMediaPanel();
 
-            addMediaForm.reset();
-            addMediaForm.querySelector('input[name="type"][value="anime"]').checked = true;
-            formStatus.textContent = `Added “${title}”.`;
-            fields.title.focus();
+            formStatus.textContent = wasEditing ? `Updated “${title}”.` : `Added “${title}”.`;
+            addMediaForm.elements.title.focus();
         });
 
         function openEmbeddedMedia(title, type, src) {
@@ -731,7 +889,7 @@ p {
         <h1>${title}</h1>
         <p>Embedded source player.</p>
         <div class="player">
-            ${type === 'video' ? `<video controls src="${src}"></video>` : `<iframe src="${src}" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>`}
+            ${type === 'video' ? `<video controls src="${src}"></video>` : `<iframe src="${src}" allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-presentation"></iframe>`}
         </div>
     </div>
 </body>
