@@ -515,6 +515,35 @@
     gap: 6px;
   }
   .button-row + .button-row { margin-top: 6px; }
+
+  /* Blocked-by explanation below Run button when physics-check has criticals */
+  .blocked-by {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: rgba(196, 111, 90, 0.10);
+    border-left: 3px solid var(--accent-warn, #c46f5a);
+    border-radius: 2px;
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .blocked-by .blocked-head {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-warn, #c46f5a);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .blocked-by ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+  .blocked-by li {
+    margin: 2px 0;
+  }
   button {
     flex: 1;
     background: transparent;
@@ -987,10 +1016,11 @@
       <div class="stat"><div class="stat-label">a₁</div><div class="stat-value"><span id="ls-a1">6.5</span></div></div>
       <div class="stat"><div class="stat-label">a₂</div><div class="stat-value"><span id="ls-a2">2.5</span></div></div>
       <div class="stat"><div class="stat-label">k<sub>f</sub></div><div class="stat-value"><span id="ls-kf">1.000</span></div></div>
-      <div class="stat"><div class="stat-label">α<sub>τc</sub></div><div class="stat-value"><span id="ls-tauCslope">20.16</span><span class="unit">Pa/%</span></div></div>
-      <div class="stat"><div class="stat-label">β<sub>τc</sub></div><div class="stat-value"><span id="ls-tauCint">0.240</span><span class="unit">Pa</span></div></div>
-      <div class="stat"><div class="stat-label">K<sub>0</sub></div><div class="stat-value"><span id="ls-Kpre">4.5e-6</span></div></div>
-      <div class="stat"><div class="stat-label">β<sub>K</sub></div><div class="stat-value"><span id="ls-Kexp">−15.10</span></div></div>
+      <div class="stat"><div class="stat-label">C<sub>f</sub> src</div><div class="stat-value"><span id="ls-CfSrc">Ferguson</span></div></div>
+      <div class="stat"><div class="stat-label">α<sub>τc</sub></div><div class="stat-value"><span id="ls-tauCslope">20.10</span><span class="unit">Pa/%</span></div></div>
+      <div class="stat"><div class="stat-label">β<sub>τc</sub></div><div class="stat-value"><span id="ls-tauCint">0.270</span><span class="unit">Pa</span></div></div>
+      <div class="stat"><div class="stat-label">K<sub>0</sub></div><div class="stat-value"><span id="ls-Kpre">4.1e-6</span></div></div>
+      <div class="stat"><div class="stat-label">β<sub>K</sub></div><div class="stat-value"><span id="ls-Kexp">−14.00</span></div></div>
     </div>
 
     <!-- Row 3: Computed / live values (15) -->
@@ -1196,7 +1226,7 @@
             </div>
           </div>
           <p class="field-caption">
-            84th-percentile grain diameter in metres. Enters k<sub>s</sub> = 2.5·D₈₄ in Ferguson (2007).
+            84th-percentile grain diameter in metres. Enters k<sub>s</sub> = D₈₄ in Ferguson (2007).
           </p>
         </div>
 
@@ -1273,15 +1303,44 @@
 
         <div class="field">
           <div class="field-head">
+            <label class="field-label"><span class="sym">C<sub>f</sub></span>C<sub>f</sub> source</label>
+          </div>
+          <div class="ctrl-mode-group" id="cfSourceGroup">
+            <label><input type="radio" name="Cf_source" value="ferguson" checked> Ferguson</label>
+            <label><input type="radio" name="Cf_source" value="user"> User-set</label>
+          </div>
+          <p class="field-caption">
+            Whether the friction coefficient comes from the Ferguson closure (with k<sub>f</sub> multiplier)
+            or a fixed user-supplied constant. Use "User-set" when you have a measured or calibrated C<sub>f</sub>
+            and want to bypass Ferguson entirely.
+          </p>
+        </div>
+
+        <div class="field" id="CfUserField" style="display:none;">
+          <div class="field-head">
+            <label class="field-label" for="Cf_user"><span class="sym">C<sub>f</sub>*</span>User C<sub>f</sub> value</label>
+            <div class="input-row">
+              <input type="text" class="input-value" id="Cf_user" value="0.045" inputmode="decimal" autocomplete="off">
+              <span class="unit">—</span>
+            </div>
+          </div>
+          <p class="field-caption">
+            Applied only when C<sub>f</sub> source is "User-set". Overrides Ferguson entirely and uses this constant
+            everywhere in the flume, for every timestep. Typical values 0.01 – 0.1. Must be positive.
+          </p>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
             <label class="field-label" for="tauC_slope"><span class="sym">α<sub>τc</sub></span>τ<sub>c</sub> slope</label>
             <div class="input-row">
-              <input type="text" class="input-value" id="tauC_slope" value="20.16" inputmode="decimal" autocomplete="off">
+              <input type="text" class="input-value" id="tauC_slope" value="20.1" inputmode="decimal" autocomplete="off">
               <span class="unit">Pa/%</span>
             </div>
           </div>
           <p class="field-caption">
             Slope of the τ<sub>c</sub> vs GG% closure: τ<sub>c</sub> = α<sub>τc</sub>·GG% + β<sub>τc</sub>.
-            Controls how strongly guar-gum content raises the critical shear stress. Default 20.16 from Parker's
+            Controls how strongly guar-gum content raises the critical shear stress. Default 20.1 from Parker's
             calibration; experiment-specific calibration may need adjustment.
           </p>
         </div>
@@ -1290,12 +1349,12 @@
           <div class="field-head">
             <label class="field-label" for="tauC_intercept"><span class="sym">β<sub>τc</sub></span>τ<sub>c</sub> intercept</label>
             <div class="input-row">
-              <input type="text" class="input-value" id="tauC_intercept" value="0.24" inputmode="decimal" autocomplete="off">
+              <input type="text" class="input-value" id="tauC_intercept" value="0.27" inputmode="decimal" autocomplete="off">
               <span class="unit">Pa</span>
             </div>
           </div>
           <p class="field-caption">
-            Intercept at GG% = 0. Represents the critical shear for non-cohesive bank material. Default 0.24 Pa.
+            Intercept at GG% = 0. Represents the critical shear for non-cohesive bank material. Default 0.27 Pa.
           </p>
         </div>
 
@@ -1303,13 +1362,13 @@
           <div class="field-head">
             <label class="field-label" for="K_prefactor"><span class="sym">K<sub>0</sub></span>Erodibility prefactor</label>
             <div class="input-row">
-              <input type="text" class="input-value" id="K_prefactor" value="4.5e-6" inputmode="decimal" autocomplete="off">
+              <input type="text" class="input-value" id="K_prefactor" value="4.1e-6" inputmode="decimal" autocomplete="off">
               <span class="unit">m·s⁻¹·Pa⁻¹</span>
             </div>
           </div>
           <p class="field-caption">
             Prefactor in K = K<sub>0</sub>·exp(β<sub>K</sub>·GG%). This is the zero-cohesion erodibility —
-            the erosion rate coefficient a bank material with no guar-gum would have. Default 4.5×10⁻⁶.
+            the erosion rate coefficient a bank material with no guar-gum would have. Default 4.1×10⁻⁶.
           </p>
         </div>
 
@@ -1317,13 +1376,13 @@
           <div class="field-head">
             <label class="field-label" for="K_exponent"><span class="sym">β<sub>K</sub></span>Erodibility exponent</label>
             <div class="input-row">
-              <input type="text" class="input-value" id="K_exponent" value="-15.1" inputmode="decimal" autocomplete="off">
+              <input type="text" class="input-value" id="K_exponent" value="-14" inputmode="decimal" autocomplete="off">
               <span class="unit">per %</span>
             </div>
           </div>
           <p class="field-caption">
-            Exponent on GG% in K. Negative: more guar-gum → lower erodibility. Default −15.1, meaning each 1% increase
-            in GG% reduces K by a factor exp(−15.1·0.01) ≈ 0.86 (about 14%). Set to 0 to disable the GG% dependence in K.
+            Exponent on GG% in K. Negative: more guar-gum → lower erodibility. Default −14, meaning each 1% increase
+            in GG% reduces K by a factor exp(−14·0.01) ≈ 0.87 (about 13%). Set to 0 to disable the GG% dependence in K.
           </p>
         </div>
       </div>
@@ -1338,6 +1397,7 @@
         <button id="exportBtn">⬇ Export JPEG</button>
         <button id="exportCsvBtn">⬇ Export CSV</button>
       </div>
+      <div id="blockedBy" class="blocked-by" style="display:none;"></div>
     </div>
   </div>
 
@@ -1348,8 +1408,8 @@
       <section class="eqs">
 
         <div class="eq-group-head">Bank erosion closure <span class="eq-group-tag">Parker / excess-shear</span></div>
-        <div class="eq"><span class="tag">(1)</span><span class="expr">&tau;<sub>c</sub> = <span id="eq-tauC-slope">20.16</span>·(GG%) + <span id="eq-tauC-int">0.24</span></span><span class="lbl">critical bank shear stress (Pa)</span></div>
-        <div class="eq"><span class="tag">(2)</span><span class="expr">K = <span id="eq-K-pre">4.5×10⁻⁶</span> · exp(<span id="eq-K-exp">−15.1</span>·GG%)</span><span class="lbl">erodibility coefficient (m·s⁻¹·Pa⁻¹)</span></div>
+        <div class="eq"><span class="tag">(1)</span><span class="expr">&tau;<sub>c</sub> = <span id="eq-tauC-slope">20.10</span>·(GG%) + <span id="eq-tauC-int">0.270</span></span><span class="lbl">critical bank shear stress (Pa)</span></div>
+        <div class="eq"><span class="tag">(2)</span><span class="expr">K = <span id="eq-K-pre">4.1×10⁻⁶</span> · exp(<span id="eq-K-exp">−14.00</span>·GG%)</span><span class="lbl">erodibility coefficient (m·s⁻¹·Pa⁻¹)</span></div>
         <div class="eq"><span class="tag">(3)</span><span class="expr">E = K · (&tau; − &tau;<sub>c</sub>),&nbsp; else 0</span><span class="lbl">lateral erosion rate (m·s⁻¹)</span></div>
         <p class="eq-note">
           Classical excess-shear formulation. Both the threshold &tau;<sub>c</sub> and the erodibility K respond to guar-gum
@@ -1361,9 +1421,9 @@
         <div class="eq"><span class="tag">(4)</span><span class="expr">R = w·H / (w + 2H)</span><span class="lbl">hydraulic radius (reported, not used in τ or Cf)</span></div>
         <div class="eq"><span class="tag">(5)</span><span class="expr">&tau; = &rho; g H S</span><span class="lbl">boundary shear stress — wide-channel form</span></div>
         <div class="eq"><span class="tag">(6)</span><span class="expr">u<sub>*</sub> = √(&tau;/&rho;) = √(gHS)</span><span class="lbl">shear velocity (m·s⁻¹)</span></div>
-        <div class="eq"><span class="tag">(7)</span><span class="expr">k<sub>s</sub> = 2.5·D₈₄</span><span class="lbl">Nikuradse roughness height (m)</span></div>
+        <div class="eq"><span class="tag">(7)</span><span class="expr">k<sub>s</sub> = D₈₄</span><span class="lbl">Nikuradse roughness height (m)</span></div>
         <div class="eq"><span class="tag">(8)</span><span class="expr">8/f = a₁²·a₂²·(H/k<sub>s</sub>)² / (a₁² + a₂²·(H/k<sub>s</sub>)^(5/3))</span><span class="lbl">Ferguson-style variable-power law</span></div>
-        <div class="eq"><span class="tag">(9)</span><span class="expr">C<sub>f</sub> = (f/8)·k<sub>f</sub> &nbsp;&nbsp;[k<sub>f</sub> = <span id="eq-kf">1.00</span>]</span><span class="lbl">friction coefficient with user-set multiplier</span></div>
+        <div class="eq"><span class="tag">(9)</span><span class="expr"><span id="eq-cf-expr">C<sub>f</sub> = (f/8)·k<sub>f</sub> &nbsp;&nbsp;[k<sub>f</sub> = <span id="eq-kf">1.00</span>]</span></span><span class="lbl">friction coefficient — Ferguson or user-set</span></div>
         <p class="eq-note">
           <b>Wide-channel convention.</b> &tau;, u<sub>*</sub>, and C<sub>f</sub> are all written in terms of depth H
           rather than hydraulic radius R. This is the standard approximation for shallow, wide flows (H ≪ w) and is applied
@@ -1488,8 +1548,9 @@ const P = {
   kth: 0.15, dH_th: 0.01, ctrlMode: 'either',
   D84: 0.021,
   T: 7, rho: 1000, g: 9.81, a1: 6.5, a2: 2.5, kf: 1.0,
-  tauC_slope: 20.16, tauC_intercept: 0.24,
-  K_prefactor: 4.5e-6, K_exponent: -15.1,
+  Cf_source: 'ferguson', Cf_user: 0.045,
+  tauC_slope: 20.1, tauC_intercept: 0.27,
+  K_prefactor: 4.1e-6, K_exponent: -14,
   dt: 60, L: 4.0, Nx: 400
 };
 
@@ -1498,6 +1559,7 @@ const P = {
 // validate the value, and commit to P. Invalid entries mark the input red
 // (via .invalid) and do NOT update P — the previous good value is kept.
 const INPUTS = ['gg','S','w0','wMax','H0','Hout','kth','dH_th','D84','T','rho','g','a1','a2','kf',
+                'Cf_user',
                 'tauC_slope','tauC_intercept','K_prefactor','K_exponent'];
 
 function parseField(id) {
@@ -1569,6 +1631,27 @@ document.querySelectorAll('input[name="ctrlMode"]').forEach(radio => {
   });
 });
 
+// Cf source: ferguson | user
+document.querySelectorAll('input[name="Cf_source"]').forEach(radio => {
+  radio.addEventListener('change', (ev) => {
+    if (ev.target.checked) {
+      P.Cf_source = ev.target.value;
+      applyCfSourceVisibility();
+      // Update tile if present
+      if ($('ls-CfSrc')) $('ls-CfSrc').textContent = P.Cf_source === 'user' ? 'user' : 'Ferguson';
+      // Re-derive Qw at t=0 with the new Cf source; update all live values
+      computeQw();
+      checkPhysics();
+      if (!state || !state.running) resetSim();
+    }
+  });
+});
+
+function applyCfSourceVisibility() {
+  const field = $('CfUserField');
+  if (field) field.style.display = (P.Cf_source === 'user') ? '' : 'none';
+}
+
 function labelForMode(m) {
   if (m === 'kth')  return 'kth';
   if (m === 'dHth') return 'dHth';
@@ -1596,15 +1679,17 @@ function formatForDisplay(id, v) {
 /**
  * Compute and display Qw from the initial geometry using the WIDE-CHANNEL relations:
  *   τ = ρgHS,  u_* = √(τ/ρ) = √(gHS),  U = u_* / √Cf,  Qw = U·w₀·H₀
- * Cf comes from the wide-channel Ferguson law at H₀/kₛ with ks = 2.5·D84.
+ * Cf comes from the wide-channel Ferguson law at H₀/kₛ with ks = D84.
  * Because the backwater ODE uses the same wide-channel friction slope
  * (S_f = Cf·Fr² = Cf·U²/(gH)), this Qw makes (w₀, H₀) an exact fixed point
  * of the sweep — no initial drift.
  */
 function computeQw() {
   const w = P.w0, H = P.H0;
-  const ks = 2.5 * P.D84;
-  const Cf = CfFerguson(H, ks, P.a1, P.a2, P.kf);
+  const ks = P.D84;
+  const Cf = (P.Cf_source === 'user')
+    ? Math.max(P.Cf_user || 0, 1e-9)
+    : CfFerguson(H, ks, P.a1, P.a2, P.kf);
   const tau = P.rho * P.g * H * P.S;
   const u_star = Math.sqrt(Math.max(tau / P.rho, 0));
   const U = u_star / Math.sqrt(Math.max(Cf, 1e-12));
@@ -1638,6 +1723,7 @@ function computeQw() {
   setTile('ls-a1',   P.a1.toFixed(1));
   setTile('ls-a2',   P.a2.toFixed(1));
   setTile('ls-kf',   P.kf.toFixed(3));
+  setTile('ls-CfSrc', P.Cf_source === 'user' ? 'user' : 'Ferguson');
   setTile('ls-tauCslope', P.tauC_slope.toFixed(2));
   setTile('ls-tauCint',   P.tauC_intercept.toFixed(3));
   setTile('ls-Kpre',      P.K_prefactor.toExponential(2));
@@ -1665,6 +1751,15 @@ function computeQw() {
   setTile('eq-K-pre',      fmtK0(P.K_prefactor));
   setTile('eq-K-exp',      signedExpStr(P.K_exponent));
   setTile('eq-kf',         P.kf.toFixed(3));
+  // Swap equation (9)'s expression to match the active Cf source
+  const eqCfExpr = $('eq-cf-expr');
+  if (eqCfExpr) {
+    if (P.Cf_source === 'user') {
+      eqCfExpr.innerHTML = `C<sub>f</sub> = C<sub>f,user</sub> = <b>${(P.Cf_user || 0).toFixed(4)}</b> &nbsp;&nbsp;<span style="color:var(--ink-mute);font-size:10.5px;">[Ferguson bypassed]</span>`;
+    } else {
+      eqCfExpr.innerHTML = `C<sub>f</sub> = (f/8)·k<sub>f</sub> &nbsp;&nbsp;[k<sub>f</sub> = <span id="eq-kf">${P.kf.toFixed(3)}</span>]`;
+    }
+  }
 
   return Qw;
 }
@@ -1702,7 +1797,7 @@ function CfFerguson(H, ks, a1, a2, kf) {
 // U = sqrt( g R S / Cf ), R = (w*H) / (w + 2H)  (wetted perimeter: free top + base + 2 walls; assume rectangular)
 // We iterate: guess H, compute R, Cf(R), U, and Q; adjust H by Newton-like updates.
 function solveNormalDepth(w, Qw, S, g, D84, a1, a2, Hguess) {
-  const ks = 2.5 * D84;
+  const ks = D84;
   let H = Math.max(Hguess, 1e-4);
   for (let i = 0; i < 60; i++) {
     const A = w * H;
@@ -1735,15 +1830,22 @@ function solveNormalDepth(w, Qw, S, g, D84, a1, a2, Hguess) {
 
 // Local-cell hydraulic helper (WIDE-CHANNEL FORM).
 //   R    = wH/(w+2H)       — kept only as a reportable diagnostic; NOT used in τ or Cf
-//   Cf   = CfFerguson(H, ks, a1, a2)   — depth-based
+//   Cf   = CfFerguson(H, ks, a1, a2, kf)   — depth-based, OR the user's constant Cf_user
+//                                             when cf_source === 'user'
 //   U    = Qw / (wH)       — from mass conservation (Qw held constant)
 //   Fr   = U / sqrt(gH)
 //   τ    = ρ g H S         — wide-channel (per spec change)
-function cellHydraulics(w, H, Qw, g, ks, a1, a2, rho, S, kf) {
+function cellHydraulics(w, H, Qw, g, ks, a1, a2, rho, S, kf, cf_source, cf_user) {
   const A = w * H;
   const Pw = w + 2 * H;
   const R = A / Math.max(Pw, 1e-12);
-  const Cf = CfFerguson(H, ks, a1, a2, kf);
+  // Cf: user-set constant if that mode is selected, else Ferguson (with kf multiplier).
+  let Cf;
+  if (cf_source === 'user') {
+    Cf = Math.max(cf_user || 0, 1e-9);   // guard against 0 which would blow up U^2 = gRS/Cf
+  } else {
+    Cf = CfFerguson(H, ks, a1, a2, kf);
+  }
   const U = Qw / Math.max(A, 1e-12);
   const Fr = U / Math.sqrt(Math.max(g * H, 1e-12));
   const tau = rho * g * H * S;
@@ -1758,7 +1860,7 @@ function cellHydraulics(w, H, Qw, g, ks, a1, a2, rho, S, kf) {
 function backwaterSweep(w, H_out, Qw, p) {
   const Nx = w.length;
   const dx = p.L / Nx;
-  const ks = 2.5 * p.D84;
+  const ks = p.D84;
   const H = new Float64Array(Nx);
 
   // Downstream BC — baselevel imposed at outlet
@@ -1777,7 +1879,7 @@ function backwaterSweep(w, H_out, Qw, p) {
   // We integrate upstream (i = Nx-1 → 0) because flow is subcritical and
   // information propagates upstream in that regime.
   function f(i, Hi) {
-    const h = cellHydraulics(w[i], Hi, Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf);
+    const h = cellHydraulics(w[i], Hi, Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf, p.Cf_source, p.Cf_user);
     const Fr2 = h.Fr * h.Fr;
     const denom = 1 - Fr2;
     const safe = Math.abs(denom) < 1e-6 ? (denom < 0 ? -1e-6 : 1e-6) : denom;
@@ -1807,7 +1909,7 @@ function backwaterSweep(w, H_out, Qw, p) {
 //   dHdxAvg = spatial mean of dH/dx (signed; + = rising downstream, − = drawdown)
 function stepSpatial(w, p, dt) {
   const Nx = w.length;
-  const ks = 2.5 * p.D84;
+  const ks = p.D84;
   const dx = p.L / Nx;
 
   // 1. Compute H(x) profile from backwater ODE
@@ -1826,7 +1928,7 @@ function stepSpatial(w, p, dt) {
 
   // Per-cell pass: compute hydraulics, E, k_metric
   for (let i = 0; i < Nx; i++) {
-    const h = cellHydraulics(w[i], H[i], p.Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf);
+    const h = cellHydraulics(w[i], H[i], p.Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf, p.Cf_source, p.Cf_user);
     const E = h.tau > tau_c ? K * (h.tau - tau_c) : 0;
     w_new[i] = w[i] + E * dt;
 
@@ -1894,7 +1996,7 @@ function physicsCheck(p = P) {
   }
 
   // 1. Bounds: every param must be positive and finite
-  const posKeys = ['Qw','S','w0','wMax','H0','Hout','D84','T','rho','g','a1','a2','dt','K_prefactor','kf','dH_th'];
+  const posKeys = ['Qw','S','w0','wMax','H0','Hout','D84','T','rho','g','a1','a2','dt','K_prefactor','kf','dH_th','Cf_user'];
   for (const k of posKeys) {
     if (!isFinite(p[k]) || p[k] <= 0) {
       out.push({
@@ -1920,13 +2022,13 @@ function physicsCheck(p = P) {
     const w0arr = new Float64Array(Nx);
     for (let i = 0; i < Nx; i++) w0arr[i] = p.w0;
     const Hprof = backwaterSweep(w0arr, p.Hout, p.Qw, p);
-    const ks = 2.5 * p.D84;
+    const ks = p.D84;
     let HMin = Infinity, HMax = -Infinity, FrMax = 0, tauMax = 0, tauSum = 0, RSum = 0;
     let anyBad = false;
     for (let i = 0; i < Nx; i++) {
       const Hi = Hprof[i];
       if (!isFinite(Hi) || Hi <= 0) { anyBad = true; continue; }
-      const h = cellHydraulics(w0arr[i], Hi, p.Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf);
+      const h = cellHydraulics(w0arr[i], Hi, p.Qw, p.g, ks, p.a1, p.a2, p.rho, p.S, p.kf, p.Cf_source, p.Cf_user);
       if (Hi < HMin) HMin = Hi;
       if (Hi > HMax) HMax = Hi;
       if (h.Fr > FrMax) FrMax = h.Fr;
@@ -2104,13 +2206,25 @@ function checkPhysics() {
   const list = physicsCheck(P);
   const blocked = renderWarnings(list);
   const btn = $('runBtn');
+  const blockedBy = $('blockedBy');
   btn.classList.toggle('blocked', blocked);
   if (blocked) {
     btn.disabled = true;
     btn.textContent = '⊘ Run blocked';
-  } else if (!state || !state.running) {
-    btn.disabled = false;
-    btn.textContent = '▶ Run';
+    // Build the blocked-by summary
+    const crits = list.filter(w => w.sev === 'crit');
+    if (blockedBy) {
+      blockedBy.innerHTML =
+        `<div class="blocked-head">Run blocked by ${crits.length} issue${crits.length===1?'':'s'}</div>` +
+        `<ul>${crits.map(c => `<li><b>${c.title}</b>${c.val ? ` <span style="color:var(--ink-dim);">(${c.val})</span>` : ''}${c.body ? `<div style="color:var(--ink-dim);font-size:11px;margin-top:2px;">${c.body}</div>` : ''}</li>`).join('')}</ul>`;
+      blockedBy.style.display = '';
+    }
+  } else {
+    if (!state || !state.running) {
+      btn.disabled = false;
+      btn.textContent = '▶ Run';
+    }
+    if (blockedBy) blockedBy.style.display = 'none';
   }
   return !blocked;
 }
@@ -2139,10 +2253,10 @@ function resetSim() {
   // Compute initial erosion at t=0 for display
   const tau_c = P.tauC_slope * P.gg + P.tauC_intercept;
   const K = P.K_prefactor * Math.exp(P.K_exponent * P.gg);
-  const ks = 2.5 * P.D84;
+  const ks = P.D84;
   let sumE0 = 0, sumW0 = 0, sumH0 = 0;
   for (let i = 0; i < Nx; i++) {
-    const h = cellHydraulics(w0arr[i], H0arr[i], P.Qw, P.g, ks, P.a1, P.a2, P.rho, P.S, P.kf);
+    const h = cellHydraulics(w0arr[i], H0arr[i], P.Qw, P.g, ks, P.a1, P.a2, P.rho, P.S, P.kf, P.Cf_source, P.Cf_user);
     const E = h.tau > tau_c ? K * (h.tau - tau_c) : 0;
     sumE0 += E;
     sumW0 += w0arr[i];
@@ -2684,7 +2798,7 @@ $('exportBtn').addEventListener('click', () => {
   const paramLines = [
     `GG% = ${P.gg.toFixed(2)}   Qw = ${P.Qw.toExponential(3)} m³/s   S = ${P.S.toFixed(5)}`,
     `w0 = ${P.w0.toFixed(3)} m   wMax = ${P.wMax.toFixed(3)} m   H0 = ${P.H0.toFixed(3)} m   Hout(init) = ${state.HoutArr[0].toFixed(4)} m   D84 = ${(1000*P.D84).toFixed(1)} mm`,
-    `ρ = ${P.rho} kg/m³   g = ${P.g} m/s²   a1 = ${P.a1}   a2 = ${P.a2}   kf = ${P.kf.toFixed(3)}   T = ${P.T.toFixed(2)} day`,
+    `ρ = ${P.rho} kg/m³   g = ${P.g} m/s²   a1 = ${P.a1}   a2 = ${P.a2}   kf = ${P.kf.toFixed(3)}   Cf-src = ${P.Cf_source === 'user' ? 'user='+P.Cf_user : 'Ferguson'}   T = ${P.T.toFixed(2)} day`,
     `Controller: mode=${P.ctrlMode}   k_th = ${P.kth.toFixed(3)}   dH_th = ${P.dH_th.toFixed(4)} m`,
     `Closure: τc = ${P.tauC_slope.toFixed(2)}·GG% + ${P.tauC_intercept.toFixed(3)}   K = ${P.K_prefactor.toExponential(2)}·exp(${P.K_exponent.toFixed(2)}·GG%)`,
     `Baselevel adjustments: ${nCtrl}${nCtrl ? `   final Hout = ${P.Hout.toFixed(4)} m${jpegTriggerBreak ? `   (triggers: ${jpegTriggerBreak})` : ''}` : ''}`,
@@ -2777,7 +2891,7 @@ $('exportCsvBtn').addEventListener('click', () => {
     `# conditions (dH/dx → 0, constant depth). Each row = one required baselevel adjustment.`,
     `# Parameters: GG%=${P.gg}, S=${P.S}, w0=${P.w0}, wMax=${P.wMax}, H0=${P.H0}, `
       + `Hout_initial=${state.HoutArr[0].toFixed(5)}, D84=${P.D84}, `
-      + `T=${P.T}d, rho=${P.rho}, g=${P.g}, a1=${P.a1}, a2=${P.a2}, kf=${P.kf}`,
+      + `T=${P.T}d, rho=${P.rho}, g=${P.g}, a1=${P.a1}, a2=${P.a2}, kf=${P.kf}, Cf_source=${P.Cf_source}${P.Cf_source === 'user' ? ', Cf_user='+P.Cf_user : ''}`,
     `# Controller: mode=${P.ctrlMode}, k_th=${P.kth}, dH_th=${P.dH_th} m`,
     `# Closure: tauC_slope=${P.tauC_slope}, tauC_intercept=${P.tauC_intercept}, `
       + `K_prefactor=${P.K_prefactor}, K_exponent=${P.K_exponent}`,
@@ -3051,6 +3165,7 @@ setTimeout(installSplitters, 0);
    ============================================================ */
 computeQw();
 resetSim();
+applyCfSourceVisibility();
 checkPhysics();
 </script>
 </body>
