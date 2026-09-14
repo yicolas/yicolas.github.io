@@ -173,7 +173,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
              ondragleave="this.classList.remove('over')"
              ondrop="onDrop(event)">
         <div>⬆ drop files</div>
-        <div style="font-size:9px;margin-top:2px;opacity:.7">.rmg · .frc · .hys · .hcr · .irm · .dcd · .txt · .csv · .xls</div>
+        <div style="font-size:9px;margin-top:2px;opacity:.7">.rmg · .frc · .forc.### · .hys · .hcr · .irm · .dcd · .txt · .csv · .xls</div>
         <div style="font-size:9px;margin-top:4px">or click to browse</div>
       </div>
       <input id="fi" type="file" multiple onchange="onFiles(this.files)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
@@ -1350,6 +1350,7 @@ function rmgSirmCurve(data){
     AF:{doesExist:false}
   });
 
+  if(!data || !data.BlockType) return [emptyResult()];   // VSM/MicroMag samples have no rmg blocks
   const irmTypes = new Set(['irm','irmz','irmx']);
   const candidateBlocks = [];   // 1-based block IDs
   for(let i=0;i<data.BlockType.length;i++){
@@ -2557,7 +2558,10 @@ function vsmImport(name, text, kind){
     const info0 = vsmSniffMicromag(text);
     if(info0 && (info0.measType==='forc' || info0.measType==='hyst+forc')){
       const curves = vsmExtractMicromagForc(text, 1);
-      return { samplename:(info0.samplename||name.replace(/\.[^.]+$/,'')), vsm:{ kind:'micromag-forc', units:info0.units, series:info0.series, forcCurves:curves } };
+      // Use the FILENAME as the sample name: MicroMag numbers repeat runs as
+      // .forc.001/.002/.003… with an identical Description, and description-based
+      // names would collapse distinct runs into one. Description kept for display.
+      return { samplename:name, vsm:{ kind:'micromag-forc', units:info0.units, series:info0.series, description:(info0.samplename||''), forcCurves:curves } };
     }
     const mm = vsmParseMicromag(text);
     const sn = mm.samplename || name.replace(/\.[^.]+$/,'');
@@ -2926,7 +2930,7 @@ function tForcDiag(samples){
   if (!raw) return [];
   const d = raw.data || raw;
   const sName = raw.name || raw.samplename || d.samplename || 'sample';
-  if (!d || !d.steptypes) return [];
+  if (!d || (!d.steptypes && !(d.vsm && d.vsm.forcCurves))) return [];
 
   let result;
   try {
@@ -3051,18 +3055,23 @@ function tForcDiag(samples){
   // User-selected colormap from the FORC controls dropdown. Falls back to inferno_r.
   const colorscale = FORC_COLORMAPS[ForcDiagState.colormap] || FORC_COLORMAPS['inferno_r'];
 
-  // Compute actual z range from valid cells (not symmetric around 0).
-  // FORC ρ on real data is overwhelmingly negative; symmetric scales waste
-  // dynamic range. We use [min, max] of the valid data as-is.
-  let zMin = Infinity, zMax = -Infinity;
+  // Compute z range from valid cells, clipped to robust percentiles
+  // [0.5%, 99.5%]. Raw min/max lets a single interpolation spike at the
+  // diamond edge (common with irregular MicroMag grids) own the whole color
+  // scale and wash out the central ridge; percentile clipping is standard
+  // FORC display practice and leaves well-behaved (2G) data essentially unchanged.
+  const zvals = [];
   for (let yi = 0; yi < gs; yi++){
     for (let xi = 0; xi < gs; xi++){
       const v = z[yi][xi];
-      if (v !== null && Number.isFinite(v)){
-        if (v < zMin) zMin = v;
-        if (v > zMax) zMax = v;
-      }
+      if (v !== null && Number.isFinite(v)) zvals.push(v);
     }
+  }
+  zvals.sort((a, b) => a - b);
+  let zMin = Infinity, zMax = -Infinity;
+  if (zvals.length){
+    zMin = zvals[Math.max(0, Math.floor(0.005 * (zvals.length - 1)))];
+    zMax = zvals[Math.min(zvals.length - 1, Math.ceil(0.995 * (zvals.length - 1)))];
   }
   // Guard against degenerate range
   if (!Number.isFinite(zMin) || !Number.isFinite(zMax) || zMin === zMax){
@@ -3101,7 +3110,7 @@ function tForcHyst(samples){
     // Accept either bare RmgData or wrapper {name, samplename, data}
     const d = raw.data || raw;
     const sName = raw.name || raw.samplename || d.samplename || `sample${si+1}`;
-    if (!d || !d.steptypes) continue;
+    if (!d || (!d.steptypes && !(d.vsm && d.vsm.forcCurves))) continue;
     const forc = rmgExtractForcDataComplete(d);
     if (!forc.exists) continue;
 
@@ -3928,6 +3937,9 @@ function rmgExtractForcData(data){
 // Same grouping, but each curve also stores Mr = magnetization at the reversal
 // point itself. Used for full-hysteresis plotting (Piece E).
 function rmgExtractForcDataComplete(data){
+  if(data && data.vsm && data.vsm.forcCurves)
+    return { exists: data.vsm.forcCurves.length > 0,
+             curves: data.vsm.forcCurves.map(c => ({ Hr:c.Hr, Mr:(c.M.length ? c.M[0] : NaN), Ha:c.Ha.slice(), M:c.M.slice() })) };
   const out = { exists: false, curves: [] };
   const forcSteps = findForcSteps(data);
   if (forcSteps.length === 0) return out;
@@ -3979,7 +3991,7 @@ function buildForcCurvesTraces(samples, darkMode){
     // Accept either bare RmgData or wrapper {name, samplename, data}
     const d = raw.data || raw;
     const sName = raw.name || raw.samplename || d.samplename || `sample${si+1}`;
-    if (!d || !d.steptypes) continue;
+    if (!d || (!d.steptypes && !(d.vsm && d.vsm.forcCurves))) continue;
     const forc = rmgExtractForcData(d);
     if (!forc.exists) continue;
 
@@ -4606,10 +4618,15 @@ function processForcForcinelWorkflow(data, opts){
   }
 
   // ─── y=0 baseline registration (remove coil Bu offset δ) ──────────────
-  const buOffsetT = measureForcBuOffset(forc.curves);
-  for (const c of forc.curves){
-    c.Hr += buOffsetT;
-    for (let _k = 0; _k < c.Ha.length; _k++) c.Ha[_k] += buOffsetT;
+  // 2G remanence FORCs only: both branches are remanences, so their zero
+  // crossings are comparable. Skip for in-field VSM/MicroMag data, where the
+  // hd−ha split reflects reversible magnetization (≈(Hcr−Hc)/2), not a coil offset.
+  const buOffsetT = (data && data.vsm) ? 0 : measureForcBuOffset(forc.curves);
+  if (buOffsetT){
+    for (const c of forc.curves){
+      c.Hr += buOffsetT;
+      for (let _k = 0; _k < c.Ha.length; _k++) c.Ha[_k] += buOffsetT;
+    }
   }
 
   // ─── Step 2: Collect scattered points ────────────────────────────────────
