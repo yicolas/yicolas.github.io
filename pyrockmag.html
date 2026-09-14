@@ -1547,6 +1547,7 @@ function correspondingIrm(data, irmLevel){
 // ─── rmg_arm_curve ───────────────────────────────────────────────────────────
 function rmgArmCurve(data){
   const empty = () => ({ experiment:'ARM', doesExist:false });
+  if(!data || !data.BlockType) return [empty()];   // VSM/MicroMag samples have no rmg blocks
 
   // ARM blocks followed by AF
   const candidateBlocks = [];
@@ -1678,6 +1679,7 @@ function rmgIrmBackfieldCurve(data){
 // ─── rmg_lowrie_fuller_curves ────────────────────────────────────────────────
 function rmgLowrieFullerCurves(data){
   const empty = () => ({ experiment:'Lowrie-Fuller', doesExist:false });
+  if(!data || !data.BlockType) return [empty()];   // VSM/MicroMag samples have no rmg blocks
 
   const irmTypes = new Set(['irm','irmz','irmx']);
   const candArm = [];
@@ -1947,6 +1949,36 @@ function rmgStats(dataList){
         for(let k=0;k<yv.length-1;k++){ if(yv[k]>=half && yv[k+1]<half){ const t=(yv[k]-half)/((yv[k]-yv[k+1])||1e-30);
           s.MDFofNRM=pts[k][0]+t*(pts[k+1][0]-pts[k][0]); break; } }
       }
+    }
+
+    // ── VSM / MicroMag samples: hysteresis-type parameters ──
+    if(data.vsm){
+      const v = data.vsm;
+      let params = null;
+      if(v.kind === 'hysteresis' && v.params) params = v.params;
+      if(v.kind === 'micromag-forc' && v.forcCurves && v.forcCurves.length >= 3){
+        // Assemble a major loop from the FORC data: descending branch =
+        // reversal points (Hr, M(Hr)); ascending branch = deepest-Hr curve.
+        const fc = rmgExtractForcDataComplete(data);
+        if(fc.exists){
+          const desc = fc.curves.map(c => [c.Hr, c.Mr]).filter(p => isFinite(p[1]))
+                         .sort((a,b) => b[0]-a[0]);          // +Hmax → −Hmax
+          let deep = fc.curves[0];
+          for(const c of fc.curves) if(c.Hr < deep.Hr) deep = c;
+          const asc = deep.Ha.map((h,k) => [h, deep.M[k]]).sort((a,b) => a[0]-b[0]);
+          const field  = desc.map(p=>p[0]).concat(asc.map(p=>p[0]));
+          const moment = desc.map(p=>p[1]).concat(asc.map(p=>p[1]));
+          try { params = vsmHystParams(field, moment); } catch(_){ params = null; }
+          s.nForcCurves = fc.curves.length;
+        }
+      }
+      if(params && params.valid){
+        s.Ms = params.Ms;                 // Am² (high-field slope corrected)
+        s.Mrs = params.Mrs;               // Am²
+        s.HcVsm = params.Hc * 1e3;        // T → mT
+        s.MrsToMs = params.squareness;
+      }
+      if(v.kind === 'dcd' && v.dcd && isFinite(v.dcd.Hcr)){ s.Hcr = v.dcd.Hcr * 1e3; }
     }
     results.push(s);
   }
@@ -3048,9 +3080,14 @@ function tForcDiag(samples){
     }
   }
 
-  // Convert Hc/Hu to mT for display
+  // Convert Hc/Hu to mT for display.
+  // Apex registration (shift so the low-Bc vertex sits at Bu=0) is only
+  // meaningful for the 2G triangular grid, where that vertex is unique.
+  // MicroMag/VSM grids have Bc≈0 cells all along the Ha≈Hr diagonal, so the
+  // "apex" is an arbitrary cell — skip the shift and show raw Bu instead.
+  const buShift = (d && d.vsm) ? 0 : apexBu;
   const x_mT = Array.from(Hc_1d).map(v => v * 1000);
-  const y_mT = Array.from(Hu_1d).map(v => (v - apexBu) * 1000);   // left apex → Bu=0
+  const y_mT = Array.from(Hu_1d).map(v => (v - buShift) * 1000);   // left apex → Bu=0 (2G only)
 
   // User-selected colormap from the FORC controls dropdown. Falls back to inferno_r.
   const colorscale = FORC_COLORMAPS[ForcDiagState.colormap] || FORC_COLORMAPS['inferno_r'];
@@ -5398,6 +5435,10 @@ function runStats(samples){
     {k:'sample',l:'Sample',f:v=>v,c:''},
     {k:'sIRM',l:'sIRM (Am²)',f:v=>fs_(v,3),c:'num'},
     {k:'sIRMperkg',l:'sIRM/kg',f:v=>fs_(v,3),c:'num'},
+    {k:'Ms',l:'Ms (Am²)',f:v=>fs_(v,3),c:'num'},
+    {k:'Mrs',l:'Mrs (Am²)',f:v=>fs_(v,3),c:'num'},
+    {k:'HcVsm',l:'Hc (mT)',f:v=>ff(v,1),c:'num'},
+    {k:'MrsToMs',l:'Mrs/Ms',f:v=>ff(v,3),c:'num'},
     {k:'Hcr',l:'Hcr (mT)',f:v=>ff(v,1),c:'num'},
     {k:'CisowskiR',l:'R',f:v=>ff(v,3),c:'num'},
     {k:'MDFofIRM',l:'MDF IRM',f:v=>ff(v,1),c:'num'},
