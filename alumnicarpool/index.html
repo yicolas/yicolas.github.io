@@ -200,6 +200,20 @@
 "use strict";
 const KEY="carpoolBoard.v1", CHAT_KEY="carpoolChat.v1", HKEY="carpoolHist.v1";
 
+/* ---- Firebase (shared live sync) ---- */
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyAKbWU4q3RTKQH5wCMpgaIGbj6SiPdWWVM",
+  authDomain:"alumni-trip.firebaseapp.com",
+  databaseURL:"https://alumni-trip-default-rtdb.firebaseio.com",
+  projectId:"alumni-trip",
+  storageBucket:"alumni-trip.firebasestorage.app",
+  messagingSenderId:"1096935003825",
+  appId:"1:1096935003825:web:b8f29ebc73ef16c6ac7490",
+  measurementId:"G-DHF3MKRQ49"
+};
+const CLOUD = !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.indexOf("PASTE")<0);
+let db=null, boardRef=null, chatRef=null, connected=false, applyingRemote=false, firstBoard=true;
+
 function seedData(){
   return {
     cars:[
@@ -239,8 +253,11 @@ function ensureShape(s){ if(!s.rooms)s.rooms={offering:[],looking:[]}; if(!s.roo
 let seq=100;
 let state = ensureShape(loadLocal());
 function loadLocal(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.cars&&s.riders) return s; }catch(e){} return seedData(); }
-let suppressSave=false;
-function persist(){ if(suppressSave)return; try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function persist(){
+  if(applyingRemote) return;
+  if(CLOUD){ if(connected&&boardRef){ try{ boardRef.set(state); }catch(e){} } }
+  else { try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+}
 
 const carById=id=>state.cars.find(c=>c.id===id);
 const ridersIn=id=>state.riders.filter(r=>r.carId===id);
@@ -482,7 +499,10 @@ function renderMsg(m){
   el.innerHTML=`<div class="who">${esc(m.name)}</div><div class="txt">${esc(m.text)}</div><div class="t">${fmtTime(m.ts)}</div>`;
   box.appendChild(el); box.scrollTop=box.scrollHeight;
 }
-function sendChat(text){ const m={name:myName(),text:text,ts:Date.now()}; localChat.push(m); try{localStorage.setItem(CHAT_KEY,JSON.stringify(localChat));}catch(e){} renderMsg(m); }
+function sendChat(text){ const m={name:myName(),text:text,ts:Date.now()};
+  if(CLOUD&&chatRef){ try{ chatRef.push(m); }catch(e){ toast("Message failed to send"); } }
+  else { localChat.push(m); try{localStorage.setItem(CHAT_KEY,JSON.stringify(localChat));}catch(e){} renderMsg(m); }
+}
 function initLocalChat(){
   try{localChat=JSON.parse(localStorage.getItem(CHAT_KEY))||[];}catch(e){localChat=[];}
   const box=document.getElementById("chatMsgs"); box.innerHTML="";
@@ -492,12 +512,44 @@ function initLocalChat(){
 document.getElementById("chatName").onclick=()=>{ const cur=(function(){try{return localStorage.getItem("carpoolChatName")||"";}catch(e){return "";}})(); const n=(prompt("Your name for the chat:",cur)||"").trim(); if(n){try{localStorage.setItem("carpoolChatName",n);}catch(e){} setWho();} };
 document.getElementById("chatForm").addEventListener("submit",e=>{e.preventDefault();const inp=document.getElementById("chatInput");const v=inp.value.trim();if(!v)return;sendChat(v);inp.value="";setWho();});
 
+/* ---- cloud (Firebase realtime sync) ---- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+async function initCloud(){
+  const cb=document.getElementById("chatBanner");
+  try{
+    await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+    await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js");
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.database();
+    // board + rooms (whole-state sync)
+    boardRef=db.ref("board");
+    boardRef.once("value").then(s=>{ if(!s.exists()) boardRef.set(state); });
+    boardRef.on("value", s=>{
+      connected=true;
+      if(s.exists()){ const v=s.val(); if(v&&v.cars&&v.riders){ applyingRemote=true; state=ensureShape(v); render(); applyingRemote=false;
+        if(firstBoard){ history=[{state:cloneState(state),label:"Loaded (shared board)",ts:Date.now()}]; hi=0; saveHistory(); updateHistUI(); renderLog(); firstBoard=false; } } }
+    });
+    // chat
+    document.getElementById("chatMsgs").innerHTML=`<div class="chat-empty">Loading…</div>`;
+    let firstChat=true; chatRef=db.ref("chat");
+    chatRef.on("child_added", snap=>{ if(firstChat){document.getElementById("chatMsgs").innerHTML="";firstChat=false;} renderMsg(snap.val()); });
+    chatRef.once("value").then(s=>{ if(!s.exists()) document.getElementById("chatMsgs").innerHTML=`<div class="chat-empty">No messages yet.</div>`; });
+    cb.textContent="✓ Live — shared with everyone on the link.";
+    cb.style.background="var(--wd-bg)"; cb.style.color="var(--wd)";
+  }catch(e){
+    connected=false;
+    toast("Couldn't reach the shared server — running local for now");
+    initLocalChat();
+  }
+}
+
 /* boot */
 initHistory();
 render();
 updateHistUI();
-initLocalChat();
 setWho();
+if(CLOUD){ document.getElementById("chatBanner").textContent="Connecting to shared board…"; initCloud(); }
+else { initLocalChat(); }
 </script>
 </body>
 </html>
