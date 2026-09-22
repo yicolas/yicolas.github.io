@@ -1343,201 +1343,7 @@ function extractDcDemag(data, stepnum){
   return y;
 }
 
-
-// ─── MPMS3 (Quantum Design) ──────────────────────────────────────────────────
-// A .dat file is an INFO header followed by "[Data]", one CSV header row and the
-// table. Low-temperature runs are recorded as a single table covering several
-// legs (cool, warm, warm), so the legs are separated here by the sign of dT.
-function mpmsDetect(name, text){
-  const head = text.slice(0, 2000);
-  if(/MPMS3?\s+Data File/i.test(head)) return 'mpms3';
-  if(/\[Header\]/.test(head) && /Quantum Design/i.test(head)) return 'mpms3';
-  return null;
-}
-
-function mpmsParse(text){
-  const lines = text.split(/\r?\n/);
-  const info = {};
-  let di = -1;
-  for(let i=0;i<lines.length;i++){
-    if(/^\s*\[data\]/i.test(lines[i])){ di = i; break; }
-    const m = lines[i].match(/^INFO,(.*?),([A-Z_0-9]+)\s*$/);
-    if(m) info[m[2]] = m[1];
-  }
-  if(di < 0) return null;
-  const cols = lines[di+1].split(',').map(c => c.trim());
-  const idx = {};
-  cols.forEach((c,j) => { idx[c] = j; });
-  const rows = [];
-  for(let i=di+2;i<lines.length;i++){
-    if(!lines[i].trim()) continue;
-    rows.push(lines[i].split(','));
-  }
-  const num = (r,j) => {
-    if(j===undefined || j>=r.length) return NaN;
-    const v = r[j].trim();
-    return v === '' ? NaN : Number(v);
-  };
-  // Prefer the free-centre DC moment; fall back through the usual alternatives.
-  let mcol = null;
-  for(const c of ['DC Moment Free Ctr (emu)','DC Moment Fixed Ctr (emu)','Moment (emu)']){
-    if(c in idx){
-      const cnt = rows.reduce((a,r) => a + (isFinite(num(r,idx[c])) ? 1 : 0), 0);
-      if(cnt > 20){ mcol = c; break; }
-    }
-  }
-  if(!mcol) return null;
-  const T = [], M = [], H = [];
-  for(const r of rows){
-    const t = num(r, idx['Temperature (K)']);
-    const m = num(r, idx[mcol]);
-    if(!isFinite(t) || !isFinite(m)) continue;
-    T.push(t); M.push(m); H.push(num(r, idx['Magnetic Field (Oe)']) || 0);
-  }
-  return { info, momentCol: mcol, T, M, H, nrows: rows.length };
-}
-
-// Split into monotonic temperature legs; drop single-point dropouts, which the
-// MPMS produces occasionally and which otherwise read as a sharp transition.
-function mpmsLegs(p, minLen){
-  minLen = minLen || 20;
-  const legs = [];
-  let cur = [0], sign = 0;
-  for(let i=1;i<p.T.length;i++){
-    const s = Math.sign(p.T[i] - p.T[i-1]);
-    if(s === 0){ cur.push(i); continue; }
-    if(sign === 0) sign = s;
-    if(s !== sign){
-      if(cur.length >= minLen) legs.push({sign, idx:cur});
-      cur = [i]; sign = s;
-    } else cur.push(i);
-  }
-  if(cur.length >= minLen) legs.push({sign, idx:cur});
-
-  return legs.map(L => {
-    const T = L.idx.map(i => p.T[i]);
-    const M = L.idx.map(i => p.M[i]);
-    const H = L.idx.map(i => p.H[i]);
-    const o = T.map((v,i) => i).sort((a,b) => T[a]-T[b]);
-    const Ts = o.map(i => T[i]), Ms = o.map(i => M[i]), Hs = o.map(i => H[i]);
-    // reject points that sit far off the local median step
-    const d = [];
-    for(let i=1;i<Ms.length;i++) d.push(Math.abs(Ms[i]-Ms[i-1]));
-    const sorted = d.slice().sort((a,b)=>a-b);
-    const med = sorted.length ? sorted[Math.floor(sorted.length/2)] : 0;
-    const keep = Ts.map((_,i) => {
-      if(i===0 || i===Ts.length-1) return true;
-      return Math.abs(Ms[i] - 0.5*(Ms[i-1]+Ms[i+1])) <= 8*med || med === 0;
-    });
-    return {
-      direction: L.sign > 0 ? 'warming' : 'cooling',
-      T: Ts.filter((_,i)=>keep[i]),
-      M: Ms.filter((_,i)=>keep[i]),
-      H: Hs.filter((_,i)=>keep[i]),
-      rejectedT: Ts.filter((_,i)=>!keep[i]),
-      rejectedM: Ms.filter((_,i)=>!keep[i]),
-      inField: Math.max(...Hs.map(Math.abs)) > 100
-    };
-  });
-}
-
-function mpmsImport(name, text){
-  const p = mpmsParse(text);
-  if(!p) return null;
-  const legs = mpmsLegs(p);
-  const sn = p.info.SAMPLE_MATERIAL || name.replace(/\.[^.]+$/,'');
-  return { samplename: sn,
-           mpms: { info:p.info, momentCol:p.momentCol, legs,
-                   comment:p.info.SAMPLE_COMMENT || '',
-                   massMg: Number(p.info.SAMPLE_MASS) || null,
-                   nrows:p.nrows } };
-}
-
-// ─── RRM (rotational remanent magnetisation) ────────────────────────────────
-// Acquired by rotating the specimen in an alternating field. The rotation rate
-// is recorded in the Spin Speed column, and the defining signature is that the
-// remanence reverses with the sense of rotation, so the signed axial component
-// is what matters, not the magnitude.
-function rmgRrmCurve(data){
-  if(!data || !data.steptypes) return [];
-  const blocks = [];
-  let cur = null;
-  for(let i=0;i<data.steptypes.length;i++){
-    const st = (data.steptypes[i]||'').toUpperCase();
-    if(st.startsWith('RRM')){
-      if(!cur) cur = { afOe: data.levels[i], spin:[], mx:[], my:[], mz:[] };
-      cur.spin.push(data.spin ? data.spin[i] : NaN);
-      cur.mx.push(data.mvector[0][i]);
-      cur.my.push(data.mvector[1][i]);
-      cur.mz.push(data.mvector[2][i]);
-    } else if(cur){
-      if(cur.spin.length >= 3) blocks.push(cur);
-      cur = null;
-    }
-  }
-  if(cur && cur.spin.length >= 3) blocks.push(cur);
-  for(const b of blocks){
-    b.mag = b.mz.map((v,i) => Math.hypot(b.mx[i], b.my[i], v));
-    const fin = b.spin.filter(isFinite);
-    b.spinMin = Math.min(...fin);
-    b.spinMax = Math.max(...fin);
-    b.peak = Math.max(...b.mz.map(Math.abs));
-  }
-  return blocks;
-}
-
 // ─── rmg_sirm_curve ──────────────────────────────────────────────────────────
-// ---------------------------------------------------------------------------
-// Crossover of the normalised IRM acquisition curve with the normalised AF
-// demagnetisation curve of the SIRM. Returns the crossover field (the remanent
-// coercivity Hcr) and the normalised remanence there (the Wohlfarth-Cisowski R
-// parameter). Both curves are interpolated onto a common logarithmic grid over
-// the overlap of their measured field ranges, and the first sign change of
-// (acquisition - demagnetisation) is located by linear interpolation.
-//
-// Fields are returned in whatever unit acqFields/afFields are supplied in.
-function rmgAcqDemagCrossover(acqFields, acqFracs, afFields, afFracs, nGrid){
-  const N = nGrid || 512;
-  const out = { Hcr: NaN, R: NaN, grid: [], acq: [], demag: [] };
-
-  const finitePositive = (fields, fracs) => {
-    const f = [];
-    for(let i=0;i<fields.length;i++){
-      if(isFinite(fields[i]) && fields[i] > 0 && isFinite(fracs[i])) f.push(fields[i]);
-    }
-    return f;
-  };
-  const aF = finitePositive(acqFields, acqFracs);
-  const dF = finitePositive(afFields,  afFracs);
-  if(aF.length < 2 || dF.length < 2) return out;
-
-  const lo = Math.max(Math.min.apply(null, aF), Math.min.apply(null, dF));
-  const hi = Math.min(Math.max.apply(null, aF), Math.max.apply(null, dF));
-  if(!(hi > lo)) return out;
-
-  const l0 = Math.log10(lo), l1 = Math.log10(hi);
-  const grid = new Array(N);
-  for(let i=0;i<N;i++) grid[i] = Math.pow(10, l0 + (l1 - l0) * i / (N - 1));
-
-  const acq   = interp1(acqFields, acqFracs, grid);
-  const demag = interp1(afFields,  afFracs,  grid);
-  out.grid = grid; out.acq = acq; out.demag = demag;
-
-  for(let i=0;i<N-1;i++){
-    const d0 = acq[i] - demag[i];
-    const d1 = acq[i+1] - demag[i+1];
-    if(!isFinite(d0) || !isFinite(d1)) continue;
-    if(d0 === 0){ out.Hcr = grid[i]; out.R = acq[i]; return out; }
-    if(d0 * d1 < 0){
-      const t = d0 / (d0 - d1);
-      out.Hcr = grid[i] + t * (grid[i+1] - grid[i]);
-      out.R   = acq[i]  + t * (acq[i+1]  - acq[i]);
-      return out;
-    }
-  }
-  return out;
-}
-
 function rmgSirmCurve(data){
   const emptyResult = () => ({
     experiment:'SIRM', doesExist:false,
@@ -1646,27 +1452,23 @@ function rmgSirmCurve(data){
         : afMz.map(()=>NaN);
       y.AF.fracmags = afFracmags;
 
-      // Median destructive field of the SIRM: the ALTERNATING field that halves
-      // the remanence. This is NOT the remanent coercivity - see y.Hcr below.
-      y.MDFofSIRM = interp1(afFracmags, afFields, 0.5);
+      y.Hcr = interp1(afFracmags, afFields, 0.5);
 
-      // Remanent coercivity and the Wohlfarth-Cisowski R parameter, both read
-      // off the crossover of the normalised IRM acquisition curve and the
-      // normalised AF demagnetisation curve of the SIRM (Cisowski 1981).
-      // R = 0.5 for a non-interacting uniaxial single-domain assemblage;
-      // lower values indicate magnetostatic interaction.
-      const cross = rmgAcqDemagCrossover(irmFields, irmFracs, afFields, afFracmags);
-      y.Hcr       = cross.Hcr;
-      y.R         = cross.R;
-      y.crossover = cross;
-
-      // Common field grid retained: y.diff.integrateddelta below still uses it.
+      // Cisowski R: fraction of common fields where IRM_acq < IRM_AF
       const commonSet = new Set();
       for(const v of irmFields) if(isFinite(v)) commonSet.add(v);
       for(const v of afFields)  if(isFinite(v)) commonSet.add(v);
       const commonFields = Array.from(commonSet).sort((a,b)=>a-b);
       const irmI = commonFields.map(cf => interp1(irmFields, irmFracs,   cf));
       const afI  = commonFields.map(cf => interp1(afFields,  afFracmags, cf));
+      let below = 0, total = 0;
+      for(let i=0;i<commonFields.length;i++){
+        if(isFinite(irmI[i]) && isFinite(afI[i])){
+          total++;
+          if(irmI[i] < afI[i]) below++;
+        }
+      }
+      y.R = total > 0 ? below / total : NaN;
 
       // MDF of AF demag
       if(y.AF.IRMDemagStepCount > 1){
@@ -2093,7 +1895,6 @@ function rmgStats(dataList){
 
       if(sc.AF && sc.AF.doesExist){
         s.Hcr                  = safe(sc.Hcr) * 1e3;
-        s.MDFofSIRM            = safe(sc.MDFofSIRM) * 1e3;
         s.CisowskiR            = safe(sc.R);
         s.SkewnessofIRMAcq     = safe(sc.IRM.skewness);
         s.IntegratedIRMMinusAF = sc.diff ? safe(sc.diff.integrateddelta) : NaN;
@@ -2101,11 +1902,11 @@ function rmgStats(dataList){
         s.SkewnessofIRMAF      = safe(sc.AF.skewness);
         s.DPofIRMAF            = safe(sc.AF.dispersion);
       } else {
-        ['Hcr','MDFofSIRM','CisowskiR','SkewnessofIRMAcq','IntegratedIRMMinusAF',
+        ['Hcr','CisowskiR','SkewnessofIRMAcq','IntegratedIRMMinusAF',
          'MDFofIRM','SkewnessofIRMAF','DPofIRMAF'].forEach(k => s[k] = NaN);
       }
     } else {
-      ['sIRM','sIRMperkg','Hcr','MDFofSIRM','CisowskiR','IRM30toIRM100','IRM100toIRM300',
+      ['sIRM','sIRMperkg','Hcr','CisowskiR','IRM30toIRM100','IRM100toIRM300',
        'IntegratedIRMMinusAF','MAFofIRM','MDFofIRM','dfIRMdBatField','dfIRMdB',
        'DPofIRMAcq','DPofIRMAF','SkewnessofIRMAcq','SkewnessofIRMAF'].forEach(k => s[k] = NaN);
     }
@@ -2238,30 +2039,6 @@ function buildLayout(samples, op){
         xaxis:logX,
         yaxis:ax('f<sub>SIRM</sub>', {rangemode:'tozero'}),
         margin:M(54,16,36,72)
-      });
-    case 'RRM':
-    case 'RRM_MAG':
-      return Object.assign({}, common, {
-        title:TT(`RRM${n}`),
-        xaxis:ax('rotation rate (rps)', {zeroline:true}),
-        yaxis:ax(op.toUpperCase()==='RRM_MAG' ? '|M| (Am<sup>2</sup>)'
-                                              : 'RRM M<sub>z</sub> (Am<sup>2</sup>)',
-                 {zeroline:true}),
-        margin:M(72,16,36,72)
-      });
-    case 'MPMS_LOWT':
-      return Object.assign({}, common, {
-        title:TT(`low-temperature remanence${n}`),
-        xaxis:ax('T (K)', {rangemode:'tozero'}),
-        yaxis:ax('M / M<sub>start</sub>'),
-        margin:M(62,16,36,72)
-      });
-    case 'MPMS_DERIV':
-      return Object.assign({}, common, {
-        title:TT(`d(M/M<sub>start</sub>)/dT${n}`),
-        xaxis:ax('T (K)', {rangemode:'tozero'}),
-        yaxis:ax('-dM/dT (10<sup>-3</sup> K<sup>-1</sup>)'),
-        margin:M(66,16,36,72)
       });
     case 'DIRM':
       return Object.assign({}, common, {
@@ -3412,110 +3189,6 @@ function tForcHyst(samples){
   return traces;
 }
 
-
-// ─── RRM and MPMS trace builders ────────────────────────────────────────────
-function tRRM(samples, useMag){
-  const tr = [];
-  const L = document.documentElement.classList.contains('light');
-  const C = L ? ['#b3301a','#0d4a8a','#6b5310','#5c2278','#0f7a3c','#9c1560']
-              : ['#f87171','#60a5fa','#fbbf24','#c084fc','#4ade80','#f472b6'];
-  samples.forEach((d, i) => {
-    const blocks = rmgRrmCurve(d);
-    if(!blocks.length) return;
-    // merge the rotation senses into one curve through zero
-    const pts = [];
-    for(const b of blocks){
-      for(let k=0;k<b.spin.length;k++){
-        const y = useMag ? b.mag[k] : b.mz[k];
-        if(isFinite(b.spin[k]) && isFinite(y)) pts.push([b.spin[k], y]);
-      }
-    }
-    pts.sort((a,b) => a[0]-b[0]);
-    tr.push({
-      x: pts.map(p=>p[0]), y: pts.map(p=>p[1]),
-      mode:'lines+markers', type:'scatter',
-      name: (d.samplename||('sample '+(i+1))) + (useMag ? ' |M|' : ' Mz'),
-      line:{color:C[i%C.length], width:1.6},
-      marker:{size:4, color:C[i%C.length]}
-    });
-  });
-  return tr;
-}
-
-function tMpmsLowT(samples){
-  const tr = [];
-  const L = document.documentElement.classList.contains('light');
-  const C = L ? ['#b3301a','#0d4a8a','#6b5310','#5c2278']
-              : ['#f87171','#60a5fa','#fbbf24','#c084fc'];
-  let ci = 0;
-  samples.forEach(d => {
-    if(!d.mpms) return;
-    d.mpms.legs.forEach(leg => {
-      if(leg.inField || leg.T.length < 20) return;
-      const m0 = leg.M[0] || 1;
-      tr.push({
-        x: leg.T, y: leg.M.map(v => v/m0),
-        mode:'lines', type:'scatter',
-        name: (d.samplename||'sample') + ' ' + leg.direction,
-        line:{color:C[ci%C.length], width:1.8}
-      });
-      if(leg.rejectedT.length){
-        tr.push({
-          x: leg.rejectedT, y: leg.rejectedM.map(v => v/m0),
-          mode:'markers', type:'scatter', name:'rejected outlier',
-          marker:{size:7, symbol:'x', color:'#888888'}, showlegend:true
-        });
-      }
-      ci++;
-    });
-  });
-  // reference lines for the two transitions this plot exists to look for
-  if(tr.length){
-    for(const [x, lab] of [[120,'Verwey (magnetite)'],[34,'Besnus (pyrrhotite)']]){
-      tr.push({ x:[x,x], y:[0,1.05], mode:'lines', type:'scatter', name:lab,
-                line:{color:'#888888', width:1, dash:'dot'}, hoverinfo:'name' });
-    }
-  }
-  return tr;
-}
-
-function tMpmsDeriv(samples){
-  const tr = [];
-  const L = document.documentElement.classList.contains('light');
-  const C = L ? ['#b3301a','#0d4a8a'] : ['#f87171','#60a5fa'];
-  let ci = 0;
-  samples.forEach(d => {
-    if(!d.mpms) return;
-    d.mpms.legs.forEach(leg => {
-      if(leg.inField || leg.T.length < 40) return;
-      const m0 = leg.M[0] || 1;
-      const T = leg.T, Mn = leg.M.map(v => v/m0);
-      const dv = [];
-      for(let i=1;i<T.length-1;i++){
-        const dT = T[i+1]-T[i-1];
-        dv.push(dT !== 0 ? -(Mn[i+1]-Mn[i-1])/dT : NaN);
-      }
-      // 9-point boxcar, matching the smoothing used elsewhere in the app
-      const w = 9, half = (w-1)/2, sm = [];
-      for(let i=0;i<dv.length;i++){
-        let a = 0, c = 0;
-        for(let j=Math.max(0,i-half); j<=Math.min(dv.length-1,i+half); j++){
-          if(isFinite(dv[j])){ a += dv[j]; c++; }
-        }
-        sm.push(c ? a/c : NaN);
-      }
-      tr.push({
-        x: T.slice(1,-1), y: sm.map(v => v*1e3),
-        mode:'lines', type:'scatter',
-        name: (d.samplename||'sample') + ' ' + leg.direction,
-        line:{color:C[ci%C.length], width:1.6}
-      });
-      ci++;
-    });
-  });
-  return tr;
-}
-
 // Dispatch to correct trace builder
 function buildTraces(samples, op){
   switch(op.toUpperCase()){
@@ -3536,10 +3209,6 @@ function buildTraces(samples, op){
     case 'DCD_CURVE':     return tDcdCurve(samples);
     case 'DAY':           return tDayDiagram(samples);
     case 'TABLE':         return tDayTable(samples);
-    case 'RRM':         return tRRM(samples, false);
-    case 'RRM_MAG':     return tRRM(samples, true);
-    case 'MPMS_LOWT':   return tMpmsLowT(samples);
-    case 'MPMS_DERIV':  return tMpmsDeriv(samples);
     case 'FORC_DIAG':   return tForcDiag(samples);
     case 'FORC_HYST':   return tForcHyst(samples);
     default: return [];
@@ -3548,21 +3217,6 @@ function buildTraces(samples, op){
 
 // ── Plot captions (educational text) ─────────────────────────────────────────
 const CAPTIONS = {
-  'RRM': {
-    title: 'Rotational remanent magnetisation',
-    axes:  'x: rotation rate (rps)  ·  y: M<sub>z</sub> (Am<sup>2</sup>)',
-    interp: 'RRM is acquired by rotating the specimen in an alternating field. The defining test is that the remanence <b>reverses sign with the sense of rotation</b>; a curve that is antisymmetric through the origin is a real RRM rather than a stray ARM. Magnitude grows with rotation rate before levelling off. A large RRM relative to ARM is characteristic of greigite.'
-  },
-  'MPMS_LOWT': {
-    title: 'Low-temperature remanence',
-    axes:  'x: temperature (K)  ·  y: M normalised to the start of the leg',
-    interp: 'Warming a low-temperature remanence in zero field. A step near 120 K is the Verwey transition of magnetite; a step near 34 K is the Besnus transition of monoclinic pyrrhotite. Greigite has no low-temperature transition, so a smooth monotonic decay with neither step points away from both minerals.'
-  },
-  'MPMS_DERIV': {
-    title: 'Temperature derivative',
-    axes:  'x: temperature (K)  ·  y: -d(M/M<sub>start</sub>)/dT',
-    interp: 'The derivative of the warming curve. A transition appears here as a peak; a featureless monotonic rise means no transition. Single-point dropouts are rejected before differentiating, since one bad point produces a spike indistinguishable from a transition.'
-  },
   'IRM': {
     title: 'IRM acquisition + AF demagnetisation',
     axes:  'x: applied field B (log mT)  ·  y: f<sub>SIRM</sub> = M / M<sub>final</sub>',
@@ -5183,14 +4837,6 @@ const OPS = [
     {key:'DAY',       label:'Day diagram (Mrs/Ms vs Hcr/Hc)'},
     {key:'TABLE',     label:'data table (raw values)'},
   ]},
-  {sec:'rotational remanence', items:[
-    {key:'RRM',     label:'RRM vs rotation rate (Mz)'},
-    {key:'RRM_MAG', label:'RRM vs rotation rate (|M|)'},
-  ]},
-  {sec:'low-temperature (MPMS)', items:[
-    {key:'MPMS_LOWT',  label:'remanence vs temperature'},
-    {key:'MPMS_DERIV', label:'dM/dT (transition finder)'},
-  ]},
   {sec:'tools', items:[
     {key:'SAM_GEN',  label:'.sam generator (CIT format)'},
     {key:'FORC_GEN', label:'FORC script generator'},
@@ -5225,10 +4871,7 @@ function opsForKind(kind){
   const HYS=['HYST_LOOP','DAY','STATS'];
   const DCDK=['DCD_CURVE','DAY','STATS'];
   const TBL=['DAY','TABLE'];
-  const RRMK=['RRM','RRM_MAG','STATS','COER','SAM_GEN'];
-  const MPMSK=['MPMS_LOWT','MPMS_DERIV'];
-  const map={FORC:FORC, rockmag:ROCK, IRM:IRMK, ARM:ARMK, hysteresis:HYS, dcd:DCDK,
-             daytable:TBL, RRM:RRMK, mpms:MPMSK};
+  const map={FORC:FORC, rockmag:ROCK, IRM:IRMK, ARM:ARMK, hysteresis:HYS, dcd:DCDK, daytable:TBL};
   const arr=map[kind];
   return arr ? new Set(arr) : null;
 }
@@ -5365,18 +5008,6 @@ async function onFiles(files){
         continue;
       }
       const text = await f.text();
-      if(mpmsDetect(f.name, text)){
-        const md = mpmsImport(f.name, text);
-        if(md){
-          S.samples.push({_d:md, selected:true, id:nextId++, up:{name:f.name, text}});
-          const nl = md.mpms.legs.filter(l => !l.inField).length;
-          log(md.samplename + ' added (MPMS, ' + nl + ' zero-field leg' +
-              (nl===1?'':'s') + ')', 'ok');
-        } else {
-          log('✗ ' + f.name + ': MPMS file with no usable moment column', 'err');
-        }
-        continue;
-      }
       const vk = vsmDetect(f.name, text);
       if(vk){ const vd=vsmImport(f.name, text, vk);
         S.samples.push({_d:vd, selected:true, id:nextId++, up:{name:f.name, text}}); log(vd.samplename+' added','ok'); continue; }
@@ -5424,12 +5055,10 @@ function showRunPickerAsync(filename, text, runs, defaultData){
 // Classify a parsed RmgData into a short "kind" label for sort/display.
 // Priority: FORC > rockmag > AF-demag > cor/coe > other
 function rmgKind(d){
-  if(d && d.mpms) return 'mpms';
   if(d && d.vsm) return d.vsm.kind==='micromag-forc' ? 'FORC' : d.vsm.kind;
   if(!d || !d.BlockType) return 'other';
   const bt = new Set(d.BlockType.map(t => (t || '').toUpperCase()));
   if(bt.has('FORCZ')) return 'FORC';
-  if(bt.has('RRM')) return 'RRM';
   const hasIrm = bt.has('IRM') || bt.has('IRMZ') || bt.has('IRMX');
   const hasArm = bt.has('ARM');
   const hasAf  = bt.has('AF');
