@@ -182,6 +182,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
         <button class="btn xs" onclick="samplesSelectAll()" title="Select all loaded samples">select all</button>
         <button class="btn xs" onclick="samplesClearAll()" title="Deselect all samples">clear all</button>
         <button class="btn xs" id="group-btn" onclick="toggleGroupByType()" title="Group samples into collapsible folders by type">⊞ group</button>
+        <button class="btn xs" onclick="stackSelectedForcRuns()" title="Average selected repeat MicroMag FORC runs (same specimen &amp; field script, e.g. .forc.000–.003) into one stacked sample — ~√N noise reduction">⧉ stack FORC</button>
         <button class="btn xs" onclick="samplesRemoveAll()" title="Remove all samples" style="margin-left:auto;color:var(--red)">remove all</button>
       </div>
       <div id="sample-sortbar" style="display:none;gap:4px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:4px;align-items:center;font-size:9px;color:var(--tx3)">
@@ -2866,6 +2867,124 @@ function vsmExtractMicromagForc(text, stepmT){ stepmT=stepmT||1;
     const keys=[...seen.keys()].sort((a,b)=>a-b);
     curves.push({Hr, Ha:keys.map(k=>k/1000), M:keys.map(k=>{const a=seen.get(k);return a.reduce((x,y)=>x+y)/a.length;})}); }
   return curves; }
+// ── Stack repeat MicroMag FORC runs (same specimen, same field script) ──────
+// Averages the moment at matched (Hr, Ha) nodes across N repeat runs
+// (MicroMag saves repeats as .forc.000/.001/…). For identical schedules this
+// is equivalent to feeding all N×curves into the local-polynomial fit, and
+// reduces random moment noise by ~√N. Refuses to stack runs whose reversal-
+// field schedules do not match (protects against mixing specimens/scripts).
+function stackForcRuns(datas){
+  const runs = datas.filter(d => d && d.vsm && d.vsm.forcCurves && d.vsm.forcCurves.length >= 3);
+  if(runs.length < 2) return { error: 'select at least two MicroMag FORC runs (.frc / .forc.00x samples)' };
+
+  // Reference = run with the most curves
+  let ref = runs[0];
+  for(const r of runs) if(r.vsm.forcCurves.length > ref.vsm.forcCurves.length) ref = r;
+  const refCurves = ref.vsm.forcCurves;
+
+  // Hr pairing tolerance: just under half the median reversal-field spacing,
+  // so a curve can never be paired with its neighbour.
+  const hrs = refCurves.map(c => c.Hr).sort((a,b) => a - b);
+  const gaps = []; for(let i=1;i<hrs.length;i++) gaps.push(hrs[i]-hrs[i-1]);
+  gaps.sort((a,b) => a - b);
+  const HrTol = gaps.length ? 0.45 * gaps[Math.floor(gaps.length/2)] : 0.0015;
+
+  // Pair each run's curves to the reference schedule by nearest Hr
+  const pairings = [];
+  for(const r of runs){
+    // Endpoint alignment first: a uniformly shifted or different-window
+    // schedule aliases onto the curve grid and would pair with the WRONG
+    // neighbours, so nearest-Hr matching alone cannot catch it.
+    const rHrs = r.vsm.forcCurves.map(c => c.Hr);
+    const dMin = Math.abs(Math.min.apply(null, rHrs) - hrs[0]);
+    const dMax = Math.abs(Math.max.apply(null, rHrs) - hrs[hrs.length-1]);
+    if(dMin > HrTol || dMax > HrTol)
+      return { error: (r.samplename||'run') + ' has a different reversal-field window than the reference (endpoints differ by ' +
+               (Math.max(dMin,dMax)*1000).toFixed(1) + ' mT) — refusing to stack' };
+    const used = new Set(); const pairs = [];
+    for(const rc of refCurves){
+      let best = -1, bestD = Infinity;
+      r.vsm.forcCurves.forEach((c,i) => {
+        if(used.has(i)) return;
+        const dd = Math.abs(c.Hr - rc.Hr);
+        if(dd < bestD){ bestD = dd; best = i; }
+      });
+      if(best >= 0 && bestD <= HrTol){ used.add(best); pairs.push(r.vsm.forcCurves[best]); }
+      else pairs.push(null);
+    }
+    const matched = pairs.filter(Boolean).length;
+    if(matched < 0.8 * refCurves.length)
+      return { error: (r.samplename||'run') + ' does not share the reference field schedule (' +
+               matched + '/' + refCurves.length + ' curves matched within ' +
+               (HrTol*1000).toFixed(2) + ' mT) — refusing to stack' };
+    pairings.push(pairs);
+  }
+
+  // Amplitude consistency across runs (drift / alteration warning)
+  const amp = runs.map(r => Math.max.apply(null, r.vsm.forcCurves.map(c => Math.max.apply(null, c.M.map(Math.abs)))));
+  const ampRatio = Math.max.apply(null, amp) / Math.min.apply(null, amp);
+
+  // Average per node. Ha values are already binned to a common mT grid at
+  // import, so keys match exactly across runs.
+  const KEY = h => Math.round(h * 1e4);
+  const stacked = [];
+  for(let ci = 0; ci < refCurves.length; ci++){
+    const members = pairings.map(p => p[ci]).filter(Boolean);
+    if(!members.length) continue;
+    const HrAvg = members.reduce((a,c) => a + c.Hr, 0) / members.length;
+    const acc = new Map();
+    for(const c of members){
+      for(let k = 0; k < c.Ha.length; k++){
+        const key = KEY(c.Ha[k]);
+        if(!acc.has(key)) acc.set(key, { ha: c.Ha[k], ms: [] });
+        acc.get(key).ms.push(c.M[k]);
+      }
+    }
+    const keys = [...acc.keys()].sort((a,b) => a - b);
+    const Ha = [], M = [], nAvg = [], sd = [];
+    for(const key of keys){
+      const e = acc.get(key);
+      const mean = e.ms.reduce((a,b) => a + b, 0) / e.ms.length;
+      Ha.push(e.ha); M.push(mean); nAvg.push(e.ms.length);
+      sd.push(e.ms.length > 1 ? Math.sqrt(e.ms.reduce((a,b) => a + (b-mean)*(b-mean), 0) / (e.ms.length - 1)) : NaN);
+    }
+    stacked.push({ Hr: HrAvg, Ha, M, nAvg, sd });
+  }
+
+  // Median between-run scatter — a free per-node noise estimate
+  const sds = stacked.flatMap(c => c.sd.filter(isFinite));
+  const medSd = sds.length ? sds.slice().sort((a,b) => a - b)[Math.floor(sds.length/2)] : NaN;
+
+  // Name: longest common prefix of the member names
+  const names = runs.map(r => r.samplename || '');
+  let pre = names[0];
+  for(const n of names){ let i = 0; while(i < pre.length && i < n.length && pre[i] === n[i]) i++; pre = pre.slice(0, i); }
+  pre = pre.replace(/\.(forc|frc)\.?\d*$/i, '').replace(/[.\-_ ]+$/, '') || 'FORC';
+
+  return {
+    data: { samplename: pre + ' (stack of ' + runs.length + ')',
+            vsm: { kind: 'micromag-forc', units: ref.vsm.units, series: ref.vsm.series,
+                   description: ref.vsm.description || '', forcCurves: stacked,
+                   stackedFrom: names, stackMedianSd: medSd } },
+    nRuns: runs.length, nCurves: stacked.length,
+    nNodes: stacked.reduce((a,c) => a + c.Ha.length, 0),
+    ampRatio, medSd
+  };
+}
+
+function stackSelectedForcRuns(){
+  const sel = S.samples.filter(s => s.selected).map(s => s._d);
+  const res = stackForcRuns(sel);
+  if(res.error){ log('✗ stack: ' + res.error, 'err'); return; }
+  if(res.ampRatio > 1.2) log('⚠ stack: run amplitudes differ by ×' + res.ampRatio.toFixed(2) +
+    ' — specimen may have changed between runs; stacked anyway', 'warn');
+  S.samples.forEach(s => s.selected = false);
+  S.samples.push({ _d: res.data, selected: true, id: nextId++ });
+  log(res.data.samplename + ' created: ' + res.nRuns + ' runs → ' + res.nCurves + ' curves / ' +
+      res.nNodes + ' nodes' + (isFinite(res.medSd) ? ' · median between-run σ ' + res.medSd.toExponential(2) + ' Am²' : ''), 'ok');
+  sortSamples(); renderSamples(); renderOps(); saveSession(); runAnalysis();
+}
+
 function vsmMassFor(name){ try{ if(typeof S==='undefined'||!S.samples) return NaN;
   for(const s of S.samples){ const v=s._d&&s._d.vsm; if(v&&v.kind==='daytable'&&v.rows){
     const r=v.rows.find(rr=>rr.name && (rr.name===name||name.includes(rr.name)||rr.name.includes(name)));
