@@ -5365,6 +5365,20 @@ async function onFiles(files){
         continue;
       }
       const text = await f.text();
+      // ── Quantum Design non-measurement files: skip with a clear message ──
+      const _head = text.slice(0, 2000);
+      if(_ext==='gph' || /^\s*\[Global\]/.test(_head)){
+        log('⚠ ' + f.name + ': MultiVu graph-settings file — nothing to plot, skipped', 'warn');
+        continue;
+      }
+      if(/BYAPP,\s*LogData/i.test(_head)){
+        log('⚠ ' + f.name + ': MPMS system log (temperatures/status only) — skipped; load the reduced .dat instead', 'warn');
+        continue;
+      }
+      if(/DC Raw Data File/i.test(_head) || /\.rw\.dat$/i.test(f.name)){
+        log('⚠ ' + f.name + ': MPMS raw voltage scans — not supported; load the reduced .dat instead', 'warn');
+        continue;
+      }
       if(mpmsDetect(f.name, text)){
         const md = mpmsImport(f.name, text);
         if(md){
@@ -5583,23 +5597,27 @@ function cleanForcSample(id){
   log((cleaned._nCleaned || 0) + ' spike(s) interpolated -> ' + cleaned.samplename, 'ok');
 }
 function sampleCategory(d){
+  if(d && d.mpms) return 'MPMS';
   if(d && d.vsm){ return ({hysteresis:'Hysteresis loops', dcd:'DCD / backfield', daytable:'Summary tables', 'micromag-forc':'FORC'})[d.vsm.kind] || 'VSM'; }
   const k=rmgKind(d);
-  return ({FORC:'FORC', rockmag:'Rock magnetics', IRM:'IRM', ARM:'ARM'})[k] || 'Other';
+  return ({FORC:'FORC', rockmag:'Rock magnetics', IRM:'IRM', ARM:'ARM', RRM:'RRM'})[k] || 'Other';
 }
-const CATEGORY_ORDER=['FORC','Hysteresis loops','DCD / backfield','Summary tables','Rock magnetics','IRM','ARM','VSM','Other'];
+const CATEGORY_ORDER=['FORC','Hysteresis loops','DCD / backfield','Summary tables','Rock magnetics','IRM','ARM','RRM','MPMS','VSM','Other'];
 
 function renderSampleItem(s, parentEl){
   const d = s._d;
   const div = document.createElement('div');
   div.className = 'sample-item' + (s.selected ? ' sel' : '');
-  const _meta = (d.vsm) ? (rmgKind(d) + ' · ' + (
+  const _meta = (d.mpms) ? ('MPMS · ' + d.mpms.legs.length + ' leg' + (d.mpms.legs.length===1?'':'s')
+      + (d.mpms.massMg ? ' · ' + d.mpms.massMg + ' mg' : ''))
+    : (d.vsm) ? (rmgKind(d) + ' · ' + (
       d.vsm.kind==='hysteresis' ? ((d.vsm.hyst?d.vsm.hyst.n:0) + ' pts')
     : d.vsm.kind==='dcd' ? ((d.vsm.remanence?d.vsm.remanence.n:0) + ' pts')
     : d.vsm.kind==='daytable' ? ((d.vsm.rows?d.vsm.rows.length:0) + ' samples')
     : d.vsm.kind==='micromag-forc' ? ((d.vsm.forcCurves?d.vsm.forcCurves.length:0) + ' FORC curves')
     : 'VSM'))
-    : (rmgKind(d) + ' · ' + d.steptypes.length + ' steps · ' + d.BlockType.length + ' blocks');
+    : (d.steptypes && d.BlockType) ? (rmgKind(d) + ' · ' + d.steptypes.length + ' steps · ' + d.BlockType.length + ' blocks')
+    : rmgKind(d);
   const _massKind = d.vsm && (d.vsm.kind==='hysteresis' || d.vsm.kind==='dcd');
   div.innerHTML = `
     <input type="checkbox" class="chk" ${s.selected?'checked':''}>
