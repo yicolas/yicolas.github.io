@@ -63,6 +63,9 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 
 /* ops (col 2) */
 .shdr{color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:10px 8px 4px}
+.shdr.tog{cursor:pointer;user-select:none}
+.shdr.tog:hover{color:var(--tx)}
+.shdr .cnt{opacity:.55;letter-spacing:0}
 .op{padding:6px 8px;border-radius:var(--r);cursor:pointer;margin-bottom:2px;display:flex;flex-direction:column;gap:2px;font-size:11px;transition:all .12s}
 .op-row{display:flex;align-items:center;gap:8px;width:100%}
 .op-blurb{color:var(--tx3);font-size:9.5px;line-height:1.3;padding-left:80px;opacity:.75}
@@ -158,6 +161,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 <div class="hdr">
   <span class="logo">⬡ pyRockmag</span>
   <span class="sub">rock magnetism · pure JS · instant</span>
+  <span class="sub" id="build-tag" style="opacity:.55"></span>
   <div class="sp"></div>
   <button class="btn sm" id="theme-btn" onclick="toggleTheme()">◑ light</button>
 </div>
@@ -178,11 +182,19 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
       </div>
       <input id="fi" type="file" multiple onchange="onFiles(this.files)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
       <button id="restore-btn" class="btn xs" style="display:none;width:100%;margin-top:6px" onclick="restoreSession()">↺ restore last session</button>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="btn xs" style="flex:1" onclick="exportSessionFile()" title="Save all loaded files + settings as a portable .json session file">💾 save session</button>
+        <button class="btn xs" style="flex:1" onclick="document.getElementById('session-fi').click()" title="Load a previously saved .json session file">📂 load session</button>
+        <input id="session-fi" type="file" accept=".json,application/json" onchange="importSessionFile(this.files[0]); this.value='';" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      </div>
+      <input id="sample-filter" placeholder="filter samples…" oninput="renderSamples()" style="width:100%;margin-top:6px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx);padding:3px 6px;border-radius:3px;font-family:var(--mono);font-size:10px;box-sizing:border-box">
       <div id="sample-toolbar" style="display:none;gap:4px;padding:6px 0 4px;border-bottom:1px solid var(--bdr);margin-bottom:4px">
         <button class="btn xs" onclick="samplesSelectAll()" title="Select all loaded samples">select all</button>
         <button class="btn xs" onclick="samplesClearAll()" title="Deselect all samples">clear all</button>
         <button class="btn xs" id="group-btn" onclick="toggleGroupByType()" title="Group samples into collapsible folders by type">⊞ group</button>
         <button class="btn xs" onclick="stackSelectedForcRuns()" title="Average selected repeat MicroMag FORC runs (same specimen &amp; field script, e.g. .forc.000–.003) into one stacked sample — ~√N noise reduction">⧉ stack FORC</button>
+        <button class="btn xs" onclick="exportMagicSelected()" title="Export selected samples as a MagIC (data model 3.0) upload file: specimens + measurements tables, SI units, standard method codes">⇣ MagIC</button>
+        <button class="btn xs" onclick="exportFiguresZip()" title="Render every available plot for the first selected sample and download them all as one zip of PNGs">🖼 figures</button>
         <button class="btn xs" onclick="samplesRemoveAll()" title="Remove all samples" style="margin-left:auto;color:var(--red)">remove all</button>
       </div>
       <div id="sample-sortbar" style="display:none;gap:4px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:4px;align-items:center;font-size:9px;color:var(--tx3)">
@@ -204,7 +216,10 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 
   <!-- col 2: operations -->
   <div class="col">
-    <div class="col-hdr">Plots</div>
+    <div class="col-hdr" style="display:flex;align-items:center;gap:6px"><span>Plots</span>
+      <input id="op-filter" placeholder="filter…" oninput="renderOps()" style="flex:1;min-width:40px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx);padding:2px 6px;border-radius:3px;font-family:var(--mono);font-size:10px;text-transform:none;letter-spacing:0">
+      <button class="btn xs" id="op-sort-btn" onclick="toggleOpsSort()" title="Sort plot names A–Z within each section">A–Z</button>
+    </div>
     <div class="col-body" id="op-list"></div>
   </div>
 
@@ -285,6 +300,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
       <span id="forc-diag-info" style="color:var(--tx3);margin-left:auto"></span>
     </div>
     <div id="plotly-div"></div>
+      <div id="fit-panel" style="display:none;max-height:46%;overflow:auto;border-top:1px solid var(--bdr);background:var(--bg2);padding:8px 12px;font-size:11px;font-family:var(--mono)"></div>
       <div id="dash-grid">
         <div class="dash-cell" style="grid-column:1;grid-row:1"><div id="d0" class="plotly"></div></div>
         <div class="dash-vsp"  style="grid-column:2;grid-row:1" id="dvsp1"></div>
@@ -687,6 +703,7 @@ function rmgImport(filename, text, skipTrim){
   y.stepsARM     = match('arm');
   y.stepsRRM     = match('rrm');
   y.stepsThermal = Array.from(new Set([...match('tt'), ...match('trm')])).sort((a,b)=>a-b);
+  y.stepsLT      = match('lt');          // LT1/LT2… liquid-nitrogen (77 K) steps
 
   // ── Treatment field arrays (SI) ───────────────────────────────────────────
   y.treatmentAFFields = new Array(n).fill(0);
@@ -2275,6 +2292,41 @@ function buildLayout(samples, op){
       return Object.assign({}, common, { title:TT(`NRM AF demagnetisation${n}`),
         xaxis:ax('AF field (mT)'), yaxis:Object.assign(ax('M / M₀'),{range:[0,1.05]}),
         margin:M(60,16,40,72), showlegend:true });
+    case 'THERM_DECAY':
+      return Object.assign({}, common, { title:TT(`thermal demagnetisation${n}`),
+        xaxis:ax('treatment (°C or mT)'), yaxis:Object.assign(ax('M / M₀'),{rangemode:'tozero'}),
+        margin:M(60,16,40,72), showlegend:true });
+    case 'DEMAG_COMP':
+      return Object.assign({}, common, { title:TT(`component decay (Lowrie-style)${n}`),
+        xaxis:ax('treatment (°C or mT)'), yaxis:ax('|M| (Am²)', {rangemode:'tozero'}),
+        margin:M(60,16,40,72), showlegend:true });
+    case 'ZIJD':
+    case 'PCA_FITS': {
+      const zd = samples.find(s => rmgDemagSeries(s));
+      const zf = zd ? {spec:'specimen', geo:'geographic', tilt:'tilt-corrected'}[fitFrame(zd)] : 'specimen';
+      return Object.assign({}, common, { title:TT(`Zijderveld — ${zf} coords${n}`),
+        xaxis:Object.assign(ax('E'), {zeroline:true}),
+        yaxis:Object.assign(ax('N (solid) / Up (open)'), {zeroline:true, scaleanchor:'x', scaleratio:1}),
+        margin:M(60,16,40,80), showlegend:true });
+    }
+    case 'LSQ_TABLE':
+      return Object.assign({}, common, { title:TT(`LSQ fits${n}`), margin:M(50,12,12,12) });
+    case 'EQAREA':
+      return Object.assign({}, common, { title:TT(`equal-area projection (down solid / up open)${n}`),
+        xaxis:Object.assign(ax(''), {range:[-1.15,1.15], showgrid:false, zeroline:false, showticklabels:false}),
+        yaxis:Object.assign(ax(''), {range:[-1.15,1.15], showgrid:false, zeroline:false, showticklabels:false, scaleanchor:'x', scaleratio:1}),
+        margin:M(50,30,30,50), showlegend:true });
+    case 'UCHAN_DEPTH':
+      return Object.assign({}, common, { title:TT(`u-channel depth series${n}`),
+        xaxis: Object.assign(ax('Dec (°)'),   {domain:[0, 0.31]}),
+        xaxis2:Object.assign(ax('Inc (°)'),   {domain:[0.345, 0.655]}),
+        xaxis3:Object.assign(ax('Intensity'), {domain:[0.69, 1], type:'log'}),
+        yaxis:Object.assign(ax('position / depth'), {autorange:'reversed'}),
+        margin:M(60,16,40,72), showlegend:true });
+    case 'XT_CURVE':
+      return Object.assign({}, common, { title:TT(`susceptibility vs temperature${n}`),
+        xaxis:ax('T (°C)'), yaxis:ax('χ (file units)', {rangemode:'tozero'}),
+        margin:M(60,16,40,80), showlegend:true });
     case 'ARM':
       return Object.assign({}, common, {
         title:TT(`ARM${n}`),
@@ -3659,6 +3711,14 @@ function buildTraces(samples, op){
     case 'RRM_MAG':     return tRRM(samples, true);
     case 'MPMS_LOWT':   return tMpmsLowT(samples);
     case 'MPMS_DERIV':  return tMpmsDeriv(samples);
+    case 'THERM_DECAY': return tThermDecay(samples);
+    case 'DEMAG_COMP':  return tDemagComp(samples);
+    case 'ZIJD':        return tZij(samples);
+    case 'PCA_FITS':    return tZij(samples);
+    case 'LSQ_TABLE':   return tLsqTable(samples);
+    case 'EQAREA':      return tEqArea(samples);
+    case 'UCHAN_DEPTH': return tUchanDepth(samples);
+    case 'XT_CURVE':    return tXtCurve(samples);
     case 'FORC_DIAG':   return tForcDiag(samples);
     case 'FORC_HYST':   return tForcHyst(samples);
     default: return [];
@@ -5302,6 +5362,20 @@ const OPS = [
     {key:'DAY',       label:'Day diagram (Mrs/Ms vs Hcr/Hc)'},
     {key:'TABLE',     label:'data table (raw values)'},
   ]},
+  {sec:'thermal / directional', items:[
+    {key:'THERM_DECAY', label:'thermal demag decay M(T)'},
+    {key:'DEMAG_COMP',  label:'component decay |Mx| |My| |Mz|'},
+    {key:'ZIJD',        label:'Zijderveld diagram'},
+    {key:'EQAREA',      label:'equal-area projection'},
+    {key:'PCA_FITS',    label:'component fits + Fisher'},
+    {key:'LSQ_TABLE',   label:'LSQ fits table'},
+  ]},
+  {sec:'u-channel', items:[
+    {key:'UCHAN_DEPTH', label:'depth series (Dec / Inc / Int)'},
+  ]},
+  {sec:'susceptibility', items:[
+    {key:'XT_CURVE', label:'χ vs temperature (Curie)'},
+  ]},
   {sec:'rotational remanence', items:[
     {key:'RRM',     label:'RRM vs rotation rate (Mz)'},
     {key:'RRM_MAG', label:'RRM vs rotation rate (|M|)'},
@@ -5325,6 +5399,8 @@ const OP_BLURBS = {
   'LF_ARM':     'same as LF, normalised; quicker SD-vs-MD read',
   'FULLER':     'Fuller test — diagnoses remanence carrier grain size',
   'BACKFIELD':  'DC-field demagnetisation of sIRM, yields H<sub>cr</sub>',
+  'PCA_FITS':   'interactive PCA component fits (pmagpy DE-BFL/BFP/FM), hide bad points, live Fisher means',
+  'LSQ_TABLE':  'least-squares fits read from a .LSQ file',
   'COERCIVITY': 'bar chart — H<sub>cr</sub> and MDF<sub>IRM</sub> side-by-side',
   'STATS':      'table of key rockmag parameters per sample',
   'COER':       'focused coercivity-parameter table',
@@ -5336,9 +5412,810 @@ const OP_BLURBS = {
   'FORC_GEN':   'generate a FORC measurement protocol or convert .rmg → .frc'
 };
 
+/* ═════ Thermal demag / TDT / u-channel / Curie module ═══════════════════════
+   Directional conventions (dir2cart/cart2dir) follow PmagPy (BSD-3,
+   https://github.com/PmagPy/PmagPy): x = cos D cos I, y = sin D cos I,
+   z = sin I;  D = atan2(y,x), I = asin(z/R).
+   U-channel formats follow the UF conventions documented in UPmag_OSU 1.71. */
+
+function pmagDir2cart(dec, inc, m){
+  const r = Math.PI/180; m = (m===undefined) ? 1 : m;
+  return [ m*Math.cos(dec*r)*Math.cos(inc*r),
+           m*Math.sin(dec*r)*Math.cos(inc*r),
+           m*Math.sin(inc*r) ];
+}
+function pmagCart2dir(x, y, z){
+  const R = Math.sqrt(x*x + y*y + z*z);
+  if(!R) return {dec:0, inc:0, R:0};
+  const dec = ((Math.atan2(y, x) * 180/Math.PI) + 360) % 360;
+  const inc = Math.asin(z/R) * 180/Math.PI;
+  return {dec, inc, R};
+}
+
+// Generic demagnetization series: one representation for 2G rmg thermal (TT)
+// steps, rmg NRM+AF steps, and TDT files.  {unit, steps:[{treat, mx,my,mz,
+// inField, code, label}]}
+function rmgDemagSeries(d){
+  if(d && d.demag && d.demag.steps && d.demag.steps.length) return d.demag;
+  if(!d || !d.steptypes || !d.mvector) return null;
+  const mv = d.mvector, out = [];
+  const grab = (k) => ({ mx:mv[0][k], my:mv[1][k], mz:mv[2][k] });
+  const th = d.stepsThermal || [], lt = d.stepsLT || [];
+  if(th.length || lt.length){
+    for(const k of (d.stepsNRM||[]))
+      out.push(Object.assign({treat:20, inField:false, label:'NRM'}, grab(k)));
+    for(const k of lt)
+      out.push(Object.assign({treat:(d.levels ? d.levels[k] : 77),   // K (LN2 bath)
+                              inField:false,
+                              label:(d.steptypes[k]||'LT')+' '+(d.levels?d.levels[k]:'')+' K'}, grab(k)));
+    for(const k of th)
+      out.push(Object.assign({treat:(d.levels ? d.levels[k] : NaN),   // °C (confirmed on Laos PKSF runs)
+                              inField:/^trm/i.test(d.steptypes[k]||''),
+                              label:(d.steptypes[k]||'')+' '+(d.levels?d.levels[k]:'')}, grab(k)));
+    return { unit:'°C', steps: out.filter(s => [s.mx,s.my,s.mz].every(v => isFinite(v))) };
+  }
+  if(d.stepsNRM && d.stepsNRM.length && d.stepsAF_nrm && d.stepsAF_nrm.length){
+    for(const k of d.stepsNRM)
+      out.push(Object.assign({treat:0, inField:false, label:'NRM'}, grab(k)));
+    for(const k of d.stepsAF_nrm)
+      out.push(Object.assign({treat:(d.treatmentAFFields ? d.treatmentAFFields[k]*1000 : NaN),
+                              inField:false, label:'AF'}, grab(k)));
+    return { unit:'mT', steps: out.filter(s => [s.mx,s.my,s.mz].every(v => isFinite(v))) };
+  }
+  return null;
+}
+// Steps that represent the remaining NRM (zero-field measurements): for TDT
+// files that means code 0 only; rmg series carry no code.
+function demagZeroFieldSteps(series){
+  return series.steps.filter(s => !s.inField && (s.code === undefined || s.code === 0));
+}
+
+/* ═════ CIT files, .LSQ fits, PCA + Fisher (PmagPy ports, BSD-3) ═════════════
+   pmagDomean / pmagFisherMean / pmagDoprinc / pmagFlip are JavaScript ports of
+   pmag.domean, pmag.fisher_mean, pmag.doprinc and pmag.flip from PmagPy
+   (https://github.com/PmagPy/PmagPy, BSD-3-Clause).  LSQ parsing follows
+   parse_lsq.py (N. Anderson).  Rules of thumb baked in: component fits are
+   never anchored to the origin, MAD is reported per segment, and dang is
+   meaningful for the terminal (origin-trending) component only. */
+
+// ── CIT specimen file (Caltech / paleomag): extensionless, e.g. TSDC01 ──────
+// line 1: sample id + comment;  line 2: pos, core az, core plunge, bedding
+// strike, bedding dip, volume;  rows: 6-char step label, geo dec/inc, tilt
+// dec/inc, intensity (emu/cm³), CSD, core (specimen) dec/inc, 3 sigmas.
+function citDetect(name, text){
+  if(/\.(rmg|lsq|sam|tdt|dir|uf|cur|csv|tsv|xls|xlsx|dat|txt|forc|frc|irm|hys|dcd|gph|up|stat|json)/i.test(name)) return false;
+  const lines = text.split(/\r\n?|\n/).filter(l => l.trim());
+  if(lines.length < 4) return false;
+  const l2 = lines[1].trim().split(/\s+/);
+  if(l2.length !== 6 || !l2.every(t => isFinite(parseFloat(t)))) return false;
+  let hits = 0;
+  for(let i = 2; i < Math.min(lines.length, 8); i++)
+    if(/^(NRM|AF|TT|LT|MW|UAFX|ARM|IRM|PT)/i.test(lines[i]) &&
+       lines[i].slice(6).trim().split(/\s+/).filter(t=>isFinite(parseFloat(t))).length >= 6) hits++;
+  return hits >= 2;
+}
+function citParseTreat(label){
+  const t = label.trim();
+  let m;
+  if(/^NRM/i.test(t)) return {type:'NRM', treat:0};
+  if((m = t.match(/^LT(\d*)\s*(\d+\.?\d*)?$/i)))
+    return {type:'LT', treat: m[2] !== undefined ? parseFloat(m[2]) : 77};
+  if((m = t.match(/^(AF|TT|MW|UAFX|ARM|IRM|PT)/i))){
+    let num = parseFloat(t.slice(m[1].length).replace(/\s+/g, ''));
+    // CIT AF levels are in oersteds (PmagPy cit convention): Oe/10 = mT
+    if(/^AF$/i.test(m[1]) && isFinite(num)) num = num / 10;
+    return {type: m[1].toUpperCase(), treat: isFinite(num) ? num : NaN};
+  }
+  return {type: t.split(/\s+/)[0].toUpperCase(), treat: NaN};
+}
+function citImport(name, text){
+  const lines = text.split(/\r\n?|\n/).filter(l => l.trim());
+  const hdr = lines[1].trim().split(/\s+/).map(parseFloat);
+  const rows = [];
+  for(let i = 2; i < lines.length; i++){
+    const label = lines[i].slice(0, 6).trimEnd();
+    if(!/^(NRM|AF|TT|LT|MW|UAFX|ARM|IRM|PT)/i.test(label)) continue;
+    const toks = lines[i].slice(6).trim().split(/\s+/);
+    const nums = [];
+    for(const tk of toks){ const v = parseFloat(tk);
+      if(isFinite(v) && /^[-+0-9.]/.test(tk)) nums.push(v); else break; }
+    if(nums.length < 6) continue;
+    const tp = citParseTreat(label);
+    rows.push({ label: label.trim(), type: tp.type, treat: tp.treat,
+      gdec: nums[0], ginc: nums[1], tdec: nums[2], tinc: nums[3],
+      int: nums[4], csd: nums[5],
+      sdec: nums.length > 6 ? nums[6] : NaN, sinc: nums.length > 7 ? nums[7] : NaN });
+  }
+  if(rows.length < 2) return null;
+  // Repeat measurements of the same step: keep the most recent (file order).
+  const byLabel = new Map();
+  for(const r of rows) byLabel.set(r.label, r);
+  const steps = [...byLabel.values()].map(r => {
+    const c = pmagDir2cart(r.gdec, r.ginc, r.int);
+    return Object.assign({ mx:c[0], my:c[1], mz:c[2], inField:false,
+                           label:r.label + (r.type==='TT'?' °C':r.type==='LT'?' K':r.type==='AF'?' Oe':'') }, r);
+  });
+  const hasTT = steps.some(s => s.type === 'TT');
+  return { samplename: name.replace(/\.[^.]*$/, ''),
+    demag: { unit: hasTT ? '°C' : 'mT', source:'cit', coords:'geo',
+      frames: ['geo','tilt','spec'], steps,
+      hdr: {pos:hdr[0], az:hdr[1], pl:hdr[2], bs:hdr[3], bd:hdr[4], vol:hdr[5]},
+      nDupes: rows.length - steps.length } };
+}
+
+// ── .LSQ fit files (paleomag least-squares output), per parse_lsq.py ────────
+const LSQ_NUM = /^(.*?)(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(-?\d+\.\d+)\s+(\S+)\s+(\d+)\s+(\d+\.\d+)\s*$/;
+const LSQ_PRE = /([LCPGlcpg])\s*([A-Za-z0-9?!*+]{0,4})\s*$/;
+function lsqImport(name, text){
+  const fits = [];
+  for(const raw of text.split(/\r\n?|\n/)){
+    const m = raw.match(LSQ_NUM);
+    if(!m) continue;
+    let pre = m[1], type = '', comp = '';
+    const pm = pre.match(LSQ_PRE);
+    if(pm){ type = pm[1].toUpperCase(); comp = pm[2] || ''; pre = pre.slice(0, pm.index); }
+    const mad = parseFloat(m[8]);
+    fits.push({ spec: pre.trim(), key: pre.replace(/\s+/g,'').toUpperCase(),
+      type, comp, dec: parseFloat(m[2]), inc: parseFloat(m[3]),
+      tdec: parseFloat(m[4]), tinc: parseFloat(m[5]),
+      steps: m[6], npts: parseInt(m[7], 10), mad,
+      placeholder: mad <= 0.1 });
+  }
+  if(!fits.length) return null;
+  return { samplename: name.replace(/\.[^.]*$/, ''), lsq: { fits } };
+}
+// Map an LSQ step-range code onto indices of a demag series.
+// Letter codes: A = first measurement, B = second …  (a–z continue past Z).
+// Numeric codes like "T250-T575" or "250-575" match on treatment level.
+function lsqStepRange(code, steps){
+  if(!code || !steps || !steps.length) return null;
+  const parts = code.split('-');
+  const letIdx = t => {
+    if(/^[A-Z]$/.test(t)) return t.charCodeAt(0) - 65;
+    if(/^[a-z]$/.test(t)) return 26 + t.charCodeAt(0) - 97;
+    return -1;
+  };
+  if(parts.length === 2){
+    const a = letIdx(parts[0]), b = letIdx(parts[1]);
+    if(a >= 0 && b >= 0 && a < steps.length && b < steps.length && a <= b) return [a, b];
+    const num = t => parseFloat(String(t).replace(/^[A-Za-z]+/, ''));
+    const ta = num(parts[0]), tb = num(parts[1]);
+    if(isFinite(ta) && isFinite(tb)){
+      let i0 = -1, i1 = -1;
+      steps.forEach((s, i) => {
+        if(Math.abs(s.treat - ta) < 0.51 && i0 < 0) i0 = i;
+        if(Math.abs(s.treat - tb) < 0.51) i1 = i;
+      });
+      if(i0 >= 0 && i1 >= i0) return [i0, i1];
+    }
+  }
+  return null;
+}
+
+// ── 3×3 symmetric eigen-decomposition (cyclic Jacobi) ───────────────────────
+function jacobiEig3(A){
+  let a = [[A[0][0],A[0][1],A[0][2]],[A[1][0],A[1][1],A[1][2]],[A[2][0],A[2][1],A[2][2]]];
+  let v = [[1,0,0],[0,1,0],[0,0,1]];
+  for(let sweep = 0; sweep < 50; sweep++){
+    let off = Math.abs(a[0][1]) + Math.abs(a[0][2]) + Math.abs(a[1][2]);
+    if(off < 1e-30) break;
+    for(let p = 0; p < 2; p++) for(let q = p + 1; q < 3; q++){
+      if(Math.abs(a[p][q]) < 1e-30) continue;
+      const theta = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+      const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta*theta + 1));
+      const c = 1 / Math.sqrt(t*t + 1), s = t * c;
+      for(let k = 0; k < 3; k++){
+        const akp = a[k][p], akq = a[k][q];
+        a[k][p] = c*akp - s*akq; a[k][q] = s*akp + c*akq;
+      }
+      for(let k = 0; k < 3; k++){
+        const apk = a[p][k], aqk = a[q][k];
+        a[p][k] = c*apk - s*aqk; a[q][k] = s*apk + c*aqk;
+        const vkp = v[k][p], vkq = v[k][q];
+        v[k][p] = c*vkp - s*vkq; v[k][q] = s*vkp + c*vkq;
+      }
+    }
+  }
+  const ev = [ {val:a[0][0], vec:[v[0][0],v[1][0],v[2][0]]},
+               {val:a[1][1], vec:[v[0][1],v[1][1],v[2][1]]},
+               {val:a[2][2], vec:[v[0][2],v[1][2],v[2][2]]} ];
+  ev.sort((x,y) => y.val - x.val);
+  return ev;   // descending: [0] principal … [2] minor
+}
+const v3dot = (a,b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const v3norm = a => { const r = Math.sqrt(v3dot(a,a)); return r ? [a[0]/r,a[1]/r,a[2]/r] : [0,0,0]; };
+
+// ── pmag.domean port: free line DE-BFL / plane DE-BFP / Fisher DE-FM ────────
+// pts = [[x,y,z], …] in measurement order.  Fits are NEVER anchored: the line
+// passes through the centroid of the chosen steps (DE-BFL-A is deliberately
+// not offered).
+function pmagDomean(pts, mode){
+  const n = pts.length;
+  const out = { n, type: mode };
+  if(mode === 'DE-FM'){
+    const dirs = pts.map(p => { const d = pmagCart2dir(p[0], p[1], p[2]); return [d.dec, d.inc]; });
+    const f = pmagFisherMean(dirs);
+    out.dec = f.dec; out.inc = f.inc; out.mad = f.alpha95; out.dang = NaN;
+    return out;
+  }
+  if(n < 3){ out.err = 'need ≥3 steps'; return out; }
+  if(mode === 'DE-BFP'){
+    // pmag.domean planes: unit vectors, NOT centred on the mean
+    const Tp = [[0,0,0],[0,0,0],[0,0,0]];
+    for(const p of pts){
+      const u = v3norm(p);
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++) Tp[i][j] += u[i]*u[j];
+    }
+    const evp = jacobiEig3(Tp);
+    let v3 = v3norm(evp[2].vec);
+    if(v3[2] < 0) v3 = [-v3[0], -v3[1], -v3[2]];   // pole to lower hemisphere
+    const d = pmagCart2dir(v3[0], v3[1], v3[2]);
+    out.dec = d.dec; out.inc = d.inc;
+    out.mad = Math.atan(Math.sqrt(evp[2].val/evp[1].val + evp[2].val/evp[0].val)) * 180/Math.PI;
+    out.dang = NaN;
+    return out;
+  }
+  const mean = [0,0,0];
+  for(const p of pts){ mean[0]+=p[0]; mean[1]+=p[1]; mean[2]+=p[2]; }
+  mean[0]/=n; mean[1]/=n; mean[2]/=n;
+  const T = [[0,0,0],[0,0,0],[0,0,0]];
+  for(const p of pts){
+    const d = [p[0]-mean[0], p[1]-mean[1], p[2]-mean[2]];
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) T[i][j] += d[i]*d[j];
+  }
+  const ev = jacobiEig3(T);
+  // DE-BFL free line: orient along the demag path (first − last point)
+  let v1 = v3norm(ev[0].vec);
+  const ref = [pts[0][0]-pts[n-1][0], pts[0][1]-pts[n-1][1], pts[0][2]-pts[n-1][2]];
+  if(v3dot(v1, ref) < 0) v1 = [-v1[0], -v1[1], -v1[2]];
+  const d = pmagCart2dir(v1[0], v1[1], v1[2]);
+  out.dec = d.dec; out.inc = d.inc;
+  out.mad = Math.atan(Math.sqrt((ev[1].val + ev[2].val) / (ev[0].val || 1e-300))) * 180/Math.PI;
+  const cm = v3norm(mean);
+  out.dang = Math.acos(Math.max(-1, Math.min(1, v3dot(v1, cm)))) * 180/Math.PI;
+  out.centroid = mean;
+  out.v1 = v1;
+  return out;
+}
+
+// ── pmag.fisher_mean port: dirs = [[dec, inc], …] ───────────────────────────
+function pmagFisherMean(dirs){
+  const N = dirs.length;
+  if(!N) return {n:0};
+  let X = 0, Y = 0, Z = 0;
+  for(const di of dirs){ const c = pmagDir2cart(di[0], di[1], 1); X+=c[0]; Y+=c[1]; Z+=c[2]; }
+  const R = Math.sqrt(X*X + Y*Y + Z*Z);
+  const d = pmagCart2dir(X, Y, Z);
+  const out = { n:N, dec:d.dec, inc:d.inc, r:R };
+  if(N > 1 && R < N){
+    out.k = (N - 1) / (N - R);
+    out.csd = 81 / Math.sqrt(out.k);
+    if(N > 2){
+      const b = Math.pow(20, 1/(N-1)) - 1;
+      let a = 1 - b * (N - R) / R;
+      if(a < -1) a = -1;
+      out.alpha95 = Math.acos(a) * 180/Math.PI;
+    }
+  }
+  return out;
+}
+// pmag.doprinc-lite: principal direction of a set of unit vectors.
+function pmagDoprinc(dirs){
+  const T = [[0,0,0],[0,0,0],[0,0,0]];
+  let Rv = [0,0,0];
+  for(const di of dirs){
+    const c = pmagDir2cart(di[0], di[1], 1);
+    Rv = [Rv[0]+c[0], Rv[1]+c[1], Rv[2]+c[2]];
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) T[i][j] += c[i]*c[j];
+  }
+  const ev = jacobiEig3(T);
+  let v1 = v3norm(ev[0].vec);
+  if(v3dot(v1, Rv) < 0) v1 = [-v1[0], -v1[1], -v1[2]];
+  const d = pmagCart2dir(v1[0], v1[1], v1[2]);
+  return { dec: d.dec, inc: d.inc };
+}
+// pmag.flip(combine=True) port: split modes about the principal direction and
+// flip the reverse mode onto the normal one.  NEVER applied twice.
+function pmagFlipCombine(dirs){
+  if(dirs.length < 2) return dirs.slice();
+  const pp = pmagDoprinc(dirs);
+  const pv = pmagDir2cart(pp.dec, pp.inc, 1);
+  return dirs.map(di => {
+    const c = pmagDir2cart(di[0], di[1], 1);
+    const ang = Math.acos(Math.max(-1, Math.min(1, v3dot(c, pv)))) * 180/Math.PI;
+    return ang > 90 ? [(di[0] + 180) % 360, -di[1]] : [di[0], di[1]];
+  });
+}
+
+// ── Fit state on a demag sample ─────────────────────────────────────────────
+function fitFrame(d){
+  return (d && d.demag && d.demag.coords) ? d.demag.coords : 'spec';
+}
+function demagStepVec(d, st, frame){
+  if(frame === 'geo'  && isFinite(st.gdec)) return pmagDir2cart(st.gdec, st.ginc, st.int);
+  if(frame === 'tilt' && isFinite(st.tdec)) return pmagDir2cart(st.tdec, st.tinc, st.int);
+  if(frame === 'spec' && isFinite(st.sdec)) return pmagDir2cart(st.sdec, st.sinc, st.int);
+  return [st.mx, st.my, st.mz];
+}
+// Visible zero-field steps with vectors in the active frame.
+// Returns [{i (series index), treat, label, vec, hidden}]
+function fitSeriesPoints(d, includeHidden){
+  const ser = rmgDemagSeries(d); if(!ser) return null;
+  const frame = fitFrame(d);
+  const hid = new Set(d.fitHidden || []);
+  const pts = [];
+  ser.steps.forEach((st, i) => {
+    if(st.inField || (st.code !== undefined && st.code !== 0)) return;
+    const hidden = hid.has(i);
+    if(hidden && !includeHidden) return;
+    pts.push({ i, treat: st.treat, label: st.label || (st.treat + ' ' + ser.unit),
+               vec: demagStepVec(d, st, frame), hidden });
+  });
+  return { unit: ser.unit, frame, pts };
+}
+function computeFit(d, i0, i1, mode, name){
+  const sp = fitSeriesPoints(d, false);
+  if(!sp) return null;
+  const seg = sp.pts.filter(p => p.i >= i0 && p.i <= i1);
+  if(seg.length < (mode === 'DE-FM' ? 2 : 3)) return { err: 'need ≥' + (mode==='DE-FM'?2:3) + ' visible steps in range' };
+  const r = pmagDomean(seg.map(p => p.vec), mode);
+  if(r.err) return r;
+  return { name: name || 'comp', type: mode, i0, i1, frame: sp.frame,
+           dec: r.dec, inc: r.inc, mad: r.mad, dang: r.dang, n: r.n,
+           labels: [seg[0].label, seg[seg.length-1].label] };
+}
+// LSQ fits attached to this sample (matched by whitespace-stripped name).
+function lsqFitsForSample(d){
+  if(!d || !d.samplename) return [];
+  const key = d.samplename.replace(/\s+/g, '').toUpperCase();
+  const out = [];
+  for(const sm of (S.samples || [])){
+    const L = sm._d && sm._d.lsq;
+    if(!L) continue;
+    for(const f of L.fits)
+      if(!f.placeholder && f.key === key) out.push(f);
+  }
+  return out;
+}
+// Zijderveld overlay traces for saved + LSQ fits: a line segment through the
+// centroid of the fitted steps (never a full axis through the origin).
+function fitOverlayTraces(d){
+  const tr = [];
+  const sp = fitSeriesPoints(d, false);
+  if(!sp || sp.pts.length < 2) return tr;
+  const seg2tr = (segPts, dec, inc, name, color, dash) => {
+    if(segPts.length < 2) return;
+    const u = pmagDir2cart(dec, inc, 1);
+    const c = [0,0,0];
+    for(const p of segPts){ c[0]+=p.vec[0]; c[1]+=p.vec[1]; c[2]+=p.vec[2]; }
+    c[0]/=segPts.length; c[1]/=segPts.length; c[2]/=segPts.length;
+    let L = 0;
+    for(const p of segPts)
+      L = Math.max(L, Math.abs(v3dot([p.vec[0]-c[0], p.vec[1]-c[1], p.vec[2]-c[2]], u)));
+    const A = [c[0]-L*u[0], c[1]-L*u[1], c[2]-L*u[2]],
+          B = [c[0]+L*u[0], c[1]+L*u[1], c[2]+L*u[2]];
+    // horizontal projection (E, N) and vertical projection (E, Up)
+    tr.push({ x:[A[1], B[1]], y:[A[0], B[0]], mode:'lines', name,
+      line:{color, width:2, dash: dash || 'solid'}, hoverinfo:'name', legendgroup:name });
+    tr.push({ x:[A[1], B[1]], y:[-A[2], -B[2]], mode:'lines', name,
+      line:{color, width:2, dash: dash || 'dot'}, hoverinfo:'name', legendgroup:name, showlegend:false });
+  };
+  const FITCOL = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
+  (d.fits || []).forEach((f, k) => {
+    if(f.type === 'DE-BFP') return;               // planes have no Zij segment
+    const segPts = sp.pts.filter(p => p.i >= f.i0 && p.i <= f.i1);
+    seg2tr(segPts, f.dec, f.inc, 'fit ' + f.name, FITCOL[k % FITCOL.length]);
+  });
+  const ser = rmgDemagSeries(d);
+  lsqFitsForSample(d).forEach((f, k) => {
+    if(f.type !== 'L') return;
+    const rng = lsqStepRange(f.steps, ser.steps);
+    if(!rng) return;
+    const segPts = sp.pts.filter(p => p.i >= rng[0] && p.i <= rng[1]);
+    const useGeo = sp.frame !== 'tilt';
+    seg2tr(segPts, useGeo ? f.dec : f.tdec, useGeo ? f.inc : f.tinc,
+           'LSQ ' + (f.comp || f.type) + ' (' + f.steps + ')',
+           '#9e9d24', 'dash');
+  });
+  return tr;
+}
+function tLsqTable(samples){
+  const rows = [];
+  for(const s of samples){
+    if(!s.lsq) continue;
+    for(const f of s.lsq.fits) if(!f.placeholder) rows.push(f);
+  }
+  if(!rows.length) return [];
+  const hdr = ['Specimen','Comp','Type','Dec (geo)','Inc (geo)','Dec (tilt)','Inc (tilt)','Steps','n','MAD'];
+  const cols = [ rows.map(r=>r.spec), rows.map(r=>r.comp), rows.map(r=>r.type),
+    rows.map(r=>r.dec.toFixed(1)), rows.map(r=>r.inc.toFixed(1)),
+    rows.map(r=>r.tdec.toFixed(1)), rows.map(r=>r.tinc.toFixed(1)),
+    rows.map(r=>r.steps), rows.map(r=>r.npts), rows.map(r=>r.mad.toFixed(1)) ];
+  return [{ type:'table',
+    header:{values:hdr, align:'left', height:26, fill:{color:'rgba(127,127,127,.18)'}, font:{size:11.5}},
+    cells:{values:cols, align:'left', height:20, font:{size:11}, fill:{color:'rgba(127,127,127,.04)'}} }];
+}
+// Live Fisher statistics over every saved line fit + loaded LSQ line fit,
+// grouped by component name; reverse-mode directions are combined via
+// pmag.flip(combine=True) — applied once, here only.
+function collectFisherGroups(){
+  const groups = {};
+  const add = (comp, frame, dec, inc, src) => {
+    const g = (groups[comp] = groups[comp] || { dirs: [], frames: new Set(), srcs: [] });
+    g.dirs.push([dec, inc]); g.frames.add(frame); g.srcs.push(src);
+  };
+  for(const sm of (S.samples || [])){
+    const d = sm._d; if(!d) continue;
+    for(const f of (d.fits || []))
+      if(f.type === 'DE-BFL') add(f.name, f.frame, f.dec, f.inc, d.samplename);
+    if(d.lsq) for(const f of d.lsq.fits)
+      if(!f.placeholder && f.type === 'L') add(f.comp || 'L', 'geo', f.dec, f.inc, f.spec);
+  }
+  const out = [];
+  for(const comp in groups){
+    const g = groups[comp];
+    if(g.dirs.length < 2){ out.push({ comp, n: g.dirs.length, frames: g.frames }); continue; }
+    const flipped = pmagFlipCombine(g.dirs);
+    const nFlipped = flipped.filter((di, i) => di[0] !== g.dirs[i][0]).length;
+    out.push(Object.assign({ comp, frames: g.frames, nFlipped }, pmagFisherMean(flipped)));
+  }
+  out.sort((a,b) => a.comp.localeCompare(b.comp));
+  return out;
+}
+
+// ── Interactive fit panel (shown with the PCA_FITS plot) ────────────────────
+function fitCurrentSample(){
+  const sm = (S.samples || []).find(s => s.selected && rmgDemagSeries(s._d));
+  return sm ? sm._d : null;
+}
+function fitEsc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fitNum(v, dg){ return (typeof v === 'number' && isFinite(v)) ? v.toFixed(dg===undefined?1:dg) : '—'; }
+function fitRefresh(){ saveSession(); if(S.activeOp==='PCA_FITS') runAnalysis(); else { renderFitPanel(); } }
+function fitSetCoords(val){
+  const d = fitCurrentSample(); if(!d || !d.demag) return;
+  d.demag.coords = val; fitRefresh();
+}
+function fitToggleHide(i){
+  const d = fitCurrentSample(); if(!d) return;
+  d.fitHidden = d.fitHidden || [];
+  const k = d.fitHidden.indexOf(i);
+  if(k >= 0) d.fitHidden.splice(k, 1); else d.fitHidden.push(i);
+  const sp = fitSeriesPoints(d, true);
+  if(sp && d.fitHidden.length / sp.pts.length > 0.25)
+    log('⚠ ' + (d.samplename||'') + ': more than 25% of steps hidden — document why in your notes', 'warn');
+  fitRefresh();
+}
+function fitSetSel(which, val){
+  const d = fitCurrentSample(); if(!d) return;
+  d.fitSel = d.fitSel || {};
+  d.fitSel[which] = parseInt(val, 10);
+  fitRefresh();
+}
+function fitAdd(){
+  const d = fitCurrentSample(); if(!d) return;
+  const nameEl = document.getElementById('fit-name'), typeEl = document.getElementById('fit-type');
+  const name = (nameEl && nameEl.value.trim()) || ('C' + (((d.fits||[]).length) + 1));
+  const type = (typeEl && typeEl.value) || 'DE-BFL';
+  const sel = d.fitSel || {};
+  const sp = fitSeriesPoints(d, false);
+  if(!sp || sp.pts.length < 2){ log('✗ fit: no visible steps', 'err'); return; }
+  const i0 = isFinite(sel.i0) ? sel.i0 : sp.pts[0].i;
+  const i1 = isFinite(sel.i1) ? sel.i1 : sp.pts[sp.pts.length-1].i;
+  const f = computeFit(d, Math.min(i0,i1), Math.max(i0,i1), type, name);
+  if(!f || f.err){ log('✗ fit: ' + (f ? f.err : 'no data'), 'err'); return; }
+  d.fits = d.fits || [];
+  d.fits.push(f);
+  if(f.mad > 10) log('⚠ fit ' + name + ': MAD ' + f.mad.toFixed(1) + '° > 10° — not a usable ChRM by the usual cutoff', 'warn');
+  log('✓ fit ' + name + ' (' + type + ', ' + f.labels[0] + '→' + f.labels[1] + '): D=' + f.dec.toFixed(1) +
+      '° I=' + f.inc.toFixed(1) + '° MAD=' + f.mad.toFixed(1) + '°' +
+      (isFinite(f.dang) ? ' dang=' + f.dang.toFixed(1) + '°' : ''), 'ok');
+  fitRefresh();
+}
+function fitDelete(k){
+  const d = fitCurrentSample(); if(!d || !d.fits) return;
+  d.fits.splice(k, 1); fitRefresh();
+}
+function fitRecomputeAll(d){
+  // Re-derive every saved fit from current hidden/coords state.
+  if(!d || !d.fits) return;
+  d.fits = d.fits.map(f => {
+    const nf = computeFit(d, f.i0, f.i1, f.type, f.name);
+    return (nf && !nf.err) ? nf : f;
+  });
+}
+function renderFitPanel(){
+  const panel = document.getElementById('fit-panel');
+  if(!panel) return;
+  const d = fitCurrentSample();
+  if(!d || S.activeOp !== 'PCA_FITS'){ panel.style.display = 'none'; return; }
+  fitRecomputeAll(d);
+  const sp = fitSeriesPoints(d, true);
+  if(!sp){ panel.style.display = 'none'; return; }
+  const frames = (d.demag && d.demag.frames) || ['spec'];
+  const sel = d.fitSel || {};
+  const i0 = isFinite(sel.i0) ? sel.i0 : sp.pts[0].i;
+  const i1 = isFinite(sel.i1) ? sel.i1 : sp.pts[sp.pts.length-1].i;
+  const optRows = sp.pts.map(p => `<option value="${p.i}">${fitEsc(p.label)}</option>`).join('');
+  const frameSel = frames.length > 1
+    ? `coords <select onchange="fitSetCoords(this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
+        ${frames.map(f => `<option value="${f}" ${f===sp.frame?'selected':''}>${({spec:'specimen',geo:'geographic',tilt:'tilt-corrected'})[f]||f}</option>`).join('')}
+       </select>`
+    : `coords: <span style="color:var(--tx2)">${({spec:'specimen',geo:'geographic',tilt:'tilt-corrected'})[sp.frame]||sp.frame}</span>`;
+  let h = `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+    <b>component fitting</b> <span style="color:var(--tx3)">${fitEsc(d.samplename||'')}</span>
+    ${frameSel}
+    from <select id="fit-from" onchange="fitSetSel('i0', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
+    to <select id="fit-to" onchange="fitSetSel('i1', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
+    <select id="fit-type" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
+      <option value="DE-BFL">line (free, DE-BFL)</option>
+      <option value="DE-BFP">plane (DE-BFP)</option>
+      <option value="DE-FM">Fisher mean (DE-FM)</option>
+    </select>
+    <input id="fit-name" placeholder="component (e.g. LT / HT)" style="width:130px;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);padding:2px 4px">
+    <button class="btn sm" onclick="fitAdd()">fit &amp; save</button>
+    <span style="color:var(--tx3)">tick a step off to exclude it from every fit; click a point on the plot does the same</span>
+  </div>`;
+  // steps strip
+  h += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">` + sp.pts.map(p => {
+    const dd = pmagCart2dir(p.vec[0], p.vec[1], p.vec[2]);
+    return `<label style="display:inline-flex;gap:3px;align-items:center;border:1px solid var(--bdr);border-radius:3px;padding:1px 5px;${p.hidden?'opacity:.45':''}" title="D=${dd.dec.toFixed(1)}° I=${dd.inc.toFixed(1)}° M=${dd.R.toExponential(2)}">
+      <input type="checkbox" ${p.hidden?'':'checked'} onchange="fitToggleHide(${p.i})">${fitEsc(p.label)}</label>`;
+  }).join('') + `</div>`;
+  // fits table (saved + LSQ)
+  const lsq = lsqFitsForSample(d);
+  if((d.fits||[]).length || lsq.length){
+    h += `<table style="border-collapse:collapse;margin-bottom:6px"><tr>
+      ${['','component','type','steps','n','Dec','Inc','MAD','dang†'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
+    (d.fits||[]).forEach((f, k) => {
+      h += `<tr><td style="padding:1px 8px"><button class="btn sm" onclick="fitDelete(${k})" title="delete">×</button></td>
+        <td style="padding:1px 8px">${fitEsc(f.name)}</td><td style="padding:1px 8px">${f.type}<span style="color:var(--tx3)"> · ${({spec:'spec',geo:'geo',tilt:'tilt'})[f.frame]||f.frame}</span></td>
+        <td style="padding:1px 8px">${fitEsc(f.labels[0])} → ${fitEsc(f.labels[1])}</td>
+        <td style="padding:1px 8px">${f.n}</td><td style="padding:1px 8px">${fitNum(f.dec)}</td><td style="padding:1px 8px">${fitNum(f.inc)}</td>
+        <td style="padding:1px 8px;${f.mad>10?'color:var(--red)':''}">${fitNum(f.mad)}</td>
+        <td style="padding:1px 8px;${f.dang>15?'color:var(--red)':''}">${fitNum(f.dang)}</td></tr>`;
+    });
+    lsq.forEach(f => {
+      h += `<tr style="color:var(--tx2)"><td style="padding:1px 8px">LSQ</td>
+        <td style="padding:1px 8px">${fitEsc(f.comp||f.type)}</td><td style="padding:1px 8px">${f.type==='L'?'line':'g-circle'} · geo</td>
+        <td style="padding:1px 8px">${fitEsc(f.steps)}</td><td style="padding:1px 8px">${f.npts}</td>
+        <td style="padding:1px 8px">${fitNum(f.dec)}</td><td style="padding:1px 8px">${fitNum(f.inc)}</td>
+        <td style="padding:1px 8px">${fitNum(f.mad)}</td><td style="padding:1px 8px">—</td></tr>`;
+    });
+    h += `</table><div style="color:var(--tx3);margin-bottom:6px">† dang is meaningful for the terminal (origin-trending) component only · usable ChRM: MAD ≤ 10° and dang ≤ 15°</div>`;
+  }
+  // live Fisher over all fits (all loaded samples + LSQ), grouped by component
+  const groups = collectFisherGroups();
+  if(groups.length){
+    h += `<div><b>Fisher means over saved fits</b> <span style="color:var(--tx3)">(all loaded specimens · lines only · reverse mode flipped once, pmag.flip combine)</span></div>`;
+    h += `<table style="border-collapse:collapse"><tr>${['component','n','Dec','Inc','R','k','α95','flipped'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
+    for(const g of groups){
+      h += g.n < 2
+        ? `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}</td><td style="padding:1px 8px">${g.n}</td><td colspan="6" style="padding:1px 8px;color:var(--tx3)">need ≥2 fits</td></tr>`
+        : `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}${g.frames.size>1?' *':''}</td><td style="padding:1px 8px">${g.n}</td>
+           <td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
+           <td style="padding:1px 8px">${fitNum(g.r,3)}</td><td style="padding:1px 8px">${fitNum(g.k)}</td>
+           <td style="padding:1px 8px">${fitNum(g.alpha95)}</td><td style="padding:1px 8px">${g.nFlipped||0}</td></tr>`;
+    }
+    h += `</table>`;
+    if(groups.some(g => g.frames && g.frames.size > 1))
+      h += `<div style="color:var(--amb)">* mixes coordinate frames — refit in one frame before using this mean</div>`;
+  }
+  panel.innerHTML = h;
+  const fEl = document.getElementById('fit-from'), tEl = document.getElementById('fit-to');
+  if(fEl) fEl.value = String(i0);
+  if(tEl) tEl.value = String(i1);
+  panel.style.display = 'block';
+}
+
+// ── TDT (ThellierTool) file: ingestion only — no Arai module ────────────────
+function tdtDetect(name, text){ return /^\s*Thellier-tdt/i.test(text.slice(0, 200)); }
+function tdtImport(name, text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  let i = 1, lab = NaN;
+  const p1 = lines[1] ? lines[1].trim().split(/[\s,;\t]+/) : [];
+  if(p1.length && isFinite(parseFloat(p1[0]))){ lab = parseFloat(p1[0]); i = 2; }
+  const bySpec = {};
+  for(; i < lines.length; i++){
+    const p = lines[i].trim().split(/[\s,;\t]+/);
+    if(p.length < 5) continue;
+    const spec = p[0], step = parseFloat(p[1]), M = parseFloat(p[2]),
+          dec = parseFloat(p[3]), inc = parseFloat(p[4]);
+    if(![step, M, dec, inc].every(isFinite)) continue;
+    const temp = Math.floor(step), code = Math.round((step - temp) * 10);
+    const c = pmagDir2cart(dec, inc, M);
+    (bySpec[spec] = bySpec[spec] || []).push({
+      treat: temp, code, mx: c[0], my: c[1], mz: c[2],
+      inField: code === 1 || code === 4, label: step.toFixed(2) });
+  }
+  const out = [];
+  for(const spec in bySpec){
+    if(bySpec[spec].length < 3) continue;
+    out.push({ samplename: spec,
+      demag: { unit:'°C', labFieldUT: lab, source:'tdt', steps: bySpec[spec] } });
+  }
+  return out;
+}
+
+// ── U-channel: UF-convention .dir (UVIEW/UDIR product) and .uf files ────────
+function uchanDirImport(name, text){
+  const rows = [];
+  for(const ln of text.split(/\r?\n/)){
+    const t = ln.trim();
+    if(!t || t.startsWith('#') || t.startsWith('%')) continue;
+    const p = t.split(/[\s,;]+/);
+    if(p.length < 7) continue;
+    const num = j => { const v = parseFloat(p[j]); return isFinite(v) ? v : NaN; };
+    const pos = num(0), treat = num(1);
+    if(!isFinite(pos) || !isFinite(treat)) continue;
+    // UF convention: 3 IC(str), 4 CD, 5 Int, 6/7 dec,inc (sample), 8/9 (geographic)
+    const int = num(4), decS = num(5), incS = num(6), decG = num(7), incG = num(8);
+    rows.push({ pos, treat, int,
+                dec: isFinite(decG) ? decG : decS, inc: isFinite(incG) ? incG : incS });
+  }
+  if(rows.length < 3) return null;
+  const treats = [...new Set(rows.map(r => r.treat))].sort((a,b) => a-b);
+  return { samplename: name, uchan: { rows, treats, source: 'dir' } };
+}
+function uchanUfImport(name, text){
+  // Default UF measurement convention: ID pos depth AFx AFy AFz dec inc int …
+  const rows = [];
+  for(const ln of text.split(/\r?\n/)){
+    const t = ln.trim();
+    if(!t || t.startsWith('#')) continue;
+    const p = t.split(/[\s\t]+/);
+    if(p.length < 9) continue;
+    const num = j => { const v = parseFloat(p[j]); return isFinite(v) ? v : NaN; };
+    const depth = num(2), afz = num(5), dec = num(6), inc = num(7), int = num(8);
+    if(![depth, dec, inc, int].every(isFinite)) continue;
+    rows.push({ pos: depth, treat: isFinite(afz) ? afz : 0, int, dec, inc });
+  }
+  if(rows.length < 3) return null;
+  const treats = [...new Set(rows.map(r => r.treat))].sort((a,b) => a-b);
+  return { samplename: name, uchan: { rows, treats, source: 'uf' } };
+}
+
+// ── Curie / χ(T): generic two-column temperature-susceptibility text ────────
+function curieDetect(name, text){
+  if(/\.cur$/i.test(name)) return true;
+  const head = text.slice(0, 400).toLowerCase();
+  return /temp/.test(head) && /(susc|chi|kappa)/.test(head);
+}
+function curieImport(name, text){
+  const T = [], X = [];
+  for(const ln of text.split(/\r?\n/)){
+    const p = ln.trim().split(/[\s,;\t]+/);
+    if(p.length < 2) continue;
+    const t = parseFloat(p[0]), x = parseFloat(p[1]);
+    if(isFinite(t) && isFinite(x)){ T.push(t); X.push(x); }
+  }
+  if(T.length < 10) return null;
+  return { samplename: name.replace(/\.[^.]+$/, ''), xt: { T, X } };
+}
+
+// ── Trace builders ──────────────────────────────────────────────────────────
+function tThermDecay(samples){
+  const tr = [];
+  samples.forEach((s, i) => {
+    const ser = rmgDemagSeries(s); if(!ser) return;
+    const zs = demagZeroFieldSteps(ser); if(zs.length < 2) return;
+    const M = zs.map(p => Math.sqrt(p.mx*p.mx + p.my*p.my + p.mz*p.mz));
+    const M0 = M[0] || 1;
+    tr.push({ x: zs.map(p => p.treat), y: M.map(m => m/M0), mode:'lines+markers',
+      name: s.samplename, line:{color: col(i)}, marker:{size:7},
+      hovertemplate:'%{x} '+ser.unit+'<br>M/M₀=%{y:.3f}<extra>'+s.samplename+'</extra>' });
+  });
+  tr._xunit = samples.map(s=>rmgDemagSeries(s)).find(Boolean);
+  return tr;
+}
+function tDemagComp(samples){
+  const tr = [];
+  const s = samples.find(x => rmgDemagSeries(x)); if(!s) return tr;
+  const ser = rmgDemagSeries(s), zs = demagZeroFieldSteps(ser);
+  const C = ['#e6194b','#3cb44b','#4363d8'];
+  [['|Mx|','mx'],['|My|','my'],['|Mz|','mz']].forEach(([lab, k], j) => {
+    tr.push({ x: zs.map(p => p.treat), y: zs.map(p => Math.abs(p[k])),
+      mode:'lines+markers', name: lab, line:{color:C[j]}, marker:{size:6} });
+  });
+  return tr;
+}
+function tZij(samples){
+  // Zijderveld orthogonal projection in the sample's active coordinate frame
+  // (specimen for rmg/tdt; geographic or tilt for CIT files — see fit panel).
+  // Solid: horizontal plane (x=E, y=N). Open: vertical (x=E, y=Up=−z).
+  // Hidden (bad) points are drawn grey and excluded from the connecting line.
+  const tr = [];
+  const s = samples.find(x => rmgDemagSeries(x)); if(!s) return tr;
+  const sp = fitSeriesPoints(s, true);
+  if(!sp || sp.pts.length < 2) return tr;
+  const vis = sp.pts.filter(p => !p.hidden), hid = sp.pts.filter(p => p.hidden);
+  if(vis.length < 2) return tr;
+  const E = vis.map(p => p.vec[1]), N = vis.map(p => p.vec[0]), U = vis.map(p => -p.vec[2]);
+  const txt = vis.map(p => p.label), cd = vis.map(p => p.i);
+  tr.push({ x:E, y:N, mode:'lines+markers', name:'horizontal (N vs E)',
+    marker:{size:7, color:'#1a1a8c'}, line:{color:'#1a1a8c', width:1}, text:txt, customdata:cd,
+    hovertemplate:'%{text}<br>E=%{x:.3e} N=%{y:.3e}<extra></extra>' });
+  tr.push({ x:E, y:U, mode:'lines+markers', name:'vertical (Up vs E)',
+    marker:{size:7, symbol:'circle-open', color:'#c62828'}, line:{color:'#c62828', width:1}, text:txt, customdata:cd,
+    hovertemplate:'%{text}<br>E=%{x:.3e} Up=%{y:.3e}<extra></extra>' });
+  if(hid.length){
+    tr.push({ x:hid.map(p=>p.vec[1]), y:hid.map(p=>p.vec[0]), mode:'markers', name:'hidden',
+      marker:{size:7, color:'#9e9e9e', symbol:'x'}, text:hid.map(p=>p.label), customdata:hid.map(p=>p.i),
+      hovertemplate:'%{text} (hidden)<extra></extra>' });
+    tr.push({ x:hid.map(p=>p.vec[1]), y:hid.map(p=>-p.vec[2]), mode:'markers', name:'hidden',
+      marker:{size:7, color:'#9e9e9e', symbol:'x-open'}, text:hid.map(p=>p.label), customdata:hid.map(p=>p.i),
+      hovertemplate:'%{text} (hidden)<extra></extra>', showlegend:false });
+  }
+  for(const t of fitOverlayTraces(s)) tr.push(t);
+  tr._frame = sp.frame;
+  return tr;
+}
+function tEqArea(samples){
+  // Equal-area (Schmidt) projection: r = √2·sin((90−|inc|)·π/360), r(0°)=1.
+  const tr = [];
+  const th = []; for(let a=0; a<=360; a+=5) th.push(a*Math.PI/180);
+  tr.push({ x: th.map(Math.sin), y: th.map(Math.cos), mode:'lines',
+            line:{color:'#888', width:1}, hoverinfo:'skip', showlegend:false });
+  samples.forEach((s, i) => {
+    const sp = fitSeriesPoints(s, false); if(!sp || !sp.pts.length) return;
+    const down = {x:[],y:[],t:[]}, up = {x:[],y:[],t:[]};
+    for(const p of sp.pts){
+      const d = pmagCart2dir(p.vec[0], p.vec[1], p.vec[2]); if(!d.R) continue;
+      const r = Math.SQRT2 * Math.sin((90 - Math.abs(d.inc)) * Math.PI/360);
+      const g = d.inc >= 0 ? down : up;
+      g.x.push(r * Math.sin(d.dec*Math.PI/180));
+      g.y.push(r * Math.cos(d.dec*Math.PI/180));
+      g.t.push(p.label + ' · D=' + d.dec.toFixed(1) + '° I=' + d.inc.toFixed(1) + '°');
+    }
+    if(down.x.length) tr.push({ x:down.x, y:down.y, mode:'markers', name:s.samplename+' (down)',
+      marker:{size:8, color:col(i)}, text:down.t, hovertemplate:'%{text}<extra></extra>' });
+    if(up.x.length) tr.push({ x:up.x, y:up.y, mode:'markers', name:s.samplename+' (up)',
+      marker:{size:8, symbol:'circle-open', color:col(i)}, text:up.t, hovertemplate:'%{text}<extra></extra>' });
+  });
+  return tr;
+}
+function tUchanDepth(samples){
+  const tr = [];
+  const s = samples.find(x => x.uchan); if(!s) return tr;
+  const u = s.uchan;
+  u.treats.forEach((t, i) => {
+    const rows = u.rows.filter(r => r.treat === t);
+    const nm = 'step ' + t;
+    tr.push({ x: rows.map(r=>r.dec), y: rows.map(r=>r.pos), xaxis:'x',  yaxis:'y',
+      mode:'lines+markers', marker:{size:3}, line:{width:1}, name:nm, legendgroup:nm, line:{width:1, color:col(i)} });
+    tr.push({ x: rows.map(r=>r.inc), y: rows.map(r=>r.pos), xaxis:'x2', yaxis:'y',
+      mode:'lines+markers', marker:{size:3}, line:{width:1, color:col(i)}, name:nm, legendgroup:nm, showlegend:false });
+    tr.push({ x: rows.map(r=>r.int), y: rows.map(r=>r.pos), xaxis:'x3', yaxis:'y',
+      mode:'lines+markers', marker:{size:3}, line:{width:1, color:col(i)}, name:nm, legendgroup:nm, showlegend:false });
+  });
+  return tr;
+}
+function tXtCurve(samples){
+  const tr = [];
+  samples.forEach((s) => {
+    if(!s.xt) return;
+    const {T, X} = s.xt;
+    // split into heating/cooling legs by sign of dT
+    let start = 0;
+    const segs = [];
+    for(let i = 1; i <= T.length; i++){
+      if(i === T.length || (i > 1 && Math.sign(T[i]-T[i-1]) !== Math.sign(T[i-1]-T[i-2]) && Math.abs(T[i]-T[i-1]) > 1e-9)){
+        if(i - start > 3) segs.push([start, i]); start = i - 1;
+      }
+    }
+    if(!segs.length) segs.push([0, T.length]);
+    segs.forEach(([a, b]) => {
+      const heating = T[b-1] >= T[a];
+      tr.push({ x: T.slice(a, b), y: X.slice(a, b), mode:'lines',
+        name: s.samplename + (heating ? ' heating' : ' cooling'),
+        line:{ color: heating ? '#c62828' : '#1565c0', width:2 } });
+    });
+  });
+  return tr;
+}
+
 function opsForKind(kind){
   const FORC=['FORC_CURVES','FORC_DIAG','FORC_HYST','FORC_DCD','FORC_COERSPEC','FORC_IRMACQ','FORC_GEN','SAM_GEN','STATS'];
-  const ROCK=['IRM','DIRM','ARM','LF','LF_ARM','FULLER','BACKFIELD','COERCIVITY','DASH','STATS','COER','SAM_GEN','NRM_DEMAG'];
+  const ROCK=['IRM','DIRM','ARM','LF','LF_ARM','FULLER','BACKFIELD','COERCIVITY','DASH','STATS','COER','SAM_GEN','NRM_DEMAG','ZIJD','EQAREA','DEMAG_COMP','PCA_FITS'];
   const IRMK=['IRM','DIRM','BACKFIELD','COERCIVITY','STATS','COER','SAM_GEN'];
   const ARMK=['ARM','STATS','COER','SAM_GEN'];
   const HYS=['HYST_LOOP','DAY','STATS'];
@@ -5346,19 +6223,54 @@ function opsForKind(kind){
   const TBL=['DAY','TABLE'];
   const RRMK=['RRM','RRM_MAG','STATS','COER','SAM_GEN'];
   const MPMSK=['MPMS_LOWT','MPMS_DERIV'];
+  const THRM=['THERM_DECAY','DEMAG_COMP','ZIJD','EQAREA','PCA_FITS','STATS','SAM_GEN'];
+  const UCH=['UCHAN_DEPTH'];
+  const XTK=['XT_CURVE'];
+  const LSQK=['LSQ_TABLE'];
   const map={FORC:FORC, rockmag:ROCK, IRM:IRMK, ARM:ARMK, hysteresis:HYS, dcd:DCDK,
-             daytable:TBL, RRM:RRMK, mpms:MPMSK};
+             daytable:TBL, RRM:RRMK, mpms:MPMSK, thermal:THRM, uchannel:UCH, xt:XTK, fits:LSQK};
   const arr=map[kind];
   return arr ? new Set(arr) : null;
 }
+// \u2500\u2500 Plots-column UI state: per-section collapse + A\u2013Z sort + last-used plot
+//    per data kind, persisted \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+const OpsUI = (() => {
+  let collapsed = new Set(), sortAZ = false, lastOp = {};
+  try{
+    collapsed = new Set(JSON.parse(localStorage.getItem('pyrm_ops_collapsed') || '[]'));
+    sortAZ = localStorage.getItem('pyrm_ops_sort') === 'az';
+    lastOp = JSON.parse(localStorage.getItem('pyrm_last_op') || '{}') || {};
+  }catch(_){}
+  return { collapsed, sortAZ, lastOp,
+    save(){ try{
+      localStorage.setItem('pyrm_ops_collapsed', JSON.stringify([...this.collapsed]));
+      localStorage.setItem('pyrm_ops_sort', this.sortAZ ? 'az' : '');
+      localStorage.setItem('pyrm_last_op', JSON.stringify(this.lastOp));
+    }catch(_){} } };
+})();
+function toggleOpsSort(){
+  OpsUI.sortAZ = !OpsUI.sortAZ; OpsUI.save(); renderOps();
+}
+
 function renderOps(){
   const list = document.getElementById('op-list');
   list.innerHTML = '';
+  const sb = document.getElementById('op-sort-btn');
+  if(sb) sb.style.fontWeight = OpsUI.sortAZ ? '700' : '';
+  const filterEl = document.getElementById('op-filter');
+  const filter = (filterEl && filterEl.value || '').trim().toLowerCase();
+  const matches = op => !filter || op.key.toLowerCase().includes(filter) ||
+    op.label.toLowerCase().includes(filter) || (OP_BLURBS[op.key] || '').toLowerCase().includes(filter);
+  const maybeSort = arr => OpsUI.sortAZ ? arr.slice().sort((a,b) => a.label.localeCompare(b.label)) : arr;
+
   const sel = S.samples.find(s => s.selected);
   const kind = sel ? rmgKind(sel._d) : null;
   const ok = kind ? opsForKind(kind) : null;
   if(ok && !ok.has(S.activeOp)){
-    for(const g of OPS){ for(const op of g.items){ if(ok.has(op.key)){ S.activeOp=op.key; break; } } if(ok.has(S.activeOp)) break; }
+    // Prefer the last plot used for this data kind; else first available.
+    const rem = OpsUI.lastOp[kind];
+    if(rem && ok.has(rem)) S.activeOp = rem;
+    else for(const g of OPS){ for(const op of g.items){ if(ok.has(op.key)){ S.activeOp=op.key; break; } } if(ok.has(S.activeOp)) break; }
   }
   const mkOp = (op, disabled) => {
     const el = document.createElement('div');
@@ -5373,35 +6285,41 @@ function renderOps(){
         if(op.key === 'SAM_GEN'){ showSamModal(); return; }
         if(op.key === 'FORC_GEN'){ showForcModal(); return; }
         S.activeOp = op.key;
+        if(kind){ OpsUI.lastOp[kind] = op.key; OpsUI.save(); }
         renderOps();
         if(S.samples.length > 0) runAnalysis();
       };
     }
     return el;
   };
-  if(ok){
+  // Collapsible section: header shows caret + count; an active filter
+  // overrides collapse so search results are never hidden.
+  const addSection = (id, title, ops, disabled) => {
+    ops = maybeSort(ops.filter(matches));
+    if(!ops.length) return;
+    const isCol = OpsUI.collapsed.has(id) && !filter;
     const h = document.createElement('div');
-    h.className = 'shdr';
-    h.textContent = 'available \u00b7 ' + kind;
+    h.className = 'shdr tog';
+    h.innerHTML = (isCol ? '\u25b8' : '\u25be') + ' ' + title +
+                  ' <span class="cnt">(' + ops.length + ')</span>';
+    h.title = isCol ? 'click to expand' : 'click to collapse';
+    h.onclick = () => {
+      if(OpsUI.collapsed.has(id)) OpsUI.collapsed.delete(id); else OpsUI.collapsed.add(id);
+      OpsUI.save(); renderOps();
+    };
     list.appendChild(h);
-    for(const g of OPS) for(const op of g.items) if(ok.has(op.key)) list.appendChild(mkOp(op, false));
+    if(!isCol) for(const op of ops) list.appendChild(mkOp(op, disabled));
+  };
+
+  if(ok){
+    addSection('__avail', 'available \u00b7 ' + kind,
+               OPS.flatMap(g => g.items.filter(op => ok.has(op.key))), false);
     for(const g of OPS){
       const rest = g.items.filter(op => !ok.has(op.key));
-      if(!rest.length) continue;
-      const hh = document.createElement('div');
-      hh.className = 'shdr';
-      hh.textContent = g.sec;
-      list.appendChild(hh);
-      for(const op of rest) list.appendChild(mkOp(op, true));
+      addSection(g.sec, g.sec, rest, true);
     }
   } else {
-    for(const g of OPS){
-      const h = document.createElement('div');
-      h.className = 'shdr';
-      h.textContent = g.sec;
-      list.appendChild(h);
-      for(const op of g.items) list.appendChild(mkOp(op, false));
-    }
+    for(const g of OPS) addSection(g.sec, g.sec, g.items, false);
   }
 }
 
@@ -5413,6 +6331,27 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
+const PYRM_BUILD='2026-09-30c';
+// Per-sample fit state (hidden steps, saved fits, coordinate frame) for
+// session persistence, keyed by samplename.
+function collectFitStates(){
+  const out={};
+  for(const sm of S.samples){ const d=sm._d; if(!d||!d.samplename) continue;
+    const st={};
+    if(d.fitHidden&&d.fitHidden.length) st.hidden=d.fitHidden.slice();
+    if(d.fits&&d.fits.length) st.fits=d.fits;
+    if(d.demag&&d.demag.coords&&d.demag.frames&&d.demag.frames.length>1) st.coords=d.demag.coords;
+    if(Object.keys(st).length) out[d.samplename]=st; }
+  return out;
+}
+function applyFitStates(fs){
+  if(!fs) return;
+  for(const sm of S.samples){ const d=sm._d; if(!d||!fs[d.samplename]) continue;
+    const st=fs[d.samplename];
+    if(st.hidden) d.fitHidden=st.hidden.slice();
+    if(st.fits) d.fits=st.fits;
+    if(st.coords&&d.demag) d.demag.coords=st.coords; }
+}
 function saveSession(){
   try{ if(typeof localStorage==='undefined') return;
     const uploads=[], seen=new Set();
@@ -5421,7 +6360,7 @@ function saveSession(){
     while(uploads.length>20) uploads.shift();
     let total=uploads.reduce((s,u)=>s+u.text.length,0);
     while(total>4500000 && uploads.length>1){ total-=uploads.shift().text.length; }
-    const state={ uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])] };
+    const state={ uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])], fitStates: collectFitStates() };
     localStorage.setItem(PYRM_KEY, JSON.stringify(state));
   }catch(e){ /* quota exceeded or storage unavailable */ }
 }
@@ -5441,22 +6380,92 @@ function maybeShowRestore(){
 async function restoreSession(){
   try{ if(typeof localStorage==='undefined') return;
     const raw=localStorage.getItem(PYRM_KEY); if(!raw){ log('no saved session','warn'); return; }
-    let state=JSON.parse(raw);
-    if(Array.isArray(state)) state={uploads:state, groupByType:false, collapsed:[]};
-    const uploads=state.uploads||[];
-    if(!uploads.length){ log('no saved session','warn'); return; }
-    const files=uploads.map(u=>({ name:u.name, async text(){return u.text;},
-      async arrayBuffer(){return new TextEncoder().encode(u.text).buffer;} }));
-    await onFiles(files);
-    for(const u of uploads){ if(u.massG!=null){ const sm=S.samples.find(s=>s.up&&s.up.name===u.name); if(sm){ sm.massG=u.massG; if(sm._d) sm._d.massG=u.massG; } } }
-    S.groupByType=!!state.groupByType; S.collapsedGroups=new Set(state.collapsed||[]);
-    const gb=document.getElementById('group-btn'); if(gb){ gb.textContent=S.groupByType?'▦ flat':'⊞ group'; gb.style.fontWeight=S.groupByType?'700':''; }
-    const rb=document.getElementById('restore-btn'); if(rb) rb.style.display='none';
-    renderSamples();
-    if(S.samples.some(x=>x.selected)) runAnalysis();
-    saveSession();
-    log('↺ restored '+uploads.length+' file(s) from last session','ok');
+    const n=await applySessionState(JSON.parse(raw));
+    if(n) log('↺ restored '+n+' file(s) from last session','ok');
   }catch(e){ log('could not restore: '+e.message,'err'); }
+}
+
+// Shared session-state applier: used by localStorage restore and by
+// "load session" from a portable .json file.
+async function applySessionState(state){
+  if(Array.isArray(state)) state={uploads:state, groupByType:false, collapsed:[]};
+  const uploads=state.uploads||[];
+  if(!uploads.length){ log('no files in session','warn'); return 0; }
+  const files=uploads.map(u=>({ name:u.name, async text(){return u.text;},
+    async arrayBuffer(){return new TextEncoder().encode(u.text).buffer;} }));
+  await onFiles(files);
+  for(const u of uploads){ if(u.massG!=null){ const sm=S.samples.find(s=>s.up&&s.up.name===u.name); if(sm){ sm.massG=u.massG; if(sm._d) sm._d.massG=u.massG; } } }
+  applyFitStates(state.fitStates);
+  S.groupByType=!!state.groupByType; S.collapsedGroups=new Set(state.collapsed||[]);
+  if(state.activeOp) S.activeOp=state.activeOp;
+  const gb=document.getElementById('group-btn'); if(gb){ gb.textContent=S.groupByType?'▦ flat':'⊞ group'; gb.style.fontWeight=S.groupByType?'700':''; }
+  const rb=document.getElementById('restore-btn'); if(rb) rb.style.display='none';
+  renderSamples(); renderOps();
+  if(S.samples.some(x=>x.selected)) runAnalysis();
+  saveSession();
+  return uploads.length;
+}
+
+// ── Portable session file: save/load everything as one .json ───────────────
+// Unlike the localStorage auto-save (last 20 files, ~4.5 MB cap, one browser),
+// a session file has no cap and moves between machines/people.
+function exportSessionFile(){
+  const uploads=[], seen=new Set();
+  for(let i=S.samples.length-1;i>=0;i--){ const sm=S.samples[i], u=sm.up;
+    if(u&&u.text&&!seen.has(u.name)){ seen.add(u.name); uploads.unshift({name:u.name, text:u.text, massG:(sm.massG!=null?sm.massG:null)}); } }
+  if(!uploads.length){ log('✗ save session: no file-backed samples loaded','err'); return; }
+  const derived=S.samples.filter(s=>!s.up).length;
+  const state={ app:'pyRockmag session', build:PYRM_BUILD, saved:new Date().toISOString(),
+    uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])], activeOp:S.activeOp,
+    fitStates: collectFitStates() };
+  const blob=new Blob([JSON.stringify(state)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pyrockmag_session_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  log('💾 session saved: '+uploads.length+' file(s)'+(derived?' · note: '+derived+' derived sample(s) (stacks/cleaned) are not saved — re-create after loading':''),'ok');
+}
+async function importSessionFile(file){
+  if(!file) return;
+  try{
+    const state=JSON.parse(await file.text());
+    const n=await applySessionState(state);
+    if(n) log('📂 session loaded: '+n+' file(s)'+(state.saved?' (saved '+String(state.saved).slice(0,10)+')':''),'ok');
+  }catch(e){ log('✗ load session: '+e.message,'err'); }
+}
+
+// ── Batch figure export: every available plot for the first selected sample,
+//    rendered at 2× and zipped ──────────────────────────────────────────────
+async function exportFiguresZip(){
+  const sel=S.samples.find(s=>s.selected);
+  if(!sel){ log('✗ figures: no sample selected','err'); return; }
+  if(typeof Plotly==='undefined'||!Plotly.toImage){ log('✗ figures: Plotly not loaded (offline?)','err'); return; }
+  const d=sel._d, kind=rmgKind(d);
+  const skip=new Set(['SAM_GEN','FORC_GEN','STATS','COER','DASH','TABLE','PCA_FITS','LSQ_TABLE']);   // modals & tables
+  const ok=opsForKind(kind);
+  const opsList=[]; for(const g of OPS) for(const op of g.items) if(ok.has(op.key)&&!skip.has(op.key)) opsList.push(op.key);
+  if(!opsList.length){ log('✗ figures: no plottable ops for kind '+kind,'err'); return; }
+  const prevOp=S.activeOp; const files={}; let nOK=0;
+  const safe=(d.samplename||'sample').replace(/[^A-Za-z0-9_.-]+/g,'_');
+  setStatus('busy','rendering figures…');
+  for(const op of opsList){
+    try{
+      runPlot([d], op);
+      const empty=document.getElementById('empty');
+      if(empty && empty.style.display==='flex') continue;      // no data for this op
+      const url=await Plotly.toImage(document.getElementById('plotly-div'),
+                                     {format:'png', width:1400, height:900, scale:2});
+      const bin=atob(url.split(',')[1]);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      files[safe+'_'+op+'.png']=bytes; nOK++;
+    }catch(e){ console.warn('figures:', op, e); }
+  }
+  S.activeOp=prevOp; runAnalysis(); setStatus('ok','ready');
+  if(!nOK){ log('✗ figures: nothing rendered','err'); return; }
+  const blob=new Blob([buildZipArchive(files)],{type:'application/zip'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=safe+'_figures.zip'; a.click(); URL.revokeObjectURL(a.href);
+  log('🖼 '+nOK+' figure(s) → '+safe+'_figures.zip','ok');
 }
 async function onFiles(files){
   const filesList = Array.from(files);
@@ -5480,7 +6489,12 @@ async function onFiles(files){
         const text=await f.text();
         const rows=vsmParseSummaryText(text);
         if(rows && rows.length){ S.samples.push({_d:{samplename:f.name.replace(/\.[^.]+$/,'')+' (table)', vsm:{kind:'daytable', rows}}, selected:true, id:nextId++, up:{name:f.name, text}}); log(f.name+' added ('+rows.length+' rows)','ok'); }
-        else log('✗ '+f.name+': no Hcr/Hc, Mr/Ms, or Hc+Hcr+Ms+Mr columns found','err');
+        else {
+          const cu = curieDetect(f.name, text) ? curieImport(f.name, text) : null;
+          if(cu){ S.samples.push({_d:cu, selected:true, id:nextId++, up:{name:f.name, text}});
+                  log(cu.samplename + ' added (χ(T) · ' + cu.xt.T.length + ' pts)', 'ok'); }
+          else log('✗ '+f.name+': no Hcr/Hc, Mr/Ms, or Hc+Hcr+Ms+Mr columns found','err');
+        }
         continue;
       }
       const text = await f.text();
@@ -5509,6 +6523,66 @@ async function onFiles(files){
           log('✗ ' + f.name + ': MPMS file with no usable moment column', 'err');
         }
         continue;
+      }
+      // ── ThellierTool .tdt: ingestion + simple plots (no Arai module) ──
+      if(tdtDetect(f.name, text)){
+        const specs = tdtImport(f.name, text);
+        if(specs.length){
+          for(const sd of specs) S.samples.push({_d:sd, selected:true, id:nextId++, up:{name:f.name, text}});
+          log(f.name + ' added: ' + specs.length + ' specimen(s) (Thellier file — decay/Zijderveld only, no Arai analysis)', 'ok');
+        } else log('✗ ' + f.name + ': no readable TDT rows', 'err');
+        continue;
+      }
+      // ── U-channel: UF-convention .dir (UVIEW/UDIR product) or .uf file ──
+      if(/\.dir$/i.test(f.name)){
+        const ud = uchanDirImport(f.name, text);
+        if(ud){ S.samples.push({_d:ud, selected:true, id:nextId++, up:{name:f.name, text}});
+                log(ud.samplename + ' added (u-channel .dir · ' + ud.uchan.rows.length + ' rows, ' + ud.uchan.treats.length + ' steps)', 'ok'); }
+        else log('✗ ' + f.name + ': not a UF-convention .dir file', 'err');
+        continue;
+      }
+      if(/\.uf$/i.test(f.name)){
+        const uu = uchanUfImport(f.name, text);
+        if(uu){ S.samples.push({_d:uu, selected:true, id:nextId++, up:{name:f.name, text}});
+                log(uu.samplename + ' added (u-channel measurement · ' + uu.uchan.rows.length + ' rows)', 'ok'); }
+        else log('✗ ' + f.name + ': could not read as UF-convention u-channel measurements', 'err');
+        continue;
+      }
+      // ── Curie / χ(T): two-column temperature–susceptibility text ──
+      if(curieDetect(f.name, text)){
+        const cu = curieImport(f.name, text);
+        if(cu){ S.samples.push({_d:cu, selected:true, id:nextId++, up:{name:f.name, text}});
+                log(cu.samplename + ' added (χ(T) · ' + cu.xt.T.length + ' pts)', 'ok'); continue; }
+        // fall through to other sniffers if it did not parse
+      }
+      // ── .LSQ least-squares fit files (paleomag / parse_lsq.py format) ──
+      if(/\.lsq$/i.test(f.name)){
+        const ld = lsqImport(f.name, text);
+        if(ld){
+          const nGood = ld.lsq.fits.filter(x=>!x.placeholder).length;
+          S.samples.push({_d:ld, selected:true, id:nextId++, up:{name:f.name, text}});
+          log(ld.samplename + ' added (' + nGood + ' LSQ fit' + (nGood===1?'':'s') +
+              (ld.lsq.fits.length-nGood ? ', ' + (ld.lsq.fits.length-nGood) + ' placeholder(s) dropped' : '') +
+              ') — fits overlay on matching Zijderveld plots and join the Fisher means', 'ok');
+        } else log('✗ ' + f.name + ': no readable LSQ fit rows', 'err');
+        continue;
+      }
+      // ── CIT .sam index file: names the specimen files, carries no data ──
+      if(/\.sam$/i.test(f.name)){
+        const specs = text.split(/\r\n?|\n/).slice(2).map(l=>l.trim()).filter(Boolean);
+        log('ℹ ' + f.name + ': CIT sample-index file — load the ' + specs.length +
+            ' specimen file(s) it names (e.g. ' + (specs[0]||'') + ') for the demag data', 'info');
+        continue;
+      }
+      // ── CIT specimen file (extensionless, e.g. TSDC01 / PKSF-0A) ──
+      if(citDetect(f.name, text)){
+        const cd = citImport(f.name, text);
+        if(cd){
+          S.samples.push({_d:cd, selected:true, id:nextId++, up:{name:f.name, text}});
+          log(cd.samplename + ' added (CIT · ' + cd.demag.steps.length + ' steps' +
+              (cd.demag.nDupes ? ', ' + cd.demag.nDupes + ' repeat measurement(s) collapsed to most recent' : '') + ')', 'ok');
+          continue;
+        }
       }
       const vk = vsmDetect(f.name, text);
       if(vk){ const vd=vsmImport(f.name, text, vk);
@@ -5558,11 +6632,17 @@ function showRunPickerAsync(filename, text, runs, defaultData){
 // Priority: FORC > rockmag > AF-demag > cor/coe > other
 function rmgKind(d){
   if(d && d.mpms) return 'mpms';
+  if(d && d.demag) return 'thermal';
+  if(d && d.lsq) return 'fits';
+  if(d && d.uchan) return 'uchannel';
+  if(d && d.xt) return 'xt';
   if(d && d.vsm) return d.vsm.kind==='micromag-forc' ? 'FORC' : d.vsm.kind;
   if(!d || !d.BlockType) return 'other';
   const bt = new Set(d.BlockType.map(t => (t || '').toUpperCase()));
   if(bt.has('FORCZ')) return 'FORC';
   if(bt.has('RRM')) return 'RRM';
+  if(bt.has('TT') || bt.has('TRM')) return 'thermal';
+  if([...bt].some(t => /^LT\d*$/.test(t))) return 'thermal';
   const hasIrm = bt.has('IRM') || bt.has('IRMZ') || bt.has('IRMX');
   const hasArm = bt.has('ARM');
   const hasAf  = bt.has('AF');
@@ -5717,11 +6797,15 @@ function cleanForcSample(id){
 }
 function sampleCategory(d){
   if(d && d.mpms) return 'MPMS';
+  if(d && d.demag) return 'Thermal demag';
+  if(d && d.lsq) return 'Fits';
+  if(d && d.uchan) return 'U-channel';
+  if(d && d.xt) return 'Susceptibility';
   if(d && d.vsm){ return ({hysteresis:'Hysteresis loops', dcd:'DCD / backfield', daytable:'Summary tables', 'micromag-forc':'FORC'})[d.vsm.kind] || 'VSM'; }
   const k=rmgKind(d);
-  return ({FORC:'FORC', rockmag:'Rock magnetics', IRM:'IRM', ARM:'ARM', RRM:'RRM'})[k] || 'Other';
+  return ({FORC:'FORC', rockmag:'Rock magnetics', IRM:'IRM', ARM:'ARM', RRM:'RRM', thermal:'Thermal demag'})[k] || 'Other';
 }
-const CATEGORY_ORDER=['FORC','Hysteresis loops','DCD / backfield','Summary tables','Rock magnetics','IRM','ARM','RRM','MPMS','VSM','Other'];
+const CATEGORY_ORDER=['FORC','Hysteresis loops','DCD / backfield','Summary tables','Rock magnetics','Thermal demag','IRM','ARM','RRM','MPMS','U-channel','Susceptibility','VSM','Other'];
 
 function renderSampleItem(s, parentEl){
   const d = s._d;
@@ -5729,6 +6813,12 @@ function renderSampleItem(s, parentEl){
   div.className = 'sample-item' + (s.selected ? ' sel' : '');
   const _meta = (d.mpms) ? ('MPMS · ' + d.mpms.legs.length + ' leg' + (d.mpms.legs.length===1?'':'s')
       + (d.mpms.massMg ? ' · ' + d.mpms.massMg + ' mg' : ''))
+    : (d.demag) ? ('thermal · ' + d.demag.steps.length + ' steps'
+      + (d.demag.source==='tdt' ? ' · tdt' + (isFinite(d.demag.labFieldUT) ? ' · ' + d.demag.labFieldUT + ' µT' : '') : '')
+      + (d.demag.source==='cit' ? ' · cit' : ''))
+    : (d.lsq) ? ('LSQ · ' + d.lsq.fits.filter(f=>!f.placeholder).length + ' fits')
+    : (d.uchan) ? ('u-channel · ' + d.uchan.rows.length + ' rows · ' + d.uchan.treats.length + ' step' + (d.uchan.treats.length===1?'':'s'))
+    : (d.xt) ? ('χ(T) · ' + d.xt.T.length + ' pts')
     : (d.vsm) ? (rmgKind(d) + ' · ' + (
       d.vsm.kind==='hysteresis' ? ((d.vsm.hyst?d.vsm.hyst.n:0) + ' pts')
     : d.vsm.kind==='dcd' ? ((d.vsm.remanence?d.vsm.remanence.n:0) + ' pts')
@@ -5782,19 +6872,27 @@ function renderSamples(){
   const count = document.getElementById('n-samples');
   const tb = document.getElementById('sample-toolbar');
   const sb = document.getElementById('sample-sortbar');
-  count.textContent = S.samples.length ? '(' + S.samples.length + ')' : '';
+  const filtEl = document.getElementById('sample-filter');
+  const filt = (filtEl && filtEl.value || '').trim().toLowerCase();
+  if(filtEl) filtEl.style.display = S.samples.length > 1 ? 'block' : 'none';
+  const shown = filt ? S.samples.filter(s =>
+      (s._d.samplename||'').toLowerCase().includes(filt) ||
+      rmgKind(s._d).toLowerCase().includes(filt) ||
+      sampleCategory(s._d).toLowerCase().includes(filt)) : S.samples;
+  count.textContent = S.samples.length ?
+      (filt ? '(' + shown.length + '/' + S.samples.length + ')' : '(' + S.samples.length + ')') : '';
   if(tb) tb.style.display = S.samples.length > 0 ? 'flex' : 'none';
   if(sb) sb.style.display = S.samples.length > 1 ? 'flex' : 'none';
   el.innerHTML = '';
-  if(S.groupByType && S.samples.length){
+  if(S.groupByType && shown.length){
     if(!S.collapsedGroups) S.collapsedGroups = new Set();
     const groups = {};
-    for(const s of S.samples){ const c = sampleCategory(s._d); (groups[c] = groups[c] || []).push(s); }
+    for(const s of shown){ const c = sampleCategory(s._d); (groups[c] = groups[c] || []).push(s); }
     const cats = Object.keys(groups).sort((a,b)=>{
       const ia=CATEGORY_ORDER.indexOf(a), ib=CATEGORY_ORDER.indexOf(b);
       return (ia<0?99:ia)-(ib<0?99:ib); });
     for(const cat of cats){
-      const collapsed = S.collapsedGroups.has(cat);
+      const collapsed = S.collapsedGroups.has(cat) && !filt;   // filter overrides collapse
       const hdr = document.createElement('div');
       hdr.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 6px;margin-top:5px;font-size:11px;font-weight:600;border-radius:4px;background:rgba(127,127,127,.10)';
       hdr.innerHTML = `<span style="width:10px;display:inline-block;text-align:center">${collapsed?'▸':'▾'}</span><span style="flex:1">${cat}</span><span style="opacity:.6;font-weight:400">${groups[cat].length}</span>`;
@@ -5807,7 +6905,7 @@ function renderSamples(){
       }
     }
   } else {
-    for(const s of S.samples) renderSampleItem(s, el);
+    for(const s of shown) renderSampleItem(s, el);
   }
 }
 
@@ -5855,6 +6953,7 @@ function runPlot(samples, op){
   // Show FORC controls only on FORC_DIAG
   const forcCtrl = document.getElementById('forc-controls');
   if(forcCtrl) forcCtrl.style.display = (op === 'FORC_DIAG') ? 'flex' : 'none';
+  if(op === 'PCA_FITS') renderFitPanel();
   showCaption(op);
   document.getElementById('save-btn').style.display = 'inline-block';
   document.getElementById('csv-btn').style.display = 'none';
@@ -5893,6 +6992,15 @@ function runPlot(samples, op){
   }
 
   Plotly.react(div, traces, layout, {responsive:true, displaylogo:false});
+  // PCA_FITS: click a Zijderveld point to toggle it hidden (excluded from fits)
+  if(op === 'PCA_FITS' && typeof div.on === 'function' && !div._fitClickBound){
+    div._fitClickBound = true;
+    div.on('plotly_click', ev => {
+      if(S.activeOp !== 'PCA_FITS' || !ev.points || !ev.points.length) return;
+      const cd = ev.points[0].customdata;
+      if(cd !== undefined && cd !== null) fitToggleHide(cd);
+    });
+  }
   // Update FORC diagram info line after rendering
   if(op === 'FORC_DIAG'){
     const info = document.getElementById('forc-diag-info');
@@ -6052,6 +7160,7 @@ function runDash(samples){
 // ── Hide/show panels ─────────────────────────────────────────────────────────
 function hideAll(){
   hideCaption();
+  { const fp = document.getElementById('fit-panel'); if(fp) fp.style.display = 'none'; }
   document.getElementById('save-btn').style.display = 'none';
   document.getElementById('csv-btn').style.display = 'none';
   document.getElementById('plotly-div').classList.remove('vis');
@@ -6697,6 +7806,198 @@ function frcConvPreview(){
   }
 }
 
+/* ═════ MagIC (data model 3.0) export ══════════════════════════════════════
+   Exports selected samples as one MagIC upload-ready text file containing a
+   minimal specimens table plus a measurements table. Units per the data
+   model: fields in Tesla, temperatures in Kelvin, moments in Am².
+   Location/site/sample metadata is not known to the app — add those tables
+   in the MagIC online editor after upload. */
+function magicFmt(v){ return (typeof v === 'number' && isFinite(v)) ? String(+v.toPrecision(7)) : ''; }
+
+function magicRowsForSample(d, seqStart){
+  const spec = (d.samplename || 'specimen').replace(/\t/g, ' ');
+  const rows = [];   // objects with magic column keys
+  const lps = new Set();
+  let seq = seqStart;
+  const push = (o) => { o.specimen = spec; o.sequence = seq++; o.standard = 'u'; o.quality = 'g';
+                        o.citations = 'This study'; rows.push(o); };
+
+  if(d.mpms){
+    for(const leg of d.mpms.legs){
+      const warming = leg.direction === 'warming';
+      const lp = warming ? (leg.inField ? 'LP-MW-I' : 'LP-MW-Z')     // measured while warming
+                         : (leg.inField ? 'LP-MC-I' : 'LP-MC-Z');    // measured while cooling
+      lps.add(lp);
+      const exp = spec + '-' + lp;
+      for(let i = 0; i < leg.T.length; i++){
+        push({ experiment: exp, method_codes: lp,
+               meas_temp: magicFmt(leg.T[i]),
+               meas_field_dc: magicFmt(leg.H[i] * 1e-4),          // Oe → T
+               magn_moment: magicFmt(leg.M[i] * 1e-3),            // emu → Am²
+               description: leg.direction + (leg.inField ? ', in-field' : ', zero-field') });
+      }
+    }
+  } else if(d.demag && d.demag.steps && d.demag.steps.length){
+    // TDT / generic thermal series: zero-field steps LT-T-Z, in-field LT-T-I.
+    // Thellier-style files export under LP-PI (checks noted in description);
+    // plain thermal demag under LP-DIR-T.  CIT files carry mixed NRM/AF/LT/TT
+    // steps and follow the PmagPy cit convention (LT-NO / LT-AF-Z / LT-LT-Z /
+    // LT-T-Z; moment = intensity x volume, emu -> Am2).
+    const isPI = d.demag.source === 'tdt', isCIT = d.demag.source === 'cit';
+    const lp = isPI ? 'LP-PI' : 'LP-DIR-T';
+    lps.add(lp);
+    const exp = spec + '-' + lp;
+    const vol = isCIT && d.demag.hdr && isFinite(d.demag.hdr.vol) && d.demag.hdr.vol > 0 ? d.demag.hdr.vol : 1;
+    for(const st of d.demag.steps){
+      if(isCIT){
+        const emu = st.int * vol;                       // emu/cm3 x cm3
+        const c = isFinite(st.sdec) ? pmagDir2cart(st.sdec, st.sinc, emu * 1e-3)
+                                    : [st.mx * vol * 1e-3, st.my * vol * 1e-3, st.mz * vol * 1e-3];
+        const mc = st.type === 'NRM' ? 'LT-NO' : st.type === 'AF' ? 'LT-AF-Z'
+                 : st.type === 'LT' ? 'LT-LT-Z' : 'LT-T-Z';
+        push({ experiment: exp, method_codes: mc + ':' + lp,
+               treat_temp: st.type === 'TT' ? magicFmt(st.treat + 273.15)
+                         : st.type === 'LT' ? magicFmt(st.treat || 77) : '273',
+               treat_ac_field: st.type === 'AF' ? magicFmt(st.treat * 1e-3) : '0',
+               dir_dec: magicFmt(st.sdec), dir_inc: magicFmt(st.sinc),
+               magn_x: magicFmt(c[0]), magn_y: magicFmt(c[1]), magn_z: magicFmt(c[2]),
+               magn_moment: magicFmt(emu * 1e-3), description: st.label });
+        continue;
+      }
+      const m = Math.sqrt(st.mx*st.mx + st.my*st.my + st.mz*st.mz);
+      const desc = st.code === 2 ? 'pTRM check' : st.code === 3 ? 'pTRM tail check'
+                 : st.code === 4 ? 'additivity check' : '';
+      push({ experiment: exp,
+             method_codes: (st.inField ? 'LT-T-I' : 'LT-T-Z') + ':' + lp,
+             treat_temp: magicFmt(st.treat + 273.15),
+             treat_dc_field: (st.inField && isFinite(d.demag.labFieldUT)) ? magicFmt(d.demag.labFieldUT * 1e-6) : '',
+             magn_x: magicFmt(st.mx), magn_y: magicFmt(st.my), magn_z: magicFmt(st.mz),
+             magn_moment: magicFmt(m), description: desc });
+    }
+  } else if(d.vsm && d.vsm.kind === 'micromag-forc' && d.vsm.forcCurves){
+    lps.add('LP-FORC');
+    const exp = spec + '-LP-FORC';
+    d.vsm.forcCurves.forEach((c, ci) => {
+      for(let k = 0; k < c.Ha.length; k++){
+        push({ experiment: exp, method_codes: 'LP-FORC',
+               treat_dc_field: magicFmt(c.Hr),                    // reversal field (T)
+               meas_field_dc: magicFmt(c.Ha[k]),                  // applied field at measurement (T)
+               magn_moment: magicFmt(c.M[k]),
+               description: 'FORC curve ' + (ci+1) + ', Hr=' + (c.Hr*1000).toFixed(2) + ' mT' });
+      }
+    });
+  } else if(d.vsm && d.vsm.kind === 'hysteresis' && d.vsm.hyst){
+    lps.add('LP-HYS');
+    const exp = spec + '-LP-HYS', h = d.vsm.hyst;
+    for(let i = 0; i < h.field.length; i++){
+      push({ experiment: exp, method_codes: 'LP-HYS',
+             meas_field_dc: magicFmt(h.field[i]), magn_moment: magicFmt(h.moment[i]) });
+    }
+  } else if(d.vsm && d.vsm.kind === 'dcd' && d.vsm.remanence){
+    lps.add('LP-IRM-DCD');
+    const exp = spec + '-LP-IRM-DCD', r = d.vsm.remanence;
+    for(let i = 0; i < r.field.length; i++){
+      push({ experiment: exp, method_codes: 'LT-IRM:LP-IRM-DCD',
+             treat_dc_field: magicFmt(r.field[i]), magn_moment: magicFmt(r.moment[i]) });
+    }
+  } else if(d.steptypes && d.mvector){
+    // 2G rmg step file. Classify each step; AF steps take their LP from the
+    // most recent acquisition (NRM / IRM / ARM / RRM).
+    let lastAcq = 'NRM';
+    for(let i = 0; i < d.steptypes.length; i++){
+      const st = (d.steptypes[i] || '').toLowerCase();
+      const mx = d.mvector[0][i], my = d.mvector[1][i], mz = d.mvector[2][i];
+      if(![mx,my,mz].every(v => typeof v === 'number' && isFinite(v))) continue;
+      const fieldT = (d.levels && isFinite(d.levels[i])) ? d.levels[i] * 1e-4 : NaN;  // G → T
+      const base = { magn_x: magicFmt(mx), magn_y: magicFmt(my), magn_z: magicFmt(mz),
+                     magn_moment: magicFmt(Math.sqrt(mx*mx + my*my + mz*mz)) };
+      let lt = null, lp = null, extra = {};
+      if(st.startsWith('nrm')){ lastAcq = 'NRM'; lt = 'LT-NO'; lp = 'LP-DIR-AF'; }
+      else if(st.startsWith('forc')){
+        lt = 'LT-IRM'; lp = 'LP-FORC'; extra.treat_dc_field = magicFmt(fieldT);
+        extra.description = 'remanence FORC node';
+      }
+      else if(st.startsWith('tt')){
+        lt = 'LT-T-Z'; lp = 'LP-DIR-T';
+        // rmg thermal level assumed °C → Kelvin (verify against a real thermal run)
+        if(isFinite(d.levels && d.levels[i])) extra.treat_temp = magicFmt(d.levels[i] + 273.15);
+      }
+      else if(st.startsWith('trm')){
+        lt = 'LT-T-I'; lp = 'LP-TRM';
+        if(isFinite(d.levels && d.levels[i])) extra.treat_temp = magicFmt(d.levels[i] + 273.15);
+      }
+      else if(st.startsWith('irm')){ lastAcq = 'IRM'; lt = 'LT-IRM'; lp = 'LP-IRM';
+        extra.treat_dc_field = magicFmt(fieldT); }
+      else if(st.startsWith('arm')){ lastAcq = 'ARM'; lt = 'LT-AF-I'; lp = 'LP-ARM';
+        extra.treat_ac_field = magicFmt(fieldT);
+        if(d.treatmentDCFields && isFinite(d.treatmentDCFields[i]) && d.treatmentDCFields[i] !== 0)
+          extra.treat_dc_field = magicFmt(d.treatmentDCFields[i]); }
+      else if(st.startsWith('rrm')){ lastAcq = 'RRM'; lt = 'LT-AF-Z'; lp = null;   // MagIC has no RRM code
+        extra.treat_ac_field = magicFmt(fieldT);
+        extra.description = 'RRM acquisition' + (d.spin && isFinite(d.spin[i]) ?
+          ', rotation ' + d.spin[i] + ' rps' : '') + ' (MagIC has no RRM method code)';
+        extra.experiment = spec + '-RRM'; }
+      else if(st.startsWith('af')){
+        lt = 'LT-AF-Z';
+        lp = ({ NRM:'LP-DIR-AF', IRM:'LP-IRM-AFD', ARM:'LP-ARM-AFD', RRM:'LP-DIR-AF' })[lastAcq];
+        extra.treat_ac_field = magicFmt(fieldT);
+      }
+      else continue;   // susceptibility-only / unknown step types are skipped
+      if(lp) lps.add(lp);
+      push(Object.assign({ experiment: spec + '-' + (lp || 'RRM'),
+                           method_codes: lt + (lp ? ':' + lp : '') }, base, extra));
+    }
+  }
+  return { spec, rows, lps: [...lps], seqEnd: seq,
+           description: (d.vsm && d.vsm.description) || (d.mpms && d.mpms.comment) || '' };
+}
+
+function magicExport(datas){
+  const MEAS_COLS = ['measurement','experiment','specimen','sequence','standard','quality',
+    'method_codes','citations','treat_ac_field','treat_dc_field','treat_temp',
+    'meas_field_dc','meas_temp','magn_moment','magn_x','magn_y','magn_z','description'];
+  const SPEC_COLS = ['specimen','sample','citations','method_codes','description'];
+  const specRows = [], measRows = [];
+  let seq = 1, exported = 0, skipped = [];
+  for(const d of datas){
+    const r = magicRowsForSample(d, seq);
+    if(!r.rows.length){ skipped.push(d.samplename || '?'); continue; }
+    seq = r.seqEnd; exported++;
+    // measurement name = experiment + running number within the experiment
+    const perExp = {};
+    for(const row of r.rows){
+      perExp[row.experiment] = (perExp[row.experiment] || 0) + 1;
+      row.measurement = row.experiment + '-' + perExp[row.experiment];
+    }
+    specRows.push({ specimen: r.spec, sample: r.spec, citations: 'This study',
+                    method_codes: r.lps.filter(Boolean).join(':'), description: r.description });
+    measRows.push(...r.rows);
+  }
+  if(!measRows.length) return { error: 'no exportable data in the selected samples' };
+  const tab = (name, cols, rows) =>
+    'tab delimited\t' + name + '\n' + cols.join('\t') + '\n' +
+    rows.map(r => cols.map(c => (r[c] === undefined || r[c] === null) ? '' : String(r[c])).join('\t')).join('\n');
+  const text = tab('specimens', SPEC_COLS, specRows) + '\n>>>>>>>>>>\n' +
+               tab('measurements', MEAS_COLS, measRows) + '\n';
+  return { text, nSpec: specRows.length, nMeas: measRows.length, skipped };
+}
+
+function exportMagicSelected(){
+  const sel = S.samples.filter(s => s.selected).map(s => s._d);
+  if(!sel.length){ log('✗ MagIC export: no samples selected', 'err'); return; }
+  const res = magicExport(sel);
+  if(res.error){ log('✗ MagIC export: ' + res.error, 'err'); return; }
+  const blob = new Blob([res.text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pyrockmag_magic.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  if(res.skipped.length) log('⚠ MagIC export: skipped (no exportable data): ' + res.skipped.join(', '), 'warn');
+  log('⇣ MagIC export: ' + res.nSpec + ' specimen(s), ' + res.nMeas + ' measurement rows → pyrockmag_magic.txt' +
+      ' — add locations/sites/samples tables in the MagIC online editor', 'ok');
+}
+
 function frcConvDownload(){
   try {
     const { sample, multiplier } = frcConvGetOpts();
@@ -6988,6 +8289,7 @@ function forcDiagRecompute(){
 
 renderOps();
 renderSamples();
+{ const bt=document.getElementById('build-tag'); if(bt) bt.textContent='build '+PYRM_BUILD; }
 setStatus('ok','ready — drop .rmg files to begin');
 log('pure JavaScript — instant startup, no Python runtime needed', 'ok');
 maybeShowRestore();
