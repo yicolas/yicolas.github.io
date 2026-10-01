@@ -249,8 +249,9 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
       <label style="display:flex;gap:4px;align-items:center;color:var(--tx2)">
         grid size
         <select id="forc-gs" style="background:var(--bg3);border:1px solid var(--bdr);color:var(--tx);padding:2px 4px;border-radius:3px;font-family:var(--mono);font-size:10px">
+          <option value="auto" selected>auto (native)</option>
           <option value="50">50</option>
-          <option value="100" selected>100</option>
+          <option value="100">100</option>
           <option value="150">150</option>
           <option value="200">200</option>
         </select>
@@ -2426,11 +2427,15 @@ function buildLayout(samples, op){
       const hasY = Number.isFinite(ForcDiagState.buMin) && Number.isFinite(ForcDiagState.buMax);
       if(hasX){ xExtra.range = [ForcDiagState.bcMin, ForcDiagState.bcMax]; delete xExtra.rangemode; }
       if(hasY){ yExtra.range = [ForcDiagState.buMin, ForcDiagState.buMax]; }
+      const t = TT(`FORC: ${sname}`);
+      // Left-anchor the title and pad the top margin so it cannot collide
+      // with Plotly's modebar (top-right graph controls).
+      t.x = 0.01; t.xanchor = 'left'; t.y = 0.985; t.yanchor = 'top';
       return Object.assign({}, common, {
-        title:TT(`FORC Contour (${ForcDiagState.colormap}): ${sname}  ·  SF=${sf}  ·  grid=${gsz}×${gsz}`),
+        title: t,
         xaxis:ax('B<sub>c</sub> (mT)', xExtra),
         yaxis:ax('B<sub>u</sub> (mT)', yExtra),
-        margin:M(68,24,36,72),
+        margin:M(68,24,64,72),
         showlegend:false
       });
     }
@@ -3219,7 +3224,7 @@ function tForcCurves(samples){
 }
 
 // ─── FORC_DIAG state (smoothing + grid size) ──────────────────────────────────
-const ForcDiagState = { smoothingFactor: 3, gridSize: 100, colormap: 'inferno_r', bcMin: null, bcMax: null, buMin: null, buMax: null, lastResult: null };
+const ForcDiagState = { smoothingFactor: 3, gridSize: 'auto', colormap: 'inferno_r', bcMin: null, bcMax: null, buMin: null, buMax: null, lastResult: null };
 
 // Plotly-format colorscale stops for matplotlib-compatible colormaps
 const FORC_COLORMAPS = {
@@ -3370,6 +3375,25 @@ function tForcDiag(samples){
     return [];
   }
   ForcDiagState.lastResult = result;
+
+  // Central-ridge diagnostic: |rho|-max Bu per 2.5 mT Bc bin over 10–40 mT,
+  // median reported in the info line so any real field offset is visible.
+  {
+    const gsD = result.gridSize, bins = {};
+    let rhoPk = 0;
+    for (let i = 0; i < gsD; i++) for (let j = 0; j < gsD; j++){
+      if (!result.validMask[i][j]) continue;
+      const v = result.rho[i][j]; if (!Number.isFinite(v)) continue;
+      if (Math.abs(v) > rhoPk) rhoPk = Math.abs(v);
+      const bc = result.Hc[i][j] * 1000;
+      if (bc < 10 || bc > 40) continue;
+      const b = Math.round(bc / 2.5);
+      if (!(b in bins) || Math.abs(v) > Math.abs(bins[b].v)) bins[b] = { v, bu: result.Hu[i][j] * 1000 };
+    }
+    const bus = Object.values(bins).map(x => x.bu).sort((a, b) => a - b);
+    result.ridgeBuMT = bus.length ? bus[Math.floor(bus.length / 2)] : NaN;
+    result.rhoPeak = rhoPk;
+  }
 
   // Build flat x/y 1D coordinates for the contour. The Hc and Hu axes are NOT
   // rectangular in (Hr, Ha) index space. Plotly's contour trace requires:
@@ -4737,18 +4761,20 @@ function uniformFilter1D(row, size){
 
 function uniformFilter2D(arr, size){
   const [rows, cols] = shape2D(arr);
+  const sizeI = Array.isArray(size) ? size[0] : size;
+  const sizeJ = Array.isArray(size) ? size[1] : size;
   // Pass 1: filter along axis 0 (rows) — for each column, apply 1D filter
   const pass1 = zeros2D(rows, cols);
   for (let j = 0; j < cols; j++){
     const col = new Float64Array(rows);
     for (let i = 0; i < rows; i++) col[i] = arr[i][j];
-    const filtered = uniformFilter1D(col, size);
+    const filtered = uniformFilter1D(col, sizeI);
     for (let i = 0; i < rows; i++) pass1[i][j] = filtered[i];
   }
   // Pass 2: filter along axis 1 (cols) — for each row, apply 1D filter
   const out = zeros2D(rows, cols);
   for (let i = 0; i < rows; i++){
-    const filtered = uniformFilter1D(pass1[i], size);
+    const filtered = uniformFilter1D(pass1[i], sizeJ);
     for (let j = 0; j < cols; j++) out[i][j] = filtered[j];
   }
   return out;
@@ -5168,7 +5194,7 @@ function measureForcBuOffset(curves){
 
 function processForcForcinelWorkflow(data, opts){
   const smoothingFactor = (opts && opts.smoothingFactor !== undefined) ? opts.smoothingFactor : 3;
-  const gridSize = (opts && opts.gridSize !== undefined) ? opts.gridSize : 100;
+  const gridSizeOpt = (opts && opts.gridSize !== undefined) ? opts.gridSize : 'auto';
 
   // ─── Step 1: Extract curves ──────────────────────────────────────────────
   const forc = rmgExtractForcData(data);
@@ -5242,6 +5268,23 @@ function processForcForcinelWorkflow(data, opts){
   const HrMin = HrIn[0], HrMax = HrIn[HrIn.length - 1];
   const HaMin = HaIn[0], HaMax = HaIn[HaIn.length - 1];
 
+  // Native measurement spacings (median step). A fixed coarse output grid
+  // undersamples the one-measurement-row-wide central ridge and aliases it
+  // into a sawtooth Bu offset — so 'auto' sizes the grid to the native
+  // spacing of BOTH axes (square grid, capped for speed/memory).
+  const medStep = (a) => {
+    const d = []; for (let k = 1; k < a.length; k++) d.push(a[k] - a[k-1]);
+    d.sort((x, y) => x - y); return d.length ? d[Math.floor(d.length/2)] : 1;
+  };
+  const dHrNat = medStep(HrIn), dHaNat = medStep(HaIn);
+  let gridSize = gridSizeOpt;
+  if (gridSize === 'auto' || !Number.isFinite(+gridSize)){
+    const need = Math.max((HrMax - HrMin) / dHrNat, (HaMax - HaMin) / dHaNat);
+    gridSize = Math.min(401, Math.max(60, Math.ceil(need) + 1));
+  } else {
+    gridSize = +gridSize;
+  }
+
   const HrOut1D = new Float64Array(gridSize);
   const HaOut1D = new Float64Array(gridSize);
   for (let k = 0; k < gridSize; k++){
@@ -5262,10 +5305,17 @@ function processForcForcinelWorkflow(data, opts){
   // ─── Step 4: Interpolate M onto target grid (bicubic) ────────────────────
   const MGrid = griddata2DBicubic(HrIn, HaIn, MRaw, HrOut1D, HaOut1D);
 
-  // ─── Step 5: Uniform-filter smoothing (FORCinel default) ─────────────────
+  // ─── Step 5: Uniform-filter smoothing ────────────────────────────────────
+  // SF is defined on the MEASUREMENT grid (FORCinel: a (2·SF+1)-point window),
+  // so convert to output-grid pixels per axis; otherwise changing the output
+  // grid silently changes the physical smoothing window.
   let MSmooth;
   if (smoothingFactor > 0){
-    MSmooth = uniformFilter2D(MGrid, smoothingFactor);
+    const dHrOut = (HrMax - HrMin) / (gridSize - 1);
+    const dHaOut = (HaMax - HaMin) / (gridSize - 1);
+    const winI = Math.max(1, Math.round((2*smoothingFactor + 1) * dHrNat / dHrOut));
+    const winJ = Math.max(1, Math.round((2*smoothingFactor + 1) * dHaNat / dHaOut));
+    MSmooth = uniformFilter2D(MGrid, [winI, winJ]);
   } else {
     MSmooth = copy2D(MGrid);
   }
@@ -6331,7 +6381,7 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
-const PYRM_BUILD='2026-09-30c';
+const PYRM_BUILD='2026-10-01a';
 // Per-sample fit state (hidden steps, saved fits, coordinate frame) for
 // session persistence, keyed by samplename.
 function collectFitStates(){
@@ -7006,7 +7056,9 @@ function runPlot(samples, op){
     const info = document.getElementById('forc-diag-info');
     if(info){
       const r = ForcDiagState.lastResult;
-      info.textContent = r ? `${r.forcData.curves.length} curves, ρ peak = ${Math.max(Math.abs(r.rho.flat().filter(v=>Number.isFinite(v)).reduce((a,b)=>Math.max(a,Math.abs(b)), 0))).toExponential(2)}` : '';
+      info.textContent = r ? `${r.forcData.curves.length} curves · SF=${r.smoothingFactor} · grid ${r.gridSize}×${r.gridSize}${ForcDiagState.gridSize==='auto'?' (native)':''} · ${ForcDiagState.colormap}`
+        + (r.rhoPeak ? ` · ρ peak ${r.rhoPeak.toExponential(2)}` : '')
+        + (Number.isFinite(r.ridgeBuMT) ? ` · ridge Bᵤ ≈ ${r.ridgeBuMT.toFixed(1)} mT` : '') : '';
     }
   }
 
@@ -8221,9 +8273,9 @@ function forcDiagRecompute(){
   const cmEl = document.getElementById('forc-cm');
   if(!sfEl || !gsEl) return;
   const sf = parseInt(sfEl.value);
-  const gs = parseInt(gsEl.value);
+  const gs = gsEl.value === 'auto' ? 'auto' : parseInt(gsEl.value);
   if(Number.isFinite(sf) && sf >= 0 && sf <= 10) ForcDiagState.smoothingFactor = sf;
-  if(Number.isFinite(gs) && gs > 0 && gs <= 500) ForcDiagState.gridSize = gs;
+  if(gs === 'auto' || (Number.isFinite(gs) && gs > 0 && gs <= 500)) ForcDiagState.gridSize = gs;
   if(cmEl && FORC_COLORMAPS[cmEl.value]) ForcDiagState.colormap = cmEl.value;
   // Re-run the FORC_DIAG plot if that's the current op
   if(S.activeOp === 'FORC_DIAG' && S.samples && S.samples.length > 0){
