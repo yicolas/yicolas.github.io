@@ -160,10 +160,32 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 
 <div class="hdr">
   <span class="logo">⬡ pyRockmag</span>
+  <button class="btn sm" id="gui-btn" onclick="toggleGuiMode()" title="Switch to a demag_gui-style full-screen fitting workspace: Zijderveld + equal-area + decay + fit panel, specimen navigation">⌘ PmagGUI</button>
   <span class="sub">rock magnetism · pure JS · instant</span>
   <span class="sub" id="build-tag" style="opacity:.55"></span>
   <div class="sp"></div>
   <button class="btn sm" id="theme-btn" onclick="toggleTheme()">◑ light</button>
+</div>
+
+<!-- PmagGUI mode: full-screen demag_gui-style fitting workspace -->
+<div id="gui-root" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column">
+  <div style="display:flex;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--bdr);background:var(--bg2);font-family:var(--mono);font-size:11px">
+    <button class="btn sm" onclick="toggleGuiMode()" title="Back to the pyRockmag plotting interface">◁ pyRockmag</button>
+    <span style="font-weight:700;color:var(--ac)">PmagGUI mode</span>
+    <button class="btn sm" onclick="guiStep(-1)" title="Previous specimen (←)">◀</button>
+    <select id="gui-spec" onchange="guiSelect(parseInt(this.value))" style="min-width:160px;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);padding:2px 4px;font-family:var(--mono);font-size:11px"></select>
+    <button class="btn sm" onclick="guiStep(1)" title="Next specimen (→)">▶</button>
+    <span id="gui-counter" style="color:var(--tx3)"></span>
+    <span id="gui-site" style="color:var(--tx2)"></span>
+    <div style="flex:1"></div>
+    <button class="btn sm" onclick="exportFitsSpecimensTable()" title="Download every saved fit as a MagIC specimens.txt">⬇ specimens.txt</button>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:54% 46%;grid-template-rows:57% 43%;min-height:0;min-width:0">
+    <div id="gui-zij" style="border-right:1px solid var(--bdr);border-bottom:1px solid var(--bdr);min-height:0;min-width:0"></div>
+    <div id="gui-eqa" style="border-bottom:1px solid var(--bdr);min-height:0;min-width:0"></div>
+    <div id="gui-dec" style="border-right:1px solid var(--bdr);min-height:0;min-width:0"></div>
+    <div id="gui-panel" style="overflow:auto;background:var(--bg2);padding:8px 12px;font-size:11px;font-family:var(--mono);min-height:0"></div>
+  </div>
 </div>
 
 <div class="main">
@@ -6109,7 +6131,7 @@ function fitCurrentSample(){
 }
 function fitEsc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fitNum(v, dg){ return (typeof v === 'number' && isFinite(v)) ? v.toFixed(dg===undefined?1:dg) : '—'; }
-function fitRefresh(){ saveSession(); if(S.activeOp==='PCA_FITS') runAnalysis(); else { renderFitPanel(); } }
+function fitRefresh(){ saveSession(); if(S.guiMode){ guiRender(); return; } if(S.activeOp==='PCA_FITS') runAnalysis(); else { renderFitPanel(); } }
 function fitSetCoords(val){
   const d = fitCurrentSample(); if(!d || !d.demag) return;
   d.demag.coords = val; fitRefresh();
@@ -6162,11 +6184,15 @@ function fitRecomputeAll(d){
     return (nf && !nf.err) ? nf : f;
   });
 }
-function renderFitPanel(){
-  const panel = document.getElementById('fit-panel');
+function renderFitPanel(targetId){
+  const gui = targetId === 'gui-panel';
+  const panel = document.getElementById(targetId || 'fit-panel');
   if(!panel) return;
+  // Only one panel may hold the fit controls at a time (ids are shared):
+  const other = document.getElementById(gui ? 'fit-panel' : 'gui-panel');
+  if(other && other.innerHTML) other.innerHTML = '';
   const d = fitCurrentSample();
-  if(!d || S.activeOp !== 'PCA_FITS'){ panel.style.display = 'none'; return; }
+  if(!d || (!gui && S.activeOp !== 'PCA_FITS')){ panel.style.display = 'none'; return; }
   fitRecomputeAll(d);
   const sp = fitSeriesPoints(d, true);
   if(!sp){ panel.style.display = 'none'; return; }
@@ -6259,6 +6285,119 @@ function renderFitPanel(){
 }
 
 // ── TDT (ThellierTool) file: ingestion only — no Arai module ────────────────
+// ── PmagGUI mode: demag_gui-style full-screen fitting workspace ─────────────
+// Zijderveld + equal-area + decay + fit panel in one grid, specimen prev/next
+// navigation (←/→), driven by the same fit state as the PCA_FITS plot.
+function guiSpecimens(){
+  return (S.samples || []).filter(sm => rmgDemagSeries(sm._d));
+}
+function toggleGuiMode(){
+  if(S.guiMode) exitGuiMode(); else enterGuiMode();
+}
+function enterGuiMode(){
+  const specs = guiSpecimens();
+  if(!specs.length){ log('✗ PmagGUI mode: load demag data first (rmg thermal / CIT / MagIC / tdt)', 'err'); return; }
+  S.guiMode = true;
+  try{ localStorage.setItem('pyrm_gui_mode', '1'); }catch(_){}
+  let idx = specs.findIndex(sm => sm.selected);
+  if(idx < 0) idx = 0;
+  const root = document.getElementById('gui-root');
+  if(root) root.style.display = 'flex';
+  const b = document.getElementById('gui-btn');
+  if(b) b.style.fontWeight = '700';
+  guiSelect(idx);
+}
+function exitGuiMode(){
+  S.guiMode = false;
+  try{ localStorage.setItem('pyrm_gui_mode', ''); }catch(_){}
+  const root = document.getElementById('gui-root');
+  if(root) root.style.display = 'none';
+  const b = document.getElementById('gui-btn');
+  if(b) b.style.fontWeight = '';
+  if(typeof Plotly !== 'undefined' && Plotly.purge){
+    for(const id of ['gui-zij','gui-eqa','gui-dec']){ const el = document.getElementById(id); if(el) try{ Plotly.purge(el); }catch(_){} }
+  }
+  { const gp = document.getElementById('gui-panel'); if(gp) gp.innerHTML = ''; }
+  renderSamples(); renderOps();
+  if(S.samples.some(x => x.selected)) runAnalysis(); else hideAll();
+}
+function guiStep(dn){
+  const specs = guiSpecimens();
+  if(!specs.length) return;
+  let idx = specs.findIndex(sm => sm.selected);
+  if(idx < 0) idx = 0;
+  guiSelect((idx + dn + specs.length) % specs.length);
+}
+function guiSelect(idx){
+  const specs = guiSpecimens();
+  if(!specs.length){ exitGuiMode(); return; }
+  idx = Math.max(0, Math.min(idx, specs.length - 1));
+  const target = specs[idx];
+  for(const sm of S.samples) sm.selected = (sm === target);
+  guiRender();
+}
+function guiEqFitTraces(d){
+  // Fit directions as stars on the equal-area net (solid = down, open = up).
+  const tr = [];
+  const COLS = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
+  const put = (dec, inc, name, color) => {
+    if(!isFinite(dec) || !isFinite(inc)) return;
+    const r = Math.SQRT2 * Math.sin((90 - Math.abs(inc)) * Math.PI/360);
+    tr.push({ x:[r*Math.sin(dec*Math.PI/180)], y:[r*Math.cos(dec*Math.PI/180)], mode:'markers',
+      name, marker:{size:13, symbol: inc >= 0 ? 'star' : 'star-open', color, line:{width:1, color:'#333'}},
+      hovertemplate: name + '<br>D=' + dec.toFixed(1) + '° I=' + inc.toFixed(1) + '°<extra></extra>' });
+  };
+  (d.fits || []).forEach((f, k) => { if(f.type !== 'DE-BFP') put(f.dec, f.inc, 'fit ' + f.name, COLS[k % COLS.length]); });
+  lsqFitsForSample(d).forEach(f => { if(f.type === 'L') put(f.dec, f.inc, (isFinite(f.kmin)?'MagIC ':'LSQ ') + (f.comp || ''), '#9e9d24'); });
+  return tr;
+}
+function guiRender(){
+  if(!S.guiMode) return;
+  const specs = guiSpecimens();
+  if(!specs.length){ exitGuiMode(); return; }
+  let idx = specs.findIndex(sm => sm.selected);
+  if(idx < 0){ idx = 0; for(const sm of S.samples) sm.selected = (sm === specs[0]); }
+  const d = specs[idx]._d;
+  const sel = document.getElementById('gui-spec');
+  if(sel) sel.innerHTML = specs.map((sm, k) =>
+    `<option value="${k}" ${k===idx?'selected':''}>${fitEsc(sm._d.samplename||('specimen '+k))}</option>`).join('');
+  const cnt = document.getElementById('gui-counter');
+  if(cnt) cnt.textContent = (idx+1) + ' / ' + specs.length;
+  const siteEl = document.getElementById('gui-site');
+  if(siteEl){
+    const site = magicSiteFor(d.samplename);
+    const nf = (d.fits||[]).length, ne = lsqFitsForSample(d).length;
+    siteEl.textContent = (site ? 'site ' + site + ' · ' : '') + nf + ' fit(s)' + (ne ? ' · ' + ne + ' imported' : '');
+  }
+  fitRecomputeAll(d);
+  if(typeof Plotly !== 'undefined' && Plotly.react){
+    const cfg = {responsive:true, displaylogo:false};
+    const zd = document.getElementById('gui-zij');
+    Plotly.react(zd, tZij([d]), buildLayout([d], 'PCA_FITS'), cfg);
+    if(typeof zd.on === 'function' && !zd._fitClickBound){
+      zd._fitClickBound = true;
+      zd.on('plotly_click', ev => {
+        if(!S.guiMode || !ev.points || !ev.points.length) return;
+        const cd = ev.points[0].customdata;
+        if(cd !== undefined && cd !== null) fitToggleHide(cd);
+      });
+    }
+    Plotly.react(document.getElementById('gui-eqa'),
+      tEqArea([d]).concat(guiEqFitTraces(d)), buildLayout([d], 'EQAREA'), cfg);
+    Plotly.react(document.getElementById('gui-dec'),
+      tThermDecay([d]), buildLayout([d], 'THERM_DECAY'), cfg);
+  }
+  renderFitPanel('gui-panel');
+}
+// ←/→ navigate specimens in PmagGUI mode (ignored while typing in a field)
+document.addEventListener('keydown', e => {
+  if(!S.guiMode) return;
+  const t = document.activeElement && document.activeElement.tagName;
+  if(/INPUT|SELECT|TEXTAREA/.test(t || '')) return;
+  if(e.key === 'ArrowRight'){ guiStep(1); e.preventDefault(); }
+  else if(e.key === 'ArrowLeft'){ guiStep(-1); e.preventDefault(); }
+});
+
 function tdtDetect(name, text){ return /^\s*Thellier-tdt/i.test(text.slice(0, 200)); }
 function tdtImport(name, text){
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -6582,7 +6721,7 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
-const PYRM_BUILD='2026-10-02a';
+const PYRM_BUILD='2026-10-02b';
 // Per-sample fit state (hidden steps, saved fits, coordinate frame) for
 // session persistence, keyed by samplename.
 function collectFitStates(){
@@ -6654,6 +6793,7 @@ async function applySessionState(state){
   renderSamples(); renderOps();
   if(S.samples.some(x=>x.selected)) runAnalysis();
   saveSession();
+  try{ if(localStorage.getItem('pyrm_gui_mode') === '1' && guiSpecimens().length && !S.guiMode) enterGuiMode(); }catch(_){}
   return uploads.length;
 }
 
