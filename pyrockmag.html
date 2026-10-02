@@ -183,7 +183,16 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
   <div style="flex:1;display:grid;grid-template-columns:55% 45%;grid-template-rows:33% 31% 36%;min-height:0;min-width:0">
     <div id="gui-zij" style="grid-row:1/4;border-right:1px solid var(--bdr);min-height:0;min-width:0"></div>
     <div style="display:flex;border-bottom:1px solid var(--bdr);min-height:0;min-width:0">
-      <div id="gui-eqa" style="flex:1;min-width:0;border-right:1px solid var(--bdr)"></div>
+      <div style="flex:1;min-width:0;border-right:1px solid var(--bdr);position:relative">
+        <select id="gui-eq-scope" onchange="guiSetEqScope(this.value)" title="What the equal-area panel shows"
+          style="position:absolute;top:4px;right:6px;z-index:3;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);font-family:var(--mono);font-size:10px">
+          <option value="specimen">specimen</option>
+          <option value="sample">sample</option>
+          <option value="site">site</option>
+          <option value="all">regional</option>
+        </select>
+        <div id="gui-eqa" style="position:absolute;inset:0"></div>
+      </div>
       <div id="gui-dec" style="flex:1;min-width:0"></div>
     </div>
     <div id="gui-logger" style="overflow:auto;background:var(--bg2);border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:10.5px;min-height:0"></div>
@@ -5508,6 +5517,29 @@ function pmagCart2dir(x, y, z){
   return {dec, inc, R};
 }
 
+// pmag.dogeo port: specimen → geographic using core azimuth/plunge.
+function pmagDogeo(dec, inc, az, pl){
+  const X = pmagDir2cart(dec, inc, 1);
+  const A1 = pmagDir2cart(az, pl, 1), A2 = pmagDir2cart(az + 90, 0, 1), A3 = pmagDir2cart(az - 180, 90 - pl, 1);
+  const xp = A1[0]*X[0] + A2[0]*X[1] + A3[0]*X[2];
+  const yp = A1[1]*X[0] + A2[1]*X[1] + A3[1]*X[2];
+  const zp = A1[2]*X[0] + A2[2]*X[1] + A3[2]*X[2];
+  const d = pmagCart2dir(xp, yp, zp);
+  return [d.dec, d.inc];
+}
+// pmag.dotilt port: geographic → tilt-corrected using bedding dip direction + dip.
+function pmagDotilt(dec, inc, bedAz, bedDip){
+  const rad = Math.PI/180;
+  const X = pmagDir2cart(dec, inc, 1);
+  const sa = -Math.sin(bedAz*rad), ca = Math.cos(bedAz*rad);
+  const cdp = Math.cos(bedDip*rad), sdp = Math.sin(bedDip*rad);
+  const xc = X[0]*(sa*sa + ca*ca*cdp) + X[1]*(ca*sa*(1-cdp)) + X[2]*sdp*ca;
+  const yc = X[0]*ca*sa*(1-cdp) + X[1]*(ca*ca + sa*sa*cdp) - X[2]*sa*sdp;
+  const zc = X[0]*ca*sdp - X[1]*sdp*sa - X[2]*cdp;
+  const d = pmagCart2dir(xc, yc, -zc);
+  return [d.dec, d.inc];
+}
+
 // Generic demagnetization series: one representation for 2G rmg thermal (TT)
 // steps, rmg NRM+AF steps, and TDT files.  {unit, steps:[{treat, mx,my,mz,
 // inField, code, label}]}
@@ -5808,10 +5840,34 @@ const FIT_COLS = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
 function fitFrame(d){
   return (d && d.demag && d.demag.coords) ? d.demag.coords : 'spec';
 }
+function magicBedFor(name){
+  const M = S.magicMeta || {};
+  const o = (M.sampleOrient || {})[(M.specOf || {})[name] || name];
+  return (o && isFinite(o.bdd) && isFinite(o.bdip)) ? o : null;
+}
+// Which coordinate frames can this specimen's Zijderveld/fits be shown in?
+function fitAvailableFrames(d){
+  if(!d || !d.demag) return ['spec'];
+  if(d.demag.frames && d.demag.frames.length > 1) return d.demag.frames;   // CIT: spec/geo/tilt stored
+  if(d.demag.source === 'magic')
+    return magicBedFor(d.samplename) ? ['geo','tilt'] : ['geo'];
+  return [fitFrame(d)];
+}
 function demagStepVec(d, st, frame){
   if(frame === 'geo'  && isFinite(st.gdec)) return pmagDir2cart(st.gdec, st.ginc, st.int);
   if(frame === 'tilt' && isFinite(st.tdec)) return pmagDir2cart(st.tdec, st.tinc, st.int);
   if(frame === 'spec' && isFinite(st.sdec)) return pmagDir2cart(st.sdec, st.sinc, st.int);
+  // MagIC series are geographic; tilt-correct on the fly from the samples-table bedding
+  if(frame === 'tilt' && d && d.demag && d.demag.source === 'magic'){
+    const bed = magicBedFor(d.samplename);
+    if(bed){
+      const g = pmagCart2dir(st.mx, st.my, st.mz);
+      if(g.R){
+        const [td, ti] = pmagDotilt(g.dec, g.inc, bed.bdd, bed.bdip);
+        return pmagDir2cart(td, ti, g.R);
+      }
+    }
+  }
   return [st.mx, st.my, st.mz];
 }
 // Visible zero-field steps with vectors in the active frame.
@@ -5940,31 +5996,55 @@ function collectFisherGroups(){
   out.sort((a,b) => a.comp.localeCompare(b.comp));
   return out;
 }
-// Fisher means per (site, component) — the demag_gui-style site means.
-function collectSiteFisherGroups(){
+// Fisher means grouped at a chosen level: 'sample' / 'site' / 'all' (regional).
+function fitGroupKeyFor(name, level){
+  if(level === 'all') return 'all';
+  if(level === 'sample') return ((S.magicMeta||{}).specOf||{})[name] || name;
+  return magicSiteFor(name) || '';
+}
+function collectFisherGroupsBy(level){
+  fitAdoptAll();
   const groups = {};
-  const add = (site, comp, dec, inc) => {
-    if(!site) return;
-    const k = site + ' ' + comp;
-    (groups[k] = groups[k] || { site, comp, dirs: [] }).dirs.push([dec, inc]);
+  const add = (key, comp, dec, inc) => {
+    if(!key) return;
+    const k = key + '|' + comp;
+    (groups[k] = groups[k] || { key, comp, dirs: [] }).dirs.push([dec, inc]);
   };
   for(const sm of (S.samples || [])){
     const d = sm._d; if(!d) continue;
     for(const f of (d.fits || []))
-      if(f.type === 'DE-BFL') add(magicSiteFor(d.samplename), f.name, f.dec, f.inc);
+      if(f.type === 'DE-BFL') add(fitGroupKeyFor(d.samplename, level), f.name, f.dec, f.inc);
     if(d.lsq) for(const f of d.lsq.fits)
-      if(!f.placeholder && !f._adopted && f.type === 'L') add(magicSiteFor(f.spec), f.comp || 'L', f.dec, f.inc);
+      if(!f.placeholder && !f._adopted && f.type === 'L') add(fitGroupKeyFor(f.spec, level), f.comp || 'L', f.dec, f.inc);
   }
   const out = [];
   for(const k in groups){
     const g = groups[k];
     if(g.dirs.length < 2) continue;
     const flipped = pmagFlipCombine(g.dirs);
-    out.push(Object.assign({ site: g.site, comp: g.comp }, pmagFisherMean(flipped)));
+    const nFlipped = flipped.filter((di, i) => di[0] !== g.dirs[i][0]).length;
+    out.push(Object.assign({ key: g.key, comp: g.comp, nFlipped }, pmagFisherMean(flipped)));
   }
-  out.sort((a,b) => a.site.localeCompare(b.site) || a.comp.localeCompare(b.comp));
+  out.sort((a,b) => a.key.localeCompare(b.key) || a.comp.localeCompare(b.comp));
   return out;
 }
+function collectSiteFisherGroups(){
+  return collectFisherGroupsBy('site').map(g => Object.assign({ site: g.key }, g));
+}
+function fitSetStatLevel(v){
+  S.fitStatLevel = v;
+  try{ localStorage.setItem('pyrm_stat_level', v); }catch(_){}
+  fitRefresh();
+}
+function guiSetEqScope(v){
+  S.guiEqScope = v;
+  try{ localStorage.setItem('pyrm_eq_scope', v); }catch(_){}
+  if(S.guiMode) guiRender();
+}
+try{
+  S.fitStatLevel = localStorage.getItem('pyrm_stat_level') || 'all';
+  S.guiEqScope = localStorage.getItem('pyrm_eq_scope') || 'site';
+}catch(_){ S.fitStatLevel = 'all'; S.guiEqScope = 'site'; }
 
 // ── MagIC tab-delimited tables: measurements / specimens / samples / sites ──
 // Handles single-table files ("tab<TAB>measurements") and combined
@@ -6007,7 +6087,12 @@ function magicImport(name, text){
   const T = magicParseTables(text);
   const out = { samples: [], nFits: 0, nMeta: 0, tables: Object.keys(T) };
   if(T.samples){
-    for(const r of T.samples){ if(r.sample){ S.magicMeta.sampleSite[r.sample] = r.site || ''; out.nMeta++; } }
+    S.magicMeta.sampleOrient = S.magicMeta.sampleOrient || {};
+    for(const r of T.samples){ if(r.sample){
+      S.magicMeta.sampleSite[r.sample] = r.site || '';
+      S.magicMeta.sampleOrient[r.sample] = { az: parseFloat(r.azimuth), pl: parseFloat(r.dip),
+        bdd: parseFloat(r.bed_dip_direction), bdip: parseFloat(r.bed_dip) };
+      out.nMeta++; } }
   }
   if(T.sites){
     for(const r of T.sites){ if(r.site){ S.magicMeta.siteLoc[r.site] = {lat:parseFloat(r.lat), lon:parseFloat(r.lon)}; out.nMeta++; } }
@@ -6075,7 +6160,7 @@ function magicImport(name, text){
       if(e.steps.length < 2) continue;
       const hasTT = e.steps.some(st => st.type === 'TT');
       const d = { samplename: spec,
-        demag: { unit: hasTT ? '°C' : 'mT', source: 'magic', steps: e.steps } };
+        demag: { unit: hasTT ? '°C' : 'mT', source: 'magic', coords: 'geo', steps: e.steps } };
       if(e.hidden.length){ d.fitHidden = e.hidden; nBad += e.hidden.length; }
       out.samples.push(d);
     }
@@ -6260,6 +6345,13 @@ function fitAdoptImported(d){
   }
   d.adoptedDone = true;
 }
+// Run adoption across every loaded demag specimen (so group views and means
+// include imported fits even for specimens not yet opened).
+function fitAdoptAll(){
+  if(S._adoptedAll) return;
+  for(const sm of (S.samples || [])) if(rmgDemagSeries(sm._d)) fitAdoptImported(sm._d);
+  S._adoptedAll = true;
+}
 function fitRecomputeAll(d){
   // Re-derive every saved fit from current hidden/coords state.
   if(!d || !d.fits) return;
@@ -6277,11 +6369,11 @@ function renderFitPanel(targetId){
   if(other && other.innerHTML) other.innerHTML = '';
   const d = fitCurrentSample();
   if(!d || (!gui && S.activeOp !== 'PCA_FITS')){ panel.style.display = 'none'; return; }
-  fitAdoptImported(d);
+  fitAdoptAll();
   fitRecomputeAll(d);
   const sp = fitSeriesPoints(d, true);
   if(!sp){ panel.style.display = 'none'; return; }
-  const frames = (d.demag && d.demag.frames) || ['spec'];
+  const frames = fitAvailableFrames(d);
   const cur = fitCurFit(d);
   const vis = sp.pts.filter(p => !p.hidden);
   const optRows = vis.map(p => `<option value="${p.i}">${fitEsc(p.label)}</option>`).join('');
@@ -6348,33 +6440,42 @@ function renderFitPanel(targetId){
     });
     h += `</table><div style="color:var(--tx3);margin-bottom:6px">† dang is meaningful for the terminal (origin-trending) component only · usable ChRM: MAD ≤ 10° and dang ≤ 15° · click a row to make it the current fit</div>`;
   }
-  // live Fisher over all fits (all loaded samples), grouped by component
-  const groups = collectFisherGroups();
-  if(groups.length){
-    h += `<div><b>Fisher means over saved fits</b> <span style="color:var(--tx3)">(all loaded specimens · lines only · reverse mode flipped once, pmag.flip combine)</span></div>`;
-    h += `<table style="border-collapse:collapse"><tr>${['component','n','Dec','Inc','R','k','α95','flipped'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
-    for(const g of groups){
-      h += g.n < 2
-        ? `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}</td><td style="padding:1px 8px">${g.n}</td><td colspan="6" style="padding:1px 8px;color:var(--tx3)">need ≥2 fits</td></tr>`
-        : `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}${g.frames.size>1?' *':''}</td><td style="padding:1px 8px">${g.n}</td>
-           <td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
-           <td style="padding:1px 8px">${fitNum(g.r,3)}</td><td style="padding:1px 8px">${fitNum(g.k)}</td>
-           <td style="padding:1px 8px">${fitNum(g.alpha95)}</td><td style="padding:1px 8px">${g.nFlipped||0}</td></tr>`;
-    }
-    h += `</table>`;
-    if(groups.some(g => g.frames && g.frames.size > 1))
-      h += `<div style="color:var(--amb)">* mixes coordinate frames — refit in one frame before using this mean</div>`;
-  }
-  const siteGroups = collectSiteFisherGroups();
-  if(siteGroups.length){
-    h += `<div style="margin-top:6px"><b>site means</b> <span style="color:var(--tx3)">(Fisher over specimen line fits per site · sites from MagIC samples table)</span></div>`;
-    h += `<table style="border-collapse:collapse"><tr>${['site','component','n','Dec','Inc','k','α95'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
-    for(const g of siteGroups){
-      h += `<tr><td style="padding:1px 8px">${fitEsc(g.site)}</td><td style="padding:1px 8px">${fitEsc(g.comp)}</td>
-        <td style="padding:1px 8px">${g.n}</td><td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
-        <td style="padding:1px 8px">${fitNum(g.k)}</td><td style="padding:1px 8px">${fitNum(g.alpha95)}</td></tr>`;
-    }
-    h += `</table>`;
+  // live Fisher means with a level selector: sample / site / regional
+  const lvl = S.fitStatLevel || 'all';
+  h += `<div><b>Fisher means over saved fits</b>
+    <select onchange="fitSetStatLevel(this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
+      <option value="all" ${lvl==='all'?'selected':''}>regional (all specimens)</option>
+      <option value="site" ${lvl==='site'?'selected':''}>by site</option>
+      <option value="sample" ${lvl==='sample'?'selected':''}>by sample</option>
+    </select>
+    <span style="color:var(--tx3)">lines only · reverse mode flipped once, pmag.flip combine</span></div>`;
+  if(lvl === 'all'){
+    const groups = collectFisherGroups();
+    if(groups.length){
+      h += `<table style="border-collapse:collapse"><tr>${['component','n','Dec','Inc','R','k','α95','flipped'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
+      for(const g of groups){
+        h += g.n < 2
+          ? `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}</td><td style="padding:1px 8px">${g.n}</td><td colspan="6" style="padding:1px 8px;color:var(--tx3)">need ≥2 fits</td></tr>`
+          : `<tr><td style="padding:1px 8px">${fitEsc(g.comp)}${g.frames.size>1?' *':''}</td><td style="padding:1px 8px">${g.n}</td>
+             <td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
+             <td style="padding:1px 8px">${fitNum(g.r,3)}</td><td style="padding:1px 8px">${fitNum(g.k)}</td>
+             <td style="padding:1px 8px">${fitNum(g.alpha95)}</td><td style="padding:1px 8px">${g.nFlipped||0}</td></tr>`;
+      }
+      h += `</table>`;
+      if(groups.some(g => g.frames && g.frames.size > 1))
+        h += `<div style="color:var(--amb)">* mixes coordinate frames — refit in one frame before using this mean</div>`;
+    } else h += `<div style="color:var(--tx3)">no line fits yet</div>`;
+  } else {
+    const lg = collectFisherGroupsBy(lvl);
+    if(lg.length){
+      h += `<table style="border-collapse:collapse"><tr>${[lvl,'component','n','Dec','Inc','k','α95','flipped'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
+      for(const g of lg){
+        h += `<tr><td style="padding:1px 8px">${fitEsc(g.key)}</td><td style="padding:1px 8px">${fitEsc(g.comp)}</td>
+          <td style="padding:1px 8px">${g.n}</td><td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
+          <td style="padding:1px 8px">${fitNum(g.k)}</td><td style="padding:1px 8px">${fitNum(g.alpha95)}</td><td style="padding:1px 8px">${g.nFlipped||0}</td></tr>`;
+      }
+      h += `</table>`;
+    } else h += `<div style="color:var(--tx3)">need ≥2 line fits per ${lvl} (grouping needs the MagIC samples/sites tables)</div>`;
   }
   panel.innerHTML = h;
   if(cur){
@@ -6483,10 +6584,16 @@ function guiRender(){
         if(cd !== undefined && cd !== null) fitToggleHide(cd);
       });
     }
+    const scope = S.guiEqScope || 'site';
+    const scEl = document.getElementById('gui-eq-scope');
+    if(scEl) scEl.value = scope;
     const eqLay = buildLayout([d], 'EQAREA');
-    eqLay.title = { text: magicSiteFor(d.samplename) ? 'site ' + magicSiteFor(d.samplename) + ' — fits + mean' : 'equal-area', font: eqLay.title && eqLay.title.font };
+    const scKey = scope === 'all' ? 'all specimens' : scope === 'specimen' ? d.samplename
+                : scope === 'sample' ? 'sample ' + (((S.magicMeta||{}).specOf||{})[d.samplename] || d.samplename)
+                : 'site ' + (magicSiteFor(d.samplename) || '—');
+    eqLay.title = { text: scKey + ' — fits + Fisher mean', font: eqLay.title && eqLay.title.font };
     eqLay.showlegend = false;
-    Plotly.react(document.getElementById('gui-eqa'), tSiteEqArea(d), eqLay, cfg);
+    Plotly.react(document.getElementById('gui-eqa'), tScopedEqArea(d, scope), eqLay, cfg);
     const dcLay = buildLayout([d], 'THERM_DECAY');
     dcLay.showlegend = false;
     Plotly.react(document.getElementById('gui-dec'), tThermDecay([d]), dcLay, cfg);
@@ -6494,37 +6601,42 @@ function guiRender(){
   guiRenderLogger(d);
   renderFitPanel('gui-panel');
 }
-// Site equal-area: this specimen's measurement path + fit stars, the other
-// site specimens' line-fit directions (grey), and the site Fisher mean per
-// component (black diamonds).
-function tSiteEqArea(d){
-  const tr = tEqArea([d]).concat(guiEqFitTraces(d));
-  const site = magicSiteFor(d.samplename);
-  if(!site) return tr;
+// Scoped equal-area: 'specimen' = this specimen's demag path + its fit stars;
+// 'sample' / 'site' / 'all' = line-fit directions of every specimen in that
+// group (grey; this specimen's as colored stars) + the group Fisher means as
+// black diamonds. The group views do NOT include the measurement path, so
+// they only change when fits change — not when you step through specimens.
+function tScopedEqArea(d, scope){
+  fitAdoptAll();
+  scope = scope || 'site';
   const proj = (dec, inc) => {
     const r = Math.SQRT2 * Math.sin((90 - Math.abs(inc)) * Math.PI/360);
     return [r*Math.sin(dec*Math.PI/180), r*Math.cos(dec*Math.PI/180), inc >= 0];
   };
+  if(scope === 'specimen') return tEqArea([d]).concat(guiEqFitTraces(d));
+  const tr = tEqArea([]).concat(guiEqFitTraces(d));   // ring + this specimen's fit stars
+  const myKey = fitGroupKeyFor(d.samplename, scope);
   const oth = { x:[], y:[], t:[], sym:[] };
   for(const sm of (S.samples || [])){
-    const od = sm._d; if(!od || od === d) continue;
-    if(magicSiteFor(od.samplename) !== site) continue;
-    for(const f of (od.fits || [])){
+    const od = sm._d; if(!od || od === d || !od.fits) continue;
+    if(scope !== 'all' && fitGroupKeyFor(od.samplename, scope) !== myKey) continue;
+    for(const f of od.fits){
       if(f.type === 'DE-BFP' || !isFinite(f.dec)) continue;
       const [x, y, down] = proj(f.dec, f.inc);
       oth.x.push(x); oth.y.push(y); oth.sym.push(down ? 'circle' : 'circle-open');
       oth.t.push(od.samplename + ' ' + f.name + ' D=' + f.dec.toFixed(1) + '° I=' + f.inc.toFixed(1) + '°');
     }
   }
-  if(oth.x.length) tr.push({ x: oth.x, y: oth.y, mode:'markers', name:'site fits',
+  if(oth.x.length) tr.push({ x: oth.x, y: oth.y, mode:'markers', name: scope + ' fits',
     marker:{size:6, color:'#9a9a9a', symbol: oth.sym}, text: oth.t,
     hovertemplate:'%{text}<extra></extra>' });
-  for(const g of collectSiteFisherGroups()){
-    if(g.site !== site || !(g.n >= 2)) continue;
+  for(const g of collectFisherGroupsBy(scope === 'all' ? 'all' : scope)){
+    if(scope !== 'all' && g.key !== myKey) continue;
+    if(!(g.n >= 2)) continue;
     const [x, y, down] = proj(g.dec, g.inc);
     tr.push({ x:[x], y:[y], mode:'markers', name:'mean ' + g.comp,
       marker:{size:14, color:'#111', symbol: down ? 'diamond' : 'diamond-open', line:{width:1.5, color:'#111'}},
-      hovertemplate:'site mean ' + g.comp + '<br>D=' + g.dec.toFixed(1) + '° I=' + g.inc.toFixed(1) +
+      hovertemplate:(scope==='all'?'regional':scope) + ' mean ' + g.comp + '<br>D=' + g.dec.toFixed(1) + '° I=' + g.inc.toFixed(1) +
         '° n=' + g.n + ' α95=' + (isFinite(g.alpha95)?g.alpha95.toFixed(1):'—') + '°<extra></extra>' });
   }
   return tr;
@@ -6901,7 +7013,7 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
-const PYRM_BUILD='2026-10-02c';
+const PYRM_BUILD='2026-10-03a';
 // Per-sample fit state (hidden steps, saved fits, coordinate frame) for
 // session persistence, keyed by samplename.
 function collectFitStates(){
@@ -6968,6 +7080,7 @@ async function applySessionState(state){
   await onFiles(files);
   for(const u of uploads){ if(u.massG!=null){ const sm=S.samples.find(s=>s.up&&s.up.name===u.name); if(sm){ sm.massG=u.massG; if(sm._d) sm._d.massG=u.massG; } } }
   applyFitStates(state.fitStates);
+  S._adoptedAll = false;
   S.groupByType=!!state.groupByType; S.groupBySite=!!state.groupBySite; S.collapsedGroups=new Set(state.collapsed||[]);
   if(state.activeOp) S.activeOp=state.activeOp;
   const gb=document.getElementById('group-btn'); if(gb){ gb.textContent=S.groupByType?'▦ flat':'⊞ group'; gb.style.fontWeight=S.groupByType?'700':''; }
@@ -7104,7 +7217,7 @@ async function onFiles(files){
           for(const sd of mg.samples) S.samples.push({_d:sd, selected:false, id:nextId++, up:{name:f.name, text}});
           const nSpec = mg.samples.filter(x=>x.demag).length;
           const bits = [];
-          if(nSpec) bits.push(nSpec + ' specimen(s)' + (mg.nBad ? ', ' + mg.nBad + " quality='b' point(s) pre-hidden" : ''));
+          if(nSpec) bits.push(nSpec + ' specimen(s), directions treated as geographic' + (mg.nBad ? ', ' + mg.nBad + " quality='b' point(s) pre-hidden" : ''));
           if(mg.nFits) bits.push(mg.nFits + ' interpretation(s) from specimens table — overlay on Zijderveld + Fisher means');
           if(mg.nMeta) bits.push('sample→site orientation metadata');
           log(f.name + ' added (MagIC: ' + (bits.join(' · ') || mg.tables.join(', ')) + ')', 'ok');
@@ -7202,6 +7315,7 @@ async function onFiles(files){
       console.error(e);
     }
   }
+  S._adoptedAll = false;
   sortSamples();
   renderSamples();
   saveSession();
