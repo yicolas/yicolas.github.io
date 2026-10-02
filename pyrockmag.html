@@ -203,6 +203,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
           <option value="loadOrder">load order</option>
           <option value="name">name (A–Z)</option>
           <option value="type">type (FORC/rockmag/…)</option>
+          <option value="site">site (MagIC/.sam)</option>
           <option value="steps">step count</option>
           <option value="selected">selected first</option>
         </select>
@@ -5859,7 +5860,7 @@ function fitOverlayTraces(d){
   const ser = rmgDemagSeries(d);
   lsqFitsForSample(d).forEach((f, k) => {
     if(f.type !== 'L') return;
-    const rng = lsqStepRange(f.steps, ser.steps);
+    const rng = isFinite(f.kmin) ? magicFitRange(f, ser.steps) : lsqStepRange(f.steps, ser.steps);
     if(!rng) return;
     const segPts = sp.pts.filter(p => p.i >= rng[0] && p.i <= rng[1]);
     const useGeo = sp.frame !== 'tilt';
@@ -5876,11 +5877,12 @@ function tLsqTable(samples){
     for(const f of s.lsq.fits) if(!f.placeholder) rows.push(f);
   }
   if(!rows.length) return [];
-  const hdr = ['Specimen','Comp','Type','Dec (geo)','Inc (geo)','Dec (tilt)','Inc (tilt)','Steps','n','MAD'];
+  const n1 = v => isFinite(v) ? v.toFixed(1) : '—';
+  const hdr = ['Specimen','Comp','Type','Frame','Dec','Inc','Steps','n','MAD'];
   const cols = [ rows.map(r=>r.spec), rows.map(r=>r.comp), rows.map(r=>r.type),
-    rows.map(r=>r.dec.toFixed(1)), rows.map(r=>r.inc.toFixed(1)),
-    rows.map(r=>r.tdec.toFixed(1)), rows.map(r=>r.tinc.toFixed(1)),
-    rows.map(r=>r.steps), rows.map(r=>r.npts), rows.map(r=>r.mad.toFixed(1)) ];
+    rows.map(r=>r.frame || 'geo'),
+    rows.map(r=>n1(r.dec)), rows.map(r=>n1(r.inc)),
+    rows.map(r=>r.steps), rows.map(r=>isFinite(r.npts)?r.npts:'—'), rows.map(r=>n1(r.mad)) ];
   return [{ type:'table',
     header:{values:hdr, align:'left', height:26, fill:{color:'rgba(127,127,127,.18)'}, font:{size:11.5}},
     cells:{values:cols, align:'left', height:20, font:{size:11}, fill:{color:'rgba(127,127,127,.04)'}} }];
@@ -5899,7 +5901,7 @@ function collectFisherGroups(){
     for(const f of (d.fits || []))
       if(f.type === 'DE-BFL') add(f.name, f.frame, f.dec, f.inc, d.samplename);
     if(d.lsq) for(const f of d.lsq.fits)
-      if(!f.placeholder && f.type === 'L') add(f.comp || 'L', 'geo', f.dec, f.inc, f.spec);
+      if(!f.placeholder && f.type === 'L') add(f.comp || 'L', f.frame || 'geo', f.dec, f.inc, f.spec);
   }
   const out = [];
   for(const comp in groups){
@@ -5911,6 +5913,193 @@ function collectFisherGroups(){
   }
   out.sort((a,b) => a.comp.localeCompare(b.comp));
   return out;
+}
+// Fisher means per (site, component) — the demag_gui-style site means.
+function collectSiteFisherGroups(){
+  const groups = {};
+  const add = (site, comp, dec, inc) => {
+    if(!site) return;
+    const k = site + ' ' + comp;
+    (groups[k] = groups[k] || { site, comp, dirs: [] }).dirs.push([dec, inc]);
+  };
+  for(const sm of (S.samples || [])){
+    const d = sm._d; if(!d) continue;
+    for(const f of (d.fits || []))
+      if(f.type === 'DE-BFL') add(magicSiteFor(d.samplename), f.name, f.dec, f.inc);
+    if(d.lsq) for(const f of d.lsq.fits)
+      if(!f.placeholder && f.type === 'L') add(magicSiteFor(f.spec), f.comp || 'L', f.dec, f.inc);
+  }
+  const out = [];
+  for(const k in groups){
+    const g = groups[k];
+    if(g.dirs.length < 2) continue;
+    const flipped = pmagFlipCombine(g.dirs);
+    out.push(Object.assign({ site: g.site, comp: g.comp }, pmagFisherMean(flipped)));
+  }
+  out.sort((a,b) => a.site.localeCompare(b.site) || a.comp.localeCompare(b.comp));
+  return out;
+}
+
+// ── MagIC tab-delimited tables: measurements / specimens / samples / sites ──
+// Handles single-table files ("tab<TAB>measurements") and combined
+// contributions (tables separated by ">>>>>>>>>>").  Measurements with
+// LT-* zero-field codes become demag series; quality='b' rows arrive
+// pre-hidden; specimens-table interpretations attach to matching specimens
+// exactly like .LSQ fits; samples/sites tables feed site grouping.
+S.magicMeta = { specOf:{}, sampleSite:{}, siteLoc:{} };
+function magicDetect(name, text){
+  const head = text.slice(0, 200);
+  return /^tab( delimited)?\t\w+/i.test(head) || /^>{5,}/m.test(text.slice(0, 5000));
+}
+function magicParseTables(text){
+  const out = {};
+  for(const chunk of text.split(/^>{5,}.*$/m)){
+    const lines = chunk.split(/\r\n?|\n/).filter(l => l.length);
+    if(lines.length < 2) continue;
+    const m = lines[0].match(/^tab( delimited)?\t(\S+)/i);
+    if(!m) continue;
+    const table = m[2].toLowerCase();
+    const cols = lines[1].split('\t');
+    const rows = [];
+    for(let i = 2; i < lines.length; i++){
+      const p = lines[i].split('\t');
+      const r = {};
+      for(let j = 0; j < cols.length; j++) r[cols[j]] = p[j] !== undefined ? p[j] : '';
+      rows.push(r);
+    }
+    out[table] = rows;
+  }
+  return out;
+}
+function magicSiteFor(name){
+  if(!name) return '';
+  const M = S.magicMeta;
+  const samp = M.specOf[name] || name;
+  return M.sampleSite[samp] || M.sampleSite[name] || '';
+}
+function magicImport(name, text){
+  const T = magicParseTables(text);
+  const out = { samples: [], nFits: 0, nMeta: 0, tables: Object.keys(T) };
+  if(T.samples){
+    for(const r of T.samples){ if(r.sample){ S.magicMeta.sampleSite[r.sample] = r.site || ''; out.nMeta++; } }
+  }
+  if(T.sites){
+    for(const r of T.sites){ if(r.site){ S.magicMeta.siteLoc[r.site] = {lat:parseFloat(r.lat), lon:parseFloat(r.lon)}; out.nMeta++; } }
+  }
+  if(T.specimens){
+    const fits = [];
+    for(const r of T.specimens){
+      if(!r.specimen || r.dir_dec === undefined || r.dir_dec === '') continue;
+      if(r.sample) S.magicMeta.specOf[r.specimen] = r.sample;
+      const mc = r.method_codes || '';
+      const type = /DE-BFP/.test(mc) ? 'P' : /DE-FM/.test(mc) ? 'F' : 'L';
+      const tc = parseFloat(r.dir_tilt_correction);
+      const frame = tc === 100 ? 'tilt' : tc === -1 ? 'spec' : 'geo';
+      const kmin = parseFloat(r.meas_step_min), kmax = parseFloat(r.meas_step_max);
+      fits.push({ spec: r.specimen, key: r.specimen.replace(/\s+/g,'').toUpperCase(),
+        type, comp: r.dir_comp || r.dir_comp_name || '', frame,
+        dec: parseFloat(r.dir_dec), inc: parseFloat(r.dir_inc),
+        tdec: parseFloat(r.dir_dec), tinc: parseFloat(r.dir_inc),
+        mad: parseFloat(r.dir_mad_free !== undefined && r.dir_mad_free !== '' ? r.dir_mad_free : r.dir_mad),
+        npts: parseInt(r.dir_n_measurements || '', 10),
+        steps: (isFinite(kmin) ? kmin : '?') + '–' + (isFinite(kmax) ? kmax : '?') + ' ' + (r.meas_step_unit || ''),
+        kmin, kmax, kunit: (r.meas_step_unit || 'Kelvin'),
+        placeholder: !isFinite(parseFloat(r.dir_dec)) });
+    }
+    if(fits.length){
+      out.nFits = fits.length;
+      out.samples.push({ samplename: name.replace(/\.[^.]*$/, '') + ' (fits)', lsq: { fits, source: 'magic' } });
+    }
+  }
+  if(T.measurements){
+    const bySpec = new Map();
+    for(const r of T.measurements){
+      const spec = r.specimen; if(!spec) continue;
+      const mc = r.method_codes || '';
+      if(!/LT-(NO|AF-Z|AF-I|T-Z|T-I|LT-Z|PTRM)/.test(mc)) continue;
+      const dec = parseFloat(r.dir_dec), inc = parseFloat(r.dir_inc);
+      const mom = parseFloat(r.magn_moment);
+      let mx, my, mz;
+      if(isFinite(dec) && isFinite(inc)){
+        const c = pmagDir2cart(dec, inc, isFinite(mom) ? mom : 1); mx=c[0]; my=c[1]; mz=c[2];
+      } else if(r.magn_x !== undefined && r.magn_x !== ''){
+        mx = parseFloat(r.magn_x); my = parseFloat(r.magn_y); mz = parseFloat(r.magn_z);
+      } else continue;
+      if(![mx,my,mz].every(Number.isFinite)) continue;
+      const tK = parseFloat(r.treat_temp), tAF = parseFloat(r.treat_ac_field);
+      let treat, label, typ;
+      if(/LT-AF-[ZI]/.test(mc)){ typ='AF'; treat = isFinite(tAF) ? tAF*1000 : NaN; label = 'AF ' + (isFinite(treat)?+treat.toFixed(1):'?') + ' mT'; }
+      else if(/LT-LT-Z/.test(mc)){ typ='LT'; treat = 77; label = 'LT 77 K'; }
+      else if(/LT-NO/.test(mc)){ typ='NRM'; treat = 0; label = 'NRM'; }
+      else { typ='TT'; treat = isFinite(tK) ? tK - 273.15 : NaN; label = 'TT ' + (isFinite(treat)?Math.round(treat):'?') + ' °C'; }
+      const e = bySpec.get(spec) || { steps: [], hidden: [] };
+      if((r.quality || 'g') === 'b') e.hidden.push(e.steps.length);
+      e.steps.push({ treat, label, type: typ, mx, my, mz,
+                     inField: /LT-(T|AF)-I|LT-PTRM/.test(mc), tK });
+      bySpec.set(spec, e);
+    }
+    let nBad = 0;
+    for(const [spec, e] of bySpec){
+      if(e.steps.length < 2) continue;
+      const hasTT = e.steps.some(st => st.type === 'TT');
+      const d = { samplename: spec,
+        demag: { unit: hasTT ? '°C' : 'mT', source: 'magic', steps: e.steps } };
+      if(e.hidden.length){ d.fitHidden = e.hidden; nBad += e.hidden.length; }
+      out.samples.push(d);
+    }
+    out.nBad = nBad;
+  }
+  return (out.samples.length || out.nFits || out.nMeta) ? out : null;
+}
+// Resolve a MagIC fit's step range (Kelvin / T / mT values) onto series indices.
+function magicFitRange(f, steps){
+  if(!isFinite(f.kmin) || !isFinite(f.kmax)) return null;
+  const unit = (f.kunit || '').toLowerCase();
+  const conv = unit.startsWith('k') ? (v => v - 273.15)
+             : unit === 't' || unit === 'tesla' ? (v => v * 1000) : (v => v);
+  const lo = conv(Math.min(f.kmin, f.kmax)) - 0.6, hi = conv(Math.max(f.kmin, f.kmax)) + 0.6;
+  let i0 = -1, i1 = -1;
+  steps.forEach((st, i) => {
+    const t = st.type === 'NRM' && unit.startsWith('k') ? 0 : st.treat;
+    if(t >= lo && t <= hi){ if(i0 < 0) i0 = i; i1 = i; }
+  });
+  return (i0 >= 0 && i1 >= i0) ? [i0, i1] : null;
+}
+
+// ── Export saved interactive fits as a MagIC specimens.txt ──────────────────
+function exportFitsSpecimensTable(){
+  const rows = [];
+  for(const sm of S.samples){
+    const d = sm._d; if(!d || !d.fits || !d.fits.length) continue;
+    const ser = rmgDemagSeries(d); if(!ser) continue;
+    const thermal = ser.unit === '°C';
+    for(const f of d.fits){
+      const seg = ser.steps.slice(f.i0, f.i1 + 1);
+      const tmin = Math.min(...seg.map(st => st.treat)), tmax = Math.max(...seg.map(st => st.treat));
+      rows.push({
+        specimen: d.samplename, sample: S.magicMeta.specOf[d.samplename] || d.samplename,
+        dir_comp: f.name, dir_dec: f.dec.toFixed(1), dir_inc: f.inc.toFixed(1),
+        dir_mad_free: isFinite(f.mad) ? f.mad.toFixed(1) : '',
+        dir_n_measurements: f.n,
+        dir_tilt_correction: f.frame === 'tilt' ? '100' : f.frame === 'spec' ? '-1' : '0',
+        meas_step_min: thermal ? (tmin + 273.15).toFixed(1) : (tmin * 1e-3).toExponential(2),
+        meas_step_max: thermal ? (tmax + 273.15).toFixed(1) : (tmax * 1e-3).toExponential(2),
+        meas_step_unit: thermal ? 'Kelvin' : 'T',
+        method_codes: f.type + (thermal ? ':LP-DIR-T' : ':LP-DIR-AF'),
+        citations: 'This study', result_quality: 'g',
+        software_packages: 'pyRockmag ' + PYRM_BUILD });
+    }
+  }
+  if(!rows.length){ log('✗ export fits: no saved fits', 'err'); return; }
+  const cols = ['specimen','sample','dir_comp','dir_dec','dir_inc','dir_mad_free','dir_n_measurements',
+    'dir_tilt_correction','meas_step_min','meas_step_max','meas_step_unit','method_codes',
+    'citations','result_quality','software_packages'];
+  const txt = 'tab\tspecimens\n' + cols.join('\t') + '\n' +
+    rows.map(r => cols.map(c => r[c] !== undefined ? r[c] : '').join('\t')).join('\n') + '\n';
+  const blob = new Blob([txt], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'specimens.txt'; a.click(); URL.revokeObjectURL(a.href);
+  log('⬇ ' + rows.length + ' fit(s) → specimens.txt (MagIC)', 'ok');
 }
 
 // ── Interactive fit panel (shown with the PCA_FITS plot) ────────────────────
@@ -6003,6 +6192,7 @@ function renderFitPanel(){
     </select>
     <input id="fit-name" placeholder="component (e.g. LT / HT)" style="width:130px;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);padding:2px 4px">
     <button class="btn sm" onclick="fitAdd()">fit &amp; save</button>
+    <button class="btn sm" onclick="exportFitsSpecimensTable()" title="Download every saved fit as a MagIC specimens.txt">⬇ specimens.txt</button>
     <span style="color:var(--tx3)">tick a step off to exclude it from every fit; click a point on the plot does the same</span>
   </div>`;
   // steps strip
@@ -6025,8 +6215,8 @@ function renderFitPanel(){
         <td style="padding:1px 8px;${f.dang>15?'color:var(--red)':''}">${fitNum(f.dang)}</td></tr>`;
     });
     lsq.forEach(f => {
-      h += `<tr style="color:var(--tx2)"><td style="padding:1px 8px">LSQ</td>
-        <td style="padding:1px 8px">${fitEsc(f.comp||f.type)}</td><td style="padding:1px 8px">${f.type==='L'?'line':'g-circle'} · geo</td>
+      h += `<tr style="color:var(--tx2)"><td style="padding:1px 8px">${f.kmin!==undefined?'MagIC':'LSQ'}</td>
+        <td style="padding:1px 8px">${fitEsc(f.comp||f.type)}</td><td style="padding:1px 8px">${f.type==='L'?'line':f.type==='P'?'plane':'fisher'} · ${fitEsc(f.frame||'geo')}</td>
         <td style="padding:1px 8px">${fitEsc(f.steps)}</td><td style="padding:1px 8px">${f.npts}</td>
         <td style="padding:1px 8px">${fitNum(f.dec)}</td><td style="padding:1px 8px">${fitNum(f.inc)}</td>
         <td style="padding:1px 8px">${fitNum(f.mad)}</td><td style="padding:1px 8px">—</td></tr>`;
@@ -6049,6 +6239,17 @@ function renderFitPanel(){
     h += `</table>`;
     if(groups.some(g => g.frames && g.frames.size > 1))
       h += `<div style="color:var(--amb)">* mixes coordinate frames — refit in one frame before using this mean</div>`;
+  }
+  const siteGroups = collectSiteFisherGroups();
+  if(siteGroups.length){
+    h += `<div style="margin-top:6px"><b>site means</b> <span style="color:var(--tx3)">(Fisher over specimen line fits per site · sites from MagIC samples table)</span></div>`;
+    h += `<table style="border-collapse:collapse"><tr>${['site','component','n','Dec','Inc','k','α95'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
+    for(const g of siteGroups){
+      h += `<tr><td style="padding:1px 8px">${fitEsc(g.site)}</td><td style="padding:1px 8px">${fitEsc(g.comp)}</td>
+        <td style="padding:1px 8px">${g.n}</td><td style="padding:1px 8px">${fitNum(g.dec)}</td><td style="padding:1px 8px">${fitNum(g.inc)}</td>
+        <td style="padding:1px 8px">${fitNum(g.k)}</td><td style="padding:1px 8px">${fitNum(g.alpha95)}</td></tr>`;
+    }
+    h += `</table>`;
   }
   panel.innerHTML = h;
   const fEl = document.getElementById('fit-from'), tEl = document.getElementById('fit-to');
@@ -6381,7 +6582,7 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
-const PYRM_BUILD='2026-10-01a';
+const PYRM_BUILD='2026-10-02a';
 // Per-sample fit state (hidden steps, saved fits, coordinate frame) for
 // session persistence, keyed by samplename.
 function collectFitStates(){
@@ -6410,7 +6611,7 @@ function saveSession(){
     while(uploads.length>20) uploads.shift();
     let total=uploads.reduce((s,u)=>s+u.text.length,0);
     while(total>4500000 && uploads.length>1){ total-=uploads.shift().text.length; }
-    const state={ uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])], fitStates: collectFitStates() };
+    const state={ uploads, groupByType:!!S.groupByType, groupBySite:!!S.groupBySite, collapsed:[...(S.collapsedGroups||[])], fitStates: collectFitStates() };
     localStorage.setItem(PYRM_KEY, JSON.stringify(state));
   }catch(e){ /* quota exceeded or storage unavailable */ }
 }
@@ -6446,7 +6647,7 @@ async function applySessionState(state){
   await onFiles(files);
   for(const u of uploads){ if(u.massG!=null){ const sm=S.samples.find(s=>s.up&&s.up.name===u.name); if(sm){ sm.massG=u.massG; if(sm._d) sm._d.massG=u.massG; } } }
   applyFitStates(state.fitStates);
-  S.groupByType=!!state.groupByType; S.collapsedGroups=new Set(state.collapsed||[]);
+  S.groupByType=!!state.groupByType; S.groupBySite=!!state.groupBySite; S.collapsedGroups=new Set(state.collapsed||[]);
   if(state.activeOp) S.activeOp=state.activeOp;
   const gb=document.getElementById('group-btn'); if(gb){ gb.textContent=S.groupByType?'▦ flat':'⊞ group'; gb.style.fontWeight=S.groupByType?'700':''; }
   const rb=document.getElementById('restore-btn'); if(rb) rb.style.display='none';
@@ -6466,7 +6667,7 @@ function exportSessionFile(){
   if(!uploads.length){ log('✗ save session: no file-backed samples loaded','err'); return; }
   const derived=S.samples.filter(s=>!s.up).length;
   const state={ app:'pyRockmag session', build:PYRM_BUILD, saved:new Date().toISOString(),
-    uploads, groupByType:!!S.groupByType, collapsed:[...(S.collapsedGroups||[])], activeOp:S.activeOp,
+    uploads, groupByType:!!S.groupByType, groupBySite:!!S.groupBySite, collapsed:[...(S.collapsedGroups||[])], activeOp:S.activeOp,
     fitStates: collectFitStates() };
   const blob=new Blob([JSON.stringify(state)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -6572,6 +6773,24 @@ async function onFiles(files){
         } else {
           log('✗ ' + f.name + ': MPMS file with no usable moment column', 'err');
         }
+        continue;
+      }
+      // ── MagIC tab-delimited tables (measurements / specimens / samples / sites) ──
+      if(magicDetect(f.name, text)){
+        const mg = magicImport(f.name, text);
+        if(mg){
+          for(const sd of mg.samples) S.samples.push({_d:sd, selected:false, id:nextId++, up:{name:f.name, text}});
+          const nSpec = mg.samples.filter(x=>x.demag).length;
+          const bits = [];
+          if(nSpec) bits.push(nSpec + ' specimen(s)' + (mg.nBad ? ', ' + mg.nBad + " quality='b' point(s) pre-hidden" : ''));
+          if(mg.nFits) bits.push(mg.nFits + ' interpretation(s) from specimens table — overlay on Zijderveld + Fisher means');
+          if(mg.nMeta) bits.push('sample→site orientation metadata');
+          log(f.name + ' added (MagIC: ' + (bits.join(' · ') || mg.tables.join(', ')) + ')', 'ok');
+          if(nSpec > 0 && nSpec <= 4) for(const sm of S.samples) if(sm.up && sm.up.name === f.name && sm._d.demag) sm.selected = true;
+          if(nSpec > 4) log('ℹ ' + nSpec + ' specimens loaded unselected — use the filter box / sort by site, then select what to fit', 'info');
+          continue;
+        }
+        log('✗ ' + f.name + ': MagIC header found but no usable tables', 'err');
         continue;
       }
       // ── ThellierTool .tdt: ingestion + simple plots (no Arai module) ──
@@ -6718,6 +6937,7 @@ function sortSamples(){
       case 'name':      key = (d.samplename || '').toLowerCase(); break;
       case 'steps':     key = d.steptypes ? d.steptypes.length : 0; break;
       case 'type':      key = rmgKind(d); break;
+      case 'site':      key = (magicSiteFor(d.samplename) || '') + '|' + (d.samplename || '').toLowerCase(); break;
       case 'selected':  key = s.selected ? 0 : 1; break;
       case 'loadOrder':
       default:          key = s.id; break;
@@ -6865,7 +7085,9 @@ function renderSampleItem(s, parentEl){
       + (d.mpms.massMg ? ' · ' + d.mpms.massMg + ' mg' : ''))
     : (d.demag) ? ('thermal · ' + d.demag.steps.length + ' steps'
       + (d.demag.source==='tdt' ? ' · tdt' + (isFinite(d.demag.labFieldUT) ? ' · ' + d.demag.labFieldUT + ' µT' : '') : '')
-      + (d.demag.source==='cit' ? ' · cit' : ''))
+      + (d.demag.source==='cit' ? ' · cit' : '')
+      + (d.demag.source==='magic' ? ' · magic' : '')
+      + (magicSiteFor(d.samplename) ? ' · ' + magicSiteFor(d.samplename) : ''))
     : (d.lsq) ? ('LSQ · ' + d.lsq.fits.filter(f=>!f.placeholder).length + ' fits')
     : (d.uchan) ? ('u-channel · ' + d.uchan.rows.length + ' rows · ' + d.uchan.treats.length + ' step' + (d.uchan.treats.length===1?'':'s'))
     : (d.xt) ? ('χ(T) · ' + d.xt.T.length + ' pts')
@@ -6911,9 +7133,13 @@ function renderSampleItem(s, parentEl){
 }
 
 function toggleGroupByType(){
-  S.groupByType = !S.groupByType;
+  // cycle: flat → group by type → group by site → flat
+  if(!S.groupByType){ S.groupByType = true; S.groupBySite = false; }
+  else if(!S.groupBySite){ S.groupBySite = true; }
+  else { S.groupByType = false; S.groupBySite = false; }
   const b = document.getElementById('group-btn');
-  if(b){ b.textContent = S.groupByType ? '▦ flat' : '⊞ group'; b.style.fontWeight = S.groupByType ? '700' : ''; }
+  if(b){ b.textContent = !S.groupByType ? '⊞ group' : S.groupBySite ? '▦ flat' : '⊞ by site';
+         b.style.fontWeight = S.groupByType ? '700' : ''; }
   saveSession(); renderSamples();
 }
 
@@ -6928,6 +7154,7 @@ function renderSamples(){
   const shown = filt ? S.samples.filter(s =>
       (s._d.samplename||'').toLowerCase().includes(filt) ||
       rmgKind(s._d).toLowerCase().includes(filt) ||
+      (magicSiteFor(s._d.samplename)||'').toLowerCase().includes(filt) ||
       sampleCategory(s._d).toLowerCase().includes(filt)) : S.samples;
   count.textContent = S.samples.length ?
       (filt ? '(' + shown.length + '/' + S.samples.length + ')' : '(' + S.samples.length + ')') : '';
@@ -6937,10 +7164,14 @@ function renderSamples(){
   if(S.groupByType && shown.length){
     if(!S.collapsedGroups) S.collapsedGroups = new Set();
     const groups = {};
-    for(const s of shown){ const c = sampleCategory(s._d); (groups[c] = groups[c] || []).push(s); }
-    const cats = Object.keys(groups).sort((a,b)=>{
-      const ia=CATEGORY_ORDER.indexOf(a), ib=CATEGORY_ORDER.indexOf(b);
-      return (ia<0?99:ia)-(ib<0?99:ib); });
+    const keyOf = S.groupBySite ? (d => magicSiteFor(d.samplename) || 'no site')
+                                : (d => sampleCategory(d));
+    for(const s of shown){ const c = keyOf(s._d); (groups[c] = groups[c] || []).push(s); }
+    const cats = S.groupBySite
+      ? Object.keys(groups).sort((a,b)=> (a==='no site')-(b==='no site') || a.localeCompare(b))
+      : Object.keys(groups).sort((a,b)=>{
+          const ia=CATEGORY_ORDER.indexOf(a), ib=CATEGORY_ORDER.indexOf(b);
+          return (ia<0?99:ia)-(ib<0?99:ib); });
     for(const cat of cats){
       const collapsed = S.collapsedGroups.has(cat) && !filt;   // filter overrides collapse
       const hdr = document.createElement('div');
