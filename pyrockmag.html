@@ -180,10 +180,13 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
     <div style="flex:1"></div>
     <button class="btn sm" onclick="exportFitsSpecimensTable()" title="Download every saved fit as a MagIC specimens.txt">⬇ specimens.txt</button>
   </div>
-  <div style="flex:1;display:grid;grid-template-columns:54% 46%;grid-template-rows:57% 43%;min-height:0;min-width:0">
-    <div id="gui-zij" style="border-right:1px solid var(--bdr);border-bottom:1px solid var(--bdr);min-height:0;min-width:0"></div>
-    <div id="gui-eqa" style="border-bottom:1px solid var(--bdr);min-height:0;min-width:0"></div>
-    <div id="gui-dec" style="border-right:1px solid var(--bdr);min-height:0;min-width:0"></div>
+  <div style="flex:1;display:grid;grid-template-columns:55% 45%;grid-template-rows:33% 31% 36%;min-height:0;min-width:0">
+    <div id="gui-zij" style="grid-row:1/4;border-right:1px solid var(--bdr);min-height:0;min-width:0"></div>
+    <div style="display:flex;border-bottom:1px solid var(--bdr);min-height:0;min-width:0">
+      <div id="gui-eqa" style="flex:1;min-width:0;border-right:1px solid var(--bdr)"></div>
+      <div id="gui-dec" style="flex:1;min-width:0"></div>
+    </div>
+    <div id="gui-logger" style="overflow:auto;background:var(--bg2);border-bottom:1px solid var(--bdr);font-family:var(--mono);font-size:10.5px;min-height:0"></div>
     <div id="gui-panel" style="overflow:auto;background:var(--bg2);padding:8px 12px;font-size:11px;font-family:var(--mono);min-height:0"></div>
   </div>
 </div>
@@ -324,7 +327,7 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
       <span id="forc-diag-info" style="color:var(--tx3);margin-left:auto"></span>
     </div>
     <div id="plotly-div"></div>
-      <div id="fit-panel" style="display:none;max-height:46%;overflow:auto;border-top:1px solid var(--bdr);background:var(--bg2);padding:8px 12px;font-size:11px;font-family:var(--mono)"></div>
+      <div id="fit-panel" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:6;max-height:46%;overflow:auto;border-top:1px solid var(--bdr);background:var(--bg2);padding:8px 12px;font-size:11px;font-family:var(--mono)"></div>
       <div id="dash-grid">
         <div class="dash-cell" style="grid-column:1;grid-row:1"><div id="d0" class="plotly"></div></div>
         <div class="dash-vsp"  style="grid-column:2;grid-row:1" id="dvsp1"></div>
@@ -2329,8 +2332,8 @@ function buildLayout(samples, op){
       const zd = samples.find(s => rmgDemagSeries(s));
       const zf = zd ? {spec:'specimen', geo:'geographic', tilt:'tilt-corrected'}[fitFrame(zd)] : 'specimen';
       return Object.assign({}, common, { title:TT(`Zijderveld — ${zf} coords${n}`),
-        xaxis:Object.assign(ax('E'), {zeroline:true}),
-        yaxis:Object.assign(ax('N (solid) / Up (open)'), {zeroline:true, scaleanchor:'x', scaleratio:1}),
+        xaxis:Object.assign(ax('E'), {zeroline:true, zerolinewidth:2.5, zerolinecolor:'#7a7a7a'}),
+        yaxis:Object.assign(ax('N (solid) / Up (open)'), {zeroline:true, zerolinewidth:2.5, zerolinecolor:'#7a7a7a', scaleanchor:'x', scaleratio:1}),
         margin:M(60,16,40,80), showlegend:true });
     }
     case 'LSQ_TABLE':
@@ -5800,6 +5803,7 @@ function pmagFlipCombine(dirs){
   });
 }
 
+const FIT_COLS = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
 // ── Fit state on a demag sample ─────────────────────────────────────────────
 function fitFrame(d){
   return (d && d.demag && d.demag.coords) ? d.demag.coords : 'spec';
@@ -5822,7 +5826,7 @@ function fitSeriesPoints(d, includeHidden){
     const hidden = hid.has(i);
     if(hidden && !includeHidden) return;
     pts.push({ i, treat: st.treat, label: st.label || (st.treat + ' ' + ser.unit),
-               vec: demagStepVec(d, st, frame), hidden });
+               vec: demagStepVec(d, st, frame), hidden, csd: st.csd });
   });
   return { unit: ser.unit, frame, pts };
 }
@@ -5846,7 +5850,7 @@ function lsqFitsForSample(d){
     const L = sm._d && sm._d.lsq;
     if(!L) continue;
     for(const f of L.fits)
-      if(!f.placeholder && f.key === key) out.push(f);
+      if(!f.placeholder && !f._adopted && f.key === key) out.push(f);
   }
   return out;
 }
@@ -5873,7 +5877,7 @@ function fitOverlayTraces(d){
     tr.push({ x:[A[1], B[1]], y:[-A[2], -B[2]], mode:'lines', name,
       line:{color, width:2, dash: dash || 'dot'}, hoverinfo:'name', legendgroup:name, showlegend:false });
   };
-  const FITCOL = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
+  const FITCOL = FIT_COLS;
   (d.fits || []).forEach((f, k) => {
     if(f.type === 'DE-BFP') return;               // planes have no Zij segment
     const segPts = sp.pts.filter(p => p.i >= f.i0 && p.i <= f.i1);
@@ -5923,7 +5927,7 @@ function collectFisherGroups(){
     for(const f of (d.fits || []))
       if(f.type === 'DE-BFL') add(f.name, f.frame, f.dec, f.inc, d.samplename);
     if(d.lsq) for(const f of d.lsq.fits)
-      if(!f.placeholder && f.type === 'L') add(f.comp || 'L', f.frame || 'geo', f.dec, f.inc, f.spec);
+      if(!f.placeholder && !f._adopted && f.type === 'L') add(f.comp || 'L', f.frame || 'geo', f.dec, f.inc, f.spec);
   }
   const out = [];
   for(const comp in groups){
@@ -5949,7 +5953,7 @@ function collectSiteFisherGroups(){
     for(const f of (d.fits || []))
       if(f.type === 'DE-BFL') add(magicSiteFor(d.samplename), f.name, f.dec, f.inc);
     if(d.lsq) for(const f of d.lsq.fits)
-      if(!f.placeholder && f.type === 'L') add(magicSiteFor(f.spec), f.comp || 'L', f.dec, f.inc);
+      if(!f.placeholder && !f._adopted && f.type === 'L') add(magicSiteFor(f.spec), f.comp || 'L', f.dec, f.inc);
   }
   const out = [];
   for(const k in groups){
@@ -6024,7 +6028,12 @@ function magicImport(name, text){
         tdec: parseFloat(r.dir_dec), tinc: parseFloat(r.dir_inc),
         mad: parseFloat(r.dir_mad_free !== undefined && r.dir_mad_free !== '' ? r.dir_mad_free : r.dir_mad),
         npts: parseInt(r.dir_n_measurements || '', 10),
-        steps: (isFinite(kmin) ? kmin : '?') + '–' + (isFinite(kmax) ? kmax : '?') + ' ' + (r.meas_step_unit || ''),
+        steps: (() => {   // display temperatures in °C, never Kelvin
+          const u = (r.meas_step_unit || '').toLowerCase();
+          const cv = v => !isFinite(v) ? '?' : u.startsWith('k') ? Math.round(v - 273.15) : (u === 't' || u === 'tesla') ? +(v*1000).toFixed(1) : v;
+          const uu = u.startsWith('k') ? ' °C' : (u === 't' || u === 'tesla') ? ' mT' : (u ? ' ' + u : '');
+          return cv(kmin) + '–' + cv(kmax) + uu;
+        })(),
         kmin, kmax, kunit: (r.meas_step_unit || 'Kelvin'),
         placeholder: !isFinite(parseFloat(r.dir_dec)) });
     }
@@ -6056,7 +6065,8 @@ function magicImport(name, text){
       else { typ='TT'; treat = isFinite(tK) ? tK - 273.15 : NaN; label = 'TT ' + (isFinite(treat)?Math.round(treat):'?') + ' °C'; }
       const e = bySpec.get(spec) || { steps: [], hidden: [] };
       if((r.quality || 'g') === 'b') e.hidden.push(e.steps.length);
-      e.steps.push({ treat, label, type: typ, mx, my, mz,
+      const rcsd = parseFloat(r.dir_csd);
+      e.steps.push({ treat, label, type: typ, mx, my, mz, csd: isFinite(rcsd) ? rcsd : NaN,
                      inField: /LT-(T|AF)-I|LT-PTRM/.test(mc), tK });
       bySpec.set(spec, e);
     }
@@ -6146,35 +6156,109 @@ function fitToggleHide(i){
     log('⚠ ' + (d.samplename||'') + ': more than 25% of steps hidden — document why in your notes', 'warn');
   fitRefresh();
 }
-function fitSetSel(which, val){
-  const d = fitCurrentSample(); if(!d) return;
-  d.fitSel = d.fitSel || {};
-  d.fitSel[which] = parseInt(val, 10);
-  fitRefresh();
+function fitCurFit(d){
+  if(!d || !d.fits || !d.fits.length) return null;
+  if(!(d.fitCur >= 0) || d.fitCur >= d.fits.length) d.fitCur = d.fits.length - 1;
+  return d.fits[d.fitCur];
 }
-function fitAdd(){
+// demag_gui model: "add fit" creates a live fit; the tmin/tmax dropdowns,
+// type select and point toggles re-fit it instantly.
+function fitNew(){
   const d = fitCurrentSample(); if(!d) return;
-  const nameEl = document.getElementById('fit-name'), typeEl = document.getElementById('fit-type');
-  const name = (nameEl && nameEl.value.trim()) || ('C' + (((d.fits||[]).length) + 1));
-  const type = (typeEl && typeEl.value) || 'DE-BFL';
-  const sel = d.fitSel || {};
   const sp = fitSeriesPoints(d, false);
-  if(!sp || sp.pts.length < 2){ log('✗ fit: no visible steps', 'err'); return; }
-  const i0 = isFinite(sel.i0) ? sel.i0 : sp.pts[0].i;
-  const i1 = isFinite(sel.i1) ? sel.i1 : sp.pts[sp.pts.length-1].i;
-  const f = computeFit(d, Math.min(i0,i1), Math.max(i0,i1), type, name);
-  if(!f || f.err){ log('✗ fit: ' + (f ? f.err : 'no data'), 'err'); return; }
+  if(!sp || sp.pts.length < 3){ log('✗ add fit: need ≥3 visible steps', 'err'); return; }
+  const i0 = sp.pts[0].i, i1 = sp.pts[sp.pts.length - 1].i;
+  const name = 'Fit ' + (((d.fits || []).length) + 1);
+  const f = computeFit(d, i0, i1, 'DE-BFL', name);
+  if(!f || f.err){ log('✗ add fit: ' + (f ? f.err : 'no data'), 'err'); return; }
   d.fits = d.fits || [];
   d.fits.push(f);
-  if(f.mad > 10) log('⚠ fit ' + name + ': MAD ' + f.mad.toFixed(1) + '° > 10° — not a usable ChRM by the usual cutoff', 'warn');
-  log('✓ fit ' + name + ' (' + type + ', ' + f.labels[0] + '→' + f.labels[1] + '): D=' + f.dec.toFixed(1) +
-      '° I=' + f.inc.toFixed(1) + '° MAD=' + f.mad.toFixed(1) + '°' +
-      (isFinite(f.dang) ? ' dang=' + f.dang.toFixed(1) + '°' : ''), 'ok');
+  d.fitCur = d.fits.length - 1;
+  fitRefresh();
+}
+function fitAdd(){ fitNew(); }   // back-compat alias
+function fitDeleteCur(){
+  const d = fitCurrentSample(); if(!d || !d.fits || !d.fits.length) return;
+  d.fits.splice(d.fitCur >= 0 ? d.fitCur : d.fits.length - 1, 1);
+  d.fitCur = d.fits.length - 1;
   fitRefresh();
 }
 function fitDelete(k){
   const d = fitCurrentSample(); if(!d || !d.fits) return;
-  d.fits.splice(k, 1); fitRefresh();
+  d.fits.splice(k, 1);
+  if(d.fitCur >= d.fits.length) d.fitCur = d.fits.length - 1;
+  fitRefresh();
+}
+function fitSetCur(k){
+  const d = fitCurrentSample(); if(!d || !d.fits) return;
+  d.fitCur = Math.max(0, Math.min(parseInt(k, 10) || 0, d.fits.length - 1));
+  fitRefresh();
+}
+function fitRenameCur(v){
+  const d = fitCurrentSample(); const f = fitCurFit(d); if(!f) return;
+  f.name = (v || '').trim() || f.name;
+  fitRefresh();
+}
+function fitSetTypeCur(v){
+  const d = fitCurrentSample(); const f = fitCurFit(d); if(!f) return;
+  f.type = v;
+  fitRefresh();
+}
+function fitSetBound(which, val){
+  const d = fitCurrentSample(); if(!d) return;
+  let f = fitCurFit(d);
+  if(!f){ fitNew(); f = fitCurFit(d); if(!f) return; }
+  f[which] = parseInt(val, 10);
+  if(f.i0 > f.i1){ const t = f.i0; f.i0 = f.i1; f.i1 = t; }
+  fitRefresh();
+}
+// demag_gui logger interaction: double-click two steps to set the current
+// fit's bounds (creates a fit first if none exists).
+let _fitBoundPick = null;
+function guiBoundPick(i){
+  const d = fitCurrentSample(); if(!d) return;
+  if(!fitCurFit(d)){ fitNew(); if(!fitCurFit(d)) return; }
+  if(_fitBoundPick === null){
+    _fitBoundPick = i;
+    const el = document.getElementById('gui-bound-hint');
+    if(el) el.textContent = 'bound 1 set at step ' + i + ' — double-click the other bound';
+    return;
+  }
+  const f = fitCurFit(d);
+  f.i0 = Math.min(_fitBoundPick, i);
+  f.i1 = Math.max(_fitBoundPick, i);
+  _fitBoundPick = null;
+  fitRefresh();
+}
+// Auto-adopt imported fits (.LSQ / MagIC specimens table) into live editable
+// fits the first time a specimen is opened; originals leave the display.
+function fitAdoptImported(d){
+  const ser = d ? rmgDemagSeries(d) : null; if(!ser) return;
+  const key = (d.samplename || '').replace(/\s+/g, '').toUpperCase();
+  let n = 0;
+  for(const sm of (S.samples || [])){
+    const L = sm._d && sm._d.lsq; if(!L) continue;
+    for(const f of L.fits){
+      if(f.placeholder || f.key !== key) continue;
+      if(f.type !== 'L' && f.type !== 'P') continue;
+      const rng = isFinite(f.kmin) ? magicFitRange(f, ser.steps) : lsqStepRange(f.steps, ser.steps);
+      if(!rng){ continue; }                       // unresolvable range: stays a read-only overlay
+      if(!d.adoptedDone){
+        const name = f.comp || ('C' + (((d.fits || []).length) + 1));
+        d.fits = d.fits || [];
+        if(!d.fits.some(x => x.name === name && x.i0 === rng[0] && x.i1 === rng[1])){
+          const nf = computeFit(d, rng[0], rng[1], f.type === 'P' ? 'DE-BFP' : 'DE-BFL', name);
+          if(nf && !nf.err){ d.fits.push(nf); n++; }
+        }
+      }
+      f._adopted = true;
+    }
+  }
+  if(!d.adoptedDone && n){
+    d.fitCur = 0;
+    log('↳ ' + d.samplename + ': ' + n + ' imported fit(s) adopted as editable fits (recomputed from current points)', 'info');
+  }
+  d.adoptedDone = true;
 }
 function fitRecomputeAll(d){
   // Re-derive every saved fit from current hidden/coords state.
@@ -6193,47 +6277,62 @@ function renderFitPanel(targetId){
   if(other && other.innerHTML) other.innerHTML = '';
   const d = fitCurrentSample();
   if(!d || (!gui && S.activeOp !== 'PCA_FITS')){ panel.style.display = 'none'; return; }
+  fitAdoptImported(d);
   fitRecomputeAll(d);
   const sp = fitSeriesPoints(d, true);
   if(!sp){ panel.style.display = 'none'; return; }
   const frames = (d.demag && d.demag.frames) || ['spec'];
-  const sel = d.fitSel || {};
-  const i0 = isFinite(sel.i0) ? sel.i0 : sp.pts[0].i;
-  const i1 = isFinite(sel.i1) ? sel.i1 : sp.pts[sp.pts.length-1].i;
-  const optRows = sp.pts.map(p => `<option value="${p.i}">${fitEsc(p.label)}</option>`).join('');
+  const cur = fitCurFit(d);
+  const vis = sp.pts.filter(p => !p.hidden);
+  const optRows = vis.map(p => `<option value="${p.i}">${fitEsc(p.label)}</option>`).join('');
   const frameSel = frames.length > 1
     ? `coords <select onchange="fitSetCoords(this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
         ${frames.map(f => `<option value="${f}" ${f===sp.frame?'selected':''}>${({spec:'specimen',geo:'geographic',tilt:'tilt-corrected'})[f]||f}</option>`).join('')}
        </select>`
     : `coords: <span style="color:var(--tx2)">${({spec:'specimen',geo:'geographic',tilt:'tilt-corrected'})[sp.frame]||sp.frame}</span>`;
-  let h = `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
-    <b>component fitting</b> <span style="color:var(--tx3)">${fitEsc(d.samplename||'')}</span>
+  let h = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+    <b>fits</b> <span style="color:var(--tx3)">${fitEsc(d.samplename||'')}</span>
     ${frameSel}
-    from <select id="fit-from" onchange="fitSetSel('i0', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
-    to <select id="fit-to" onchange="fitSetSel('i1', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
-    <select id="fit-type" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
-      <option value="DE-BFL">line (free, DE-BFL)</option>
-      <option value="DE-BFP">plane (DE-BFP)</option>
-      <option value="DE-FM">Fisher mean (DE-FM)</option>
+    ${gui ? '' : '<button class="btn sm" onclick="fitStepSample(-1)" title="Previous demag specimen">◀</button><button class="btn sm" onclick="fitStepSample(1)" title="Next demag specimen">▶</button>'}
+    <button class="btn sm" onclick="fitNew()" title="Add a new fit over the full visible range, then narrow it with the bound dropdowns (demag_gui: ctrl-n)">＋ add fit</button>`;
+  if(cur){
+    h += `
+    <select id="fit-cur" onchange="fitSetCur(this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
+      ${d.fits.map((f,k)=>`<option value="${k}" ${k===d.fitCur?'selected':''}>● ${fitEsc(f.name)}</option>`).join('')}
     </select>
-    <input id="fit-name" placeholder="component (e.g. LT / HT)" style="width:130px;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);padding:2px 4px">
-    <button class="btn sm" onclick="fitAdd()">fit &amp; save</button>
+    <input id="fit-name" value="${fitEsc(cur.name)}" onchange="fitRenameCur(this.value)" title="Rename the current fit (component name — fits with the same name combine in the Fisher means)" style="width:90px;background:var(--bg3);color:var(--tx);border:1px solid var(--bdr);padding:2px 4px">
+    <select id="fit-type" onchange="fitSetTypeCur(this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">
+      <option value="DE-BFL" ${cur.type==='DE-BFL'?'selected':''}>line (free, DE-BFL)</option>
+      <option value="DE-BFP" ${cur.type==='DE-BFP'?'selected':''}>plane (DE-BFP)</option>
+      <option value="DE-FM" ${cur.type==='DE-FM'?'selected':''}>Fisher mean (DE-FM)</option>
+    </select>
+    from <select id="fit-from" onchange="fitSetBound('i0', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
+    to <select id="fit-to" onchange="fitSetBound('i1', this.value)" style="background:var(--bg3);color:var(--tx);border:1px solid var(--bdr)">${optRows}</select>
+    <button class="btn sm" onclick="fitDeleteCur()" title="Delete the current fit">✕ delete</button>`;
+  } else {
+    h += `<span style="color:var(--tx3)">no fits yet — ＋ add fit, then set the bounds</span>`;
+  }
+  h += `
     <button class="btn sm" onclick="exportFitsSpecimensTable()" title="Download every saved fit as a MagIC specimens.txt">⬇ specimens.txt</button>
-    <span style="color:var(--tx3)">tick a step off to exclude it from every fit; click a point on the plot does the same</span>
+    <span id="gui-bound-hint" style="color:var(--tx3)">${gui ? 'steps table: right-click or untick = bad point · double-click two rows = fit bounds' : 'untick a step to exclude it from every fit; clicking a plot point does the same'}</span>
   </div>`;
-  // steps strip
-  h += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">` + sp.pts.map(p => {
-    const dd = pmagCart2dir(p.vec[0], p.vec[1], p.vec[2]);
-    return `<label style="display:inline-flex;gap:3px;align-items:center;border:1px solid var(--bdr);border-radius:3px;padding:1px 5px;${p.hidden?'opacity:.45':''}" title="D=${dd.dec.toFixed(1)}° I=${dd.inc.toFixed(1)}° M=${dd.R.toExponential(2)}">
-      <input type="checkbox" ${p.hidden?'':'checked'} onchange="fitToggleHide(${p.i})">${fitEsc(p.label)}</label>`;
-  }).join('') + `</div>`;
-  // fits table (saved + LSQ)
+  if(!gui){
+    // compact step strip (the GUI mode has the full steps table instead)
+    h += `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">` + sp.pts.map(p => {
+      const dd = pmagCart2dir(p.vec[0], p.vec[1], p.vec[2]);
+      return `<label style="display:inline-flex;gap:3px;align-items:center;border:1px solid var(--bdr);border-radius:3px;padding:1px 5px;${p.hidden?'opacity:.45':''}" title="D=${dd.dec.toFixed(1)}° I=${dd.inc.toFixed(1)}° M=${dd.R.toExponential(2)}${isFinite(p.csd)?' CSD='+p.csd.toFixed(1)+'°':''}">
+        <input type="checkbox" ${p.hidden?'':'checked'} onchange="fitToggleHide(${p.i})">${fitEsc(p.label)}</label>`;
+    }).join('') + `</div>`;
+  }
+  // fits table (live fits + any imported fits that could not be adopted)
   const lsq = lsqFitsForSample(d);
   if((d.fits||[]).length || lsq.length){
     h += `<table style="border-collapse:collapse;margin-bottom:6px"><tr>
       ${['','component','type','steps','n','Dec','Inc','MAD','dang†'].map(c=>`<th style="text-align:left;padding:1px 8px;color:var(--tx3)">${c}</th>`).join('')}</tr>`;
     (d.fits||[]).forEach((f, k) => {
-      h += `<tr><td style="padding:1px 8px"><button class="btn sm" onclick="fitDelete(${k})" title="delete">×</button></td>
+      const curRow = k === d.fitCur;
+      h += `<tr onclick="fitSetCur(${k})" style="cursor:pointer;${curRow?'background:rgba(127,160,255,.12)':''}">
+        <td style="padding:1px 8px"><span style="color:${FIT_COLS[k % FIT_COLS.length]}">${curRow?'◆':'●'}</span></td>
         <td style="padding:1px 8px">${fitEsc(f.name)}</td><td style="padding:1px 8px">${f.type}<span style="color:var(--tx3)"> · ${({spec:'spec',geo:'geo',tilt:'tilt'})[f.frame]||f.frame}</span></td>
         <td style="padding:1px 8px">${fitEsc(f.labels[0])} → ${fitEsc(f.labels[1])}</td>
         <td style="padding:1px 8px">${f.n}</td><td style="padding:1px 8px">${fitNum(f.dec)}</td><td style="padding:1px 8px">${fitNum(f.inc)}</td>
@@ -6241,15 +6340,15 @@ function renderFitPanel(targetId){
         <td style="padding:1px 8px;${f.dang>15?'color:var(--red)':''}">${fitNum(f.dang)}</td></tr>`;
     });
     lsq.forEach(f => {
-      h += `<tr style="color:var(--tx2)"><td style="padding:1px 8px">${f.kmin!==undefined?'MagIC':'LSQ'}</td>
+      h += `<tr style="color:var(--tx2)"><td style="padding:1px 8px" title="imported fit whose step range could not be matched to the measurements — shown for reference">${f.kmin!==undefined?'MagIC':'LSQ'}</td>
         <td style="padding:1px 8px">${fitEsc(f.comp||f.type)}</td><td style="padding:1px 8px">${f.type==='L'?'line':f.type==='P'?'plane':'fisher'} · ${fitEsc(f.frame||'geo')}</td>
-        <td style="padding:1px 8px">${fitEsc(f.steps)}</td><td style="padding:1px 8px">${f.npts}</td>
+        <td style="padding:1px 8px">${fitEsc(f.steps)}</td><td style="padding:1px 8px">${isFinite(f.npts)?f.npts:'—'}</td>
         <td style="padding:1px 8px">${fitNum(f.dec)}</td><td style="padding:1px 8px">${fitNum(f.inc)}</td>
         <td style="padding:1px 8px">${fitNum(f.mad)}</td><td style="padding:1px 8px">—</td></tr>`;
     });
-    h += `</table><div style="color:var(--tx3);margin-bottom:6px">† dang is meaningful for the terminal (origin-trending) component only · usable ChRM: MAD ≤ 10° and dang ≤ 15°</div>`;
+    h += `</table><div style="color:var(--tx3);margin-bottom:6px">† dang is meaningful for the terminal (origin-trending) component only · usable ChRM: MAD ≤ 10° and dang ≤ 15° · click a row to make it the current fit</div>`;
   }
-  // live Fisher over all fits (all loaded samples + LSQ), grouped by component
+  // live Fisher over all fits (all loaded samples), grouped by component
   const groups = collectFisherGroups();
   if(groups.length){
     h += `<div><b>Fisher means over saved fits</b> <span style="color:var(--tx3)">(all loaded specimens · lines only · reverse mode flipped once, pmag.flip combine)</span></div>`;
@@ -6278,9 +6377,11 @@ function renderFitPanel(targetId){
     h += `</table>`;
   }
   panel.innerHTML = h;
-  const fEl = document.getElementById('fit-from'), tEl = document.getElementById('fit-to');
-  if(fEl) fEl.value = String(i0);
-  if(tEl) tEl.value = String(i1);
+  if(cur){
+    const fEl = document.getElementById('fit-from'), tEl = document.getElementById('fit-to');
+    if(fEl) fEl.value = String(cur.i0);
+    if(tEl) tEl.value = String(cur.i1);
+  }
   panel.style.display = 'block';
 }
 
@@ -6339,7 +6440,7 @@ function guiSelect(idx){
 function guiEqFitTraces(d){
   // Fit directions as stars on the equal-area net (solid = down, open = up).
   const tr = [];
-  const COLS = ['#2e7d32','#7b1fa2','#ef6c00','#00838f','#c2185b'];
+  const COLS = FIT_COLS;
   const put = (dec, inc, name, color) => {
     if(!isFinite(dec) || !isFinite(inc)) return;
     const r = Math.SQRT2 * Math.sin((90 - Math.abs(inc)) * Math.PI/360);
@@ -6382,12 +6483,91 @@ function guiRender(){
         if(cd !== undefined && cd !== null) fitToggleHide(cd);
       });
     }
-    Plotly.react(document.getElementById('gui-eqa'),
-      tEqArea([d]).concat(guiEqFitTraces(d)), buildLayout([d], 'EQAREA'), cfg);
-    Plotly.react(document.getElementById('gui-dec'),
-      tThermDecay([d]), buildLayout([d], 'THERM_DECAY'), cfg);
+    const eqLay = buildLayout([d], 'EQAREA');
+    eqLay.title = { text: magicSiteFor(d.samplename) ? 'site ' + magicSiteFor(d.samplename) + ' — fits + mean' : 'equal-area', font: eqLay.title && eqLay.title.font };
+    eqLay.showlegend = false;
+    Plotly.react(document.getElementById('gui-eqa'), tSiteEqArea(d), eqLay, cfg);
+    const dcLay = buildLayout([d], 'THERM_DECAY');
+    dcLay.showlegend = false;
+    Plotly.react(document.getElementById('gui-dec'), tThermDecay([d]), dcLay, cfg);
   }
+  guiRenderLogger(d);
   renderFitPanel('gui-panel');
+}
+// Site equal-area: this specimen's measurement path + fit stars, the other
+// site specimens' line-fit directions (grey), and the site Fisher mean per
+// component (black diamonds).
+function tSiteEqArea(d){
+  const tr = tEqArea([d]).concat(guiEqFitTraces(d));
+  const site = magicSiteFor(d.samplename);
+  if(!site) return tr;
+  const proj = (dec, inc) => {
+    const r = Math.SQRT2 * Math.sin((90 - Math.abs(inc)) * Math.PI/360);
+    return [r*Math.sin(dec*Math.PI/180), r*Math.cos(dec*Math.PI/180), inc >= 0];
+  };
+  const oth = { x:[], y:[], t:[], sym:[] };
+  for(const sm of (S.samples || [])){
+    const od = sm._d; if(!od || od === d) continue;
+    if(magicSiteFor(od.samplename) !== site) continue;
+    for(const f of (od.fits || [])){
+      if(f.type === 'DE-BFP' || !isFinite(f.dec)) continue;
+      const [x, y, down] = proj(f.dec, f.inc);
+      oth.x.push(x); oth.y.push(y); oth.sym.push(down ? 'circle' : 'circle-open');
+      oth.t.push(od.samplename + ' ' + f.name + ' D=' + f.dec.toFixed(1) + '° I=' + f.inc.toFixed(1) + '°');
+    }
+  }
+  if(oth.x.length) tr.push({ x: oth.x, y: oth.y, mode:'markers', name:'site fits',
+    marker:{size:6, color:'#9a9a9a', symbol: oth.sym}, text: oth.t,
+    hovertemplate:'%{text}<extra></extra>' });
+  for(const g of collectSiteFisherGroups()){
+    if(g.site !== site || !(g.n >= 2)) continue;
+    const [x, y, down] = proj(g.dec, g.inc);
+    tr.push({ x:[x], y:[y], mode:'markers', name:'mean ' + g.comp,
+      marker:{size:14, color:'#111', symbol: down ? 'diamond' : 'diamond-open', line:{width:1.5, color:'#111'}},
+      hovertemplate:'site mean ' + g.comp + '<br>D=' + g.dec.toFixed(1) + '° I=' + g.inc.toFixed(1) +
+        '° n=' + g.n + ' α95=' + (isFinite(g.alpha95)?g.alpha95.toFixed(1):'—') + '°<extra></extra>' });
+  }
+  return tr;
+}
+// Measurement list (demag_gui "logger"): i, Step, Dec, Inc, M, CSD + use box.
+// Right-click toggles bad; double-click two rows sets current-fit bounds.
+function guiRenderLogger(d){
+  const el = document.getElementById('gui-logger');
+  if(!el) return;
+  const sp = fitSeriesPoints(d, true);
+  if(!sp){ el.innerHTML = ''; return; }
+  const cur = fitCurFit(d);
+  let h = `<table style="border-collapse:collapse;width:100%"><tr>
+    ${['use','i','step','Dec','Inc','M (Am²)','CSD'].map(c=>`<th style="position:sticky;top:0;background:var(--bg2);text-align:left;padding:2px 8px;color:var(--tx3);border-bottom:1px solid var(--bdr)">${c}</th>`).join('')}</tr>`;
+  sp.pts.forEach((p, row) => {
+    const dd = pmagCart2dir(p.vec[0], p.vec[1], p.vec[2]);
+    const inFit = cur && !p.hidden && p.i >= cur.i0 && p.i <= cur.i1;
+    const style = p.hidden ? 'color:var(--red);opacity:.75'
+                : inFit ? 'background:rgba(90,130,255,.14)' : '';
+    h += `<tr style="cursor:pointer;${style}"
+        oncontextmenu="fitToggleHide(${p.i});return false;"
+        ondblclick="guiBoundPick(${p.i})"
+        title="right-click: toggle bad · double-click two rows: set fit bounds">
+      <td style="padding:1px 8px"><input type="checkbox" ${p.hidden?'':'checked'} onclick="event.stopPropagation()" onchange="fitToggleHide(${p.i})"></td>
+      <td style="padding:1px 8px;color:var(--tx3)">${row}</td>
+      <td style="padding:1px 8px">${fitEsc(p.label)}</td>
+      <td style="padding:1px 8px">${dd.dec.toFixed(1)}</td>
+      <td style="padding:1px 8px">${dd.inc.toFixed(1)}</td>
+      <td style="padding:1px 8px">${dd.R ? dd.R.toExponential(2) : '—'}</td>
+      <td style="padding:1px 8px">${isFinite(p.csd) ? p.csd.toFixed(1) : '—'}</td></tr>`;
+  });
+  el.innerHTML = h + '</table>';
+}
+// Normal-mode specimen navigation (shares the GUI's specimen list).
+function fitStepSample(dn){
+  const specs = guiSpecimens();
+  if(!specs.length) return;
+  let idx = specs.findIndex(sm => sm.selected);
+  if(idx < 0) idx = 0;
+  const target = specs[(idx + dn + specs.length) % specs.length];
+  for(const sm of S.samples) sm.selected = (sm === target);
+  if(S.guiMode){ guiRender(); return; }
+  renderSamples(); renderOps(); runAnalysis();
 }
 // ←/→ navigate specimens in PmagGUI mode (ignored while typing in a field)
 document.addEventListener('keydown', e => {
@@ -6721,7 +6901,7 @@ function onDrop(e){
 }
 let nextId = 1;
 const PYRM_KEY='pyrm_uploads_v1';
-const PYRM_BUILD='2026-10-02b';
+const PYRM_BUILD='2026-10-02c';
 // Per-sample fit state (hidden steps, saved fits, coordinate frame) for
 // session persistence, keyed by samplename.
 function collectFitStates(){
@@ -6729,7 +6909,8 @@ function collectFitStates(){
   for(const sm of S.samples){ const d=sm._d; if(!d||!d.samplename) continue;
     const st={};
     if(d.fitHidden&&d.fitHidden.length) st.hidden=d.fitHidden.slice();
-    if(d.fits&&d.fits.length) st.fits=d.fits;
+    if(d.fits&&d.fits.length){ st.fits=d.fits; st.cur=d.fitCur; }
+    if(d.adoptedDone) st.adopted=true;
     if(d.demag&&d.demag.coords&&d.demag.frames&&d.demag.frames.length>1) st.coords=d.demag.coords;
     if(Object.keys(st).length) out[d.samplename]=st; }
   return out;
@@ -6739,7 +6920,8 @@ function applyFitStates(fs){
   for(const sm of S.samples){ const d=sm._d; if(!d||!fs[d.samplename]) continue;
     const st=fs[d.samplename];
     if(st.hidden) d.fitHidden=st.hidden.slice();
-    if(st.fits) d.fits=st.fits;
+    if(st.fits){ d.fits=st.fits; if(st.cur>=0) d.fitCur=st.cur; }
+    if(st.adopted) d.adoptedDone=true;
     if(st.coords&&d.demag) d.demag.coords=st.coords; }
 }
 function saveSession(){
