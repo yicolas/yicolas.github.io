@@ -3501,7 +3501,9 @@ function tForcDiag(samples){
       const hr = hu - hc;
       const ha = hu + hc;
       // Check in valid range
-      if (hr < HrMin || hr > HrMax || ha < HaMin || ha > HaMax || ha < hr){
+      const envD = forcEnvAt(result.envelope, hr);
+      if (hr < HrMin || hr > HrMax || ha < HaMin || ha > HaMax || ha < hr ||
+          (envD && (ha < envD[0] - 1e-12 || ha > envD[1] + 1e-12))){
         z[yi][xi] = null;   // transparent
         continue;
       }
@@ -5227,6 +5229,21 @@ function measureForcBuOffset(curves){
   return (hd - ha) / 2; // Tesla
 }
 
+// Linear interpolation of a FORC measurement envelope at an arbitrary Hr.
+// env = { hr:[], lo:[], hi:[] }, hr ascending. Returns [HaMin, HaMax] or null.
+function forcEnvAt(env, hr){
+  if (!env || !env.hr || !env.hr.length) return null;
+  const H = env.hr, n = H.length;
+  if (hr <= H[0])     return [env.lo[0], env.hi[0]];
+  if (hr >= H[n - 1]) return [env.lo[n - 1], env.hi[n - 1]];
+  let a = 0, b = n - 1;
+  while (b - a > 1){ const m = (a + b) >> 1; if (H[m] <= hr) a = m; else b = m; }
+  const span = H[b] - H[a];
+  const t = span ? (hr - H[a]) / span : 0;
+  return [env.lo[a] + t * (env.lo[b] - env.lo[a]),
+          env.hi[a] + t * (env.hi[b] - env.hi[a])];
+}
+
 function processForcForcinelWorkflow(data, opts){
   const smoothingFactor = (opts && opts.smoothingFactor !== undefined) ? opts.smoothingFactor : 3;
   const gridSizeOpt = (opts && opts.gridSize !== undefined) ? opts.gridSize : 'auto';
@@ -5249,6 +5266,28 @@ function processForcForcinelWorkflow(data, opts){
     for (const c of forc.curves){
       c.Hr += buOffsetT;
       for (let _k = 0; _k < c.Ha.length; _k++) c.Ha[_k] += buOffsetT;
+    }
+  }
+
+  // ─── Measured envelope: the Ha range actually swept at each Hr ───────
+  // The measured (Hr, Ha) domain is NOT the rectangle [HrMin,HrMax] x
+  // [HaMin,HaMax]. A MicroMag caps every reversal curve - the Kochi runs cap
+  // Bc at 271 mT and Bu at 119 mT - so the corners of that rectangle were
+  // never measured. Masking by the rectangle alone lets the bicubic fill them
+  // by extrapolation, and the diagram grows area that is not data (Bc out to
+  // 378 mT on data that stops at 271). Interpolate the real limits instead.
+  const forcEnv = { hr: [], lo: [], hi: [] };
+  {
+    const byHr = forc.curves.slice().sort((a, b) => a.Hr - b.Hr);
+    for (const c of byHr){
+      let lo = Infinity, hi = -Infinity;
+      for (let k = 0; k < c.Ha.length; k++){
+        const v = c.Ha[k];
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+      if (!Number.isFinite(lo) || !Number.isFinite(hi)) continue;
+      forcEnv.hr.push(c.Hr); forcEnv.lo.push(lo); forcEnv.hi.push(hi);
     }
   }
 
@@ -5380,7 +5419,10 @@ function processForcForcinelWorkflow(data, opts){
     for (let j = 0; j < gridSize; j++){
       Hc[i][j] = (HaGrid[i][j] - HrGrid[i][j]) / 2.0;
       Hu[i][j] = (HaGrid[i][j] + HrGrid[i][j]) / 2.0;
-      validMask[i][j] = (HaGrid[i][j] >= HrGrid[i][j]) ? 1 : 0;
+      const _env = forcEnvAt(forcEnv, HrGrid[i][j]);
+      validMask[i][j] = (HaGrid[i][j] >= HrGrid[i][j] && _env &&
+                         HaGrid[i][j] >= _env[0] - 1e-12 &&
+                         HaGrid[i][j] <= _env[1] + 1e-12) ? 1 : 0;
     }
   }
 
@@ -5396,6 +5438,7 @@ function processForcForcinelWorkflow(data, opts){
     MGrid, MSmooth,
     Hc, Hu,
     rho,
+    envelope: forcEnv,
     validMask,
     smoothingFactor,
     gridSize,
