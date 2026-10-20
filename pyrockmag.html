@@ -5189,7 +5189,7 @@ function griddata2DBicubic(Hr_in, Ha_in, M_2d, Hr_out, Ha_out){
 //   MSmooth     M after uniform-filter smoothing
 //   Hc          coercivity transform (Ha - Hr)/2 (Tesla)
 //   Hu          interaction field transform (Ha + Hr)/2 (Tesla)
-//   rho         final FORC distribution = -1 * (-0.5 * d²M/dHr∂Ha)
+//   rho         final FORC distribution = -0.5 * d²M/dHr∂Ha
 //   validMask   boolean 2D grid (true where Ha >= Hr)
 //   smoothingFactor, gridSize  — echoed back for display
 //
@@ -5360,12 +5360,14 @@ function processForcForcinelWorkflow(data, opts){
   const dHa = HaOut1D[1] - HaOut1D[0];
   const dM_dHr = gradient2D(MSmooth, dHr, 0);
   const d2M = gradient2D(dM_dHr, dHa, 1);
-  // rho = -1 * (-0.5 * d2M) = 0.5 * d2M
-  // (Python writes it in two separate steps; we match the same sign convention.)
+  // rho = -(1/2) d2M/dHr dHa  (Roberts et al. 2000, Pike et al. 1999).
+  // A spurious extra -1 lived here until 2026-10-06 and inverted every diagram:
+  // the central ridge plotted negative. HrIn is sorted ascending above, so the
+  // gradient already has the right orientation and needs no compensation.
   const rho = zeros2D(gridSize, gridSize);
   for (let i = 0; i < gridSize; i++){
     for (let j = 0; j < gridSize; j++){
-      rho[i][j] = -1.0 * (-0.5 * d2M[i][j]);
+      rho[i][j] = -0.5 * d2M[i][j];
     }
   }
 
