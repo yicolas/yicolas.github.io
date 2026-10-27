@@ -2736,7 +2736,7 @@ function forcExtractReversalRemanence(forc){
   const Hd=[], Md=[], sat=[]; let deep=null;
   for(const c of forc.curves){
     let k=0; for(let m=1;m<c.Ha.length;m++) if(c.Ha[m]<c.Ha[k]) k=m;
-    const Hrev=Math.abs(c.Hr), Mr=c.M[k], last=c.M[c.M.length-1];
+    const Hrev=Math.abs(c.Hr), Mr=c.M[k], last=(c.Msat!==undefined&&isFinite(c.Msat))?c.Msat:c.M[c.M.length-1];
     if(isFinite(last)) sat.push(last);
     if(Hrev>0 && isFinite(Mr)){ Hd.push(Hrev); Md.push(Mr); }
     if(deep===null || c.Hr<deep.Hr) deep=c;
@@ -4511,6 +4511,24 @@ function findForcSteps(data){
 // Standard extraction: groups measurements by reversal curve.
 // Negative field = new reversal curve; positive/zero = measurement point.
 // Skips the initial positive saturation pulse.
+// The 2G re-saturates between reversal curves, so each curve's trailing point is
+// the saturation pulse, not a sweep step. skipFirstPositive only skipped the very
+// first one. Left in Ha/M, the pulse stretched the FORC grid to (pulse - Hr_min)/2
+// -- 322 mT on FeS_0, whose sweep stops at 148 -- and the bicubic interpolated
+// across the empty gap, so 55% of that diagram was not data. Move it to Hsat/Msat:
+// the grid ignores it, forcExtractReversalRemanence still reads it for SIRM.
+function _forcStripSatPulse(curve, satT){
+  if (!curve || !Number.isFinite(satT) || curve.Ha.length < 2) return curve;
+  const n = curve.Ha.length;
+  const lastH = curve.Ha[n - 1];
+  const tol = Math.max(1e-9, 1e-3 * Math.abs(satT));
+  if (Math.abs(lastH - satT) <= tol && lastH > curve.Ha[n - 2]){
+    curve.Hsat = curve.Ha.pop();
+    curve.Msat = curve.M.pop();
+  }
+  return curve;
+}
+
 function rmgExtractForcData(data){
   if(data && data.vsm && data.vsm.forcCurves)
     return { exists:true, curves:data.vsm.forcCurves.map(c=>({Hr:c.Hr, Ha:c.Ha.slice(), M:c.M.slice()})) };
@@ -4520,6 +4538,7 @@ function rmgExtractForcData(data){
 
   let currentCurve = null;
   let skipFirstPositive = true;
+  let satT = NaN;
 
   for (const i of forcSteps){
     const fieldOe = data.levels[i];
@@ -4530,6 +4549,7 @@ function rmgExtractForcData(data){
 
     // Skip the initial saturation pulse (first positive field before any reversal)
     if (skipFirstPositive && fieldOe > 0){
+      satT = fieldT;                 // remember the saturation field
       skipFirstPositive = false;
       continue;
     }
@@ -4537,7 +4557,7 @@ function rmgExtractForcData(data){
     if (fieldOe < 0){
       // Negative field → start a new reversal curve
       if (currentCurve !== null && currentCurve.Ha.length > 0){
-        out.curves.push(currentCurve);
+        out.curves.push(_forcStripSatPulse(currentCurve, satT));
       }
       currentCurve = { Hr: fieldT, Ha: [], M: [] };
     } else if (currentCurve !== null){
@@ -4549,7 +4569,7 @@ function rmgExtractForcData(data){
 
   // Flush last curve
   if (currentCurve !== null && currentCurve.Ha.length > 0){
-    out.curves.push(currentCurve);
+    out.curves.push(_forcStripSatPulse(currentCurve, satT));
   }
 
   out.exists = out.curves.length > 0;
@@ -4569,6 +4589,7 @@ function rmgExtractForcDataComplete(data){
 
   let currentCurve = null;
   let skipFirstPositive = true;
+  let satT = NaN;
 
   for (const i of forcSteps){
     const fieldOe = data.levels[i];
@@ -4578,13 +4599,14 @@ function rmgExtractForcDataComplete(data){
     if (mz === null || mz === undefined || Number.isNaN(mz)) continue;
 
     if (skipFirstPositive && fieldOe > 0){
+      satT = fieldT;                 // remember the saturation field
       skipFirstPositive = false;
       continue;
     }
 
     if (fieldOe < 0){
       if (currentCurve !== null && currentCurve.Ha.length > 0){
-        out.curves.push(currentCurve);
+        out.curves.push(_forcStripSatPulse(currentCurve, satT));
       }
       currentCurve = { Hr: fieldT, Mr: mz, Ha: [], M: [] };
     } else if (currentCurve !== null){
@@ -4594,7 +4616,7 @@ function rmgExtractForcDataComplete(data){
   }
 
   if (currentCurve !== null && currentCurve.Ha.length > 0){
-    out.curves.push(currentCurve);
+    out.curves.push(_forcStripSatPulse(currentCurve, satT));
   }
 
   out.exists = out.curves.length > 0;
