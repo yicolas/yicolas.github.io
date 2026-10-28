@@ -317,6 +317,14 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
           </optgroup>
         </select>
       </label>
+      <label style="display:flex;gap:4px;align-items:center;color:var(--tx2)" title="Hide |rho| below this fraction of the peak. 0 = off.">
+        noise floor
+        <input type="number" id="forc-nf" min="0" max="0.9" step="0.05" value="0" style="width:50px;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx);padding:2px 4px;border-radius:3px;font-family:var(--mono);font-size:10px">
+      </label>
+      <label style="display:flex;gap:4px;align-items:center;color:var(--tx2)" title="Draw only cells significant at 3 sigma, where sigma is measured from the signal-free outer quarter of Bc. Drops isolated cells and the Bc boundary stripe. Does not alter the distribution.">
+        <input type="checkbox" id="forc-sig" style="margin:0">
+        significance mask
+      </label>
       <button class="btn sm" onclick="forcDiagRecompute()" style="padding:2px 10px;font-size:10px">recompute</button>
       <span style="color:var(--tx3);border-left:1px solid var(--bdr);padding-left:10px;margin-left:6px;font-size:9px;text-transform:uppercase;letter-spacing:.05em">axis limits (mT)</span>
       <label style="display:flex;gap:3px;align-items:center;color:var(--tx2)">
@@ -3259,7 +3267,7 @@ function tForcCurves(samples){
 }
 
 // ─── FORC_DIAG state (smoothing + grid size) ──────────────────────────────────
-const ForcDiagState = { smoothingFactor: 3, gridSize: 'auto', colormap: 'inferno_r', bcMin: null, bcMax: null, buMin: null, buMax: null, lastResult: null };
+const ForcDiagState = { smoothingFactor: 3, gridSize: 'auto', colormap: 'inferno_r', noiseFloor: 0, sigMask: false, lastMask: null, bcMin: null, bcMax: null, buMin: null, buMax: null, lastResult: null };
 
 // Plotly-format colorscale stops for matplotlib-compatible colormaps
 const FORC_COLORMAPS = {
@@ -3388,6 +3396,88 @@ const FORC_COLORMAPS = {
 // For FORC_DIAG the convention is: x = Hc (coercivity), y = Hu (interaction)
 // with pixels outside the triangular valid region shown as transparent.
 // We only support single-sample FORC diagrams (multi-sample makes no sense here).
+// ─── Display-side noise handling ────────────────────────────────────────────
+// Neither option touches the distribution; both decide which cells are DRAWN.
+// rho is a second derivative, so it amplifies measurement noise hard: 0.185%
+// noise on M (the Kochi film, sigma 1.6e-8 Am2 against Ms 8.7e-6) lands at
+// ~18% of peak out where there is no signal, and the default 0.1/0.2 contours
+// then draw noise. Two independent controls:
+//   noiseFloor : hide |rho| below this fraction of the peak. Cosmetic but
+//                honest provided the floor is stated.
+//   sigMask    : hide cells that are not significant. sigma is a MAD estimate
+//                taken from the outer quarter of Bc, which is signal-free in
+//                every run tested; cells within 3 sigma of that background are
+//                dropped, then components too small to be a real feature go,
+//                and so does the Bc boundary stripe (width ~ SF x grid step),
+//                which is what hijacks the peak when SF is raised instead.
+// Tested on FeS_0, FeS, MTTF, Greg001, CryptoC1, Komat003 and the VSM film:
+// the peak position is preserved in all seven. Clean 2G runs keep 20-45% of
+// cells, the noisy VSM film keeps 0.8% - the mask adapts to data quality.
+function forcApplyDisplayMask(z, Hc_1d, gs, absMax, opts){
+  const out = { sigma: NaN, kept: 0, total: 0, floor: 0, sig: false };
+  if (!opts || (!opts.sigMask && !(opts.noiseFloor > 0))) return out;
+  let bcMax = 0;
+  for (let xi = 0; xi < gs; xi++) if (Hc_1d[xi] > bcMax) bcMax = Hc_1d[xi];
+  for (let yi = 0; yi < gs; yi++) for (let xi = 0; xi < gs; xi++)
+    if (z[yi][xi] !== null) out.total++;
+
+  let keepMask = null;
+  if (opts.sigMask && bcMax > 0){
+    const far = [];
+    for (let yi = 0; yi < gs; yi++) for (let xi = 0; xi < gs; xi++){
+      const v = z[yi][xi];
+      if (v !== null && Hc_1d[xi] > 0.75 * bcMax) far.push(v);
+    }
+    if (far.length > 20){
+      const mu = _median(far);
+      const sg = _median(far.map(v => Math.abs(v - mu))) * 1.4826;
+      out.sigma = sg;
+      if (sg > 0){
+        const sf = ForcDiagState.smoothingFactor || 3;
+        const bcCut = 2 * sf * (bcMax / (gs - 1));
+        const M = [];
+        for (let yi = 0; yi < gs; yi++){
+          M.push(new Uint8Array(gs));
+          for (let xi = 0; xi < gs; xi++){
+            const v = z[yi][xi];
+            if (v !== null && Math.abs(v - mu) > 3 * sg && Hc_1d[xi] > bcCut) M[yi][xi] = 1;
+          }
+        }
+        const MIN = Math.max(8, Math.round(gs * gs * 7e-4));
+        const seen = []; for (let yi = 0; yi < gs; yi++) seen.push(new Uint8Array(gs));
+        keepMask = []; for (let yi = 0; yi < gs; yi++) keepMask.push(new Uint8Array(gs));
+        for (let yi = 0; yi < gs; yi++) for (let xi = 0; xi < gs; xi++){
+          if (!M[yi][xi] || seen[yi][xi]) continue;
+          const st = [[yi, xi]]; seen[yi][xi] = 1; const comp = [];
+          while (st.length){
+            const p = st.pop(); comp.push(p);
+            const nb = [[p[0]+1,p[1]],[p[0]-1,p[1]],[p[0],p[1]+1],[p[0],p[1]-1]];
+            for (let q = 0; q < 4; q++){
+              const a = nb[q][0], b = nb[q][1];
+              if (a < 0 || b < 0 || a >= gs || b >= gs || seen[a][b] || !M[a][b]) continue;
+              seen[a][b] = 1; st.push([a, b]);
+            }
+          }
+          if (comp.length >= MIN)
+            for (let q = 0; q < comp.length; q++) keepMask[comp[q][0]][comp[q][1]] = 1;
+        }
+        out.sig = true;
+      }
+    }
+  }
+  const floor = (opts.noiseFloor > 0) ? opts.noiseFloor * absMax : 0;
+  out.floor = floor;
+  for (let yi = 0; yi < gs; yi++) for (let xi = 0; xi < gs; xi++){
+    const v = z[yi][xi];
+    if (v === null) continue;
+    let drop = false;
+    if (keepMask && !keepMask[yi][xi]) drop = true;
+    if (floor > 0 && Math.abs(v) < floor) drop = true;
+    if (drop) z[yi][xi] = null; else out.kept++;
+  }
+  return out;
+}
+
 function tForcDiag(samples){
   if (!samples || samples.length === 0) return [];
   // FORC diagrams are per-sample; use the first selected sample only.
@@ -3534,6 +3624,10 @@ function tForcDiag(samples){
       if (v !== null && Math.abs(v) > absMax) absMax = Math.abs(v);
     }
   }
+
+  // Hide cells the user has asked not to see (noise floor / significance).
+  ForcDiagState.lastMask = forcApplyDisplayMask(z, Hc_1d, gs, absMax, {
+    noiseFloor: ForcDiagState.noiseFloor, sigMask: ForcDiagState.sigMask });
 
   // Convert Hc/Hu to mT for display.
   // Apex registration (shift so the low-Bc vertex sits at Bu=0) is only
@@ -9011,6 +9105,11 @@ function forcDiagRecompute(){
   if(Number.isFinite(sf) && sf >= 0 && sf <= 10) ForcDiagState.smoothingFactor = sf;
   if(gs === 'auto' || (Number.isFinite(gs) && gs > 0 && gs <= 500)) ForcDiagState.gridSize = gs;
   if(cmEl && FORC_COLORMAPS[cmEl.value]) ForcDiagState.colormap = cmEl.value;
+  const nfEl = document.getElementById('forc-nf');
+  const sgEl = document.getElementById('forc-sig');
+  if(nfEl){ const nf = parseFloat(nfEl.value);
+            ForcDiagState.noiseFloor = (Number.isFinite(nf) && nf >= 0 && nf < 1) ? nf : 0; }
+  if(sgEl){ ForcDiagState.sigMask = !!sgEl.checked; }
   // Re-run the FORC_DIAG plot if that's the current op
   if(S.activeOp === 'FORC_DIAG' && S.samples && S.samples.length > 0){
     const selSamps = S.samples.filter(s => s.active);
@@ -9022,7 +9121,15 @@ function forcDiagRecompute(){
       if(info){
         const r = ForcDiagState.lastResult;
         if(r){
-          info.textContent = `${r.forcData.curves.length} curves · ${dt.toFixed(0)}ms`;
+          const mk = ForcDiagState.lastMask;
+          let extra = '';
+          if(mk && mk.total && (ForcDiagState.sigMask || ForcDiagState.noiseFloor > 0)){
+            const bits = [];
+            if(ForcDiagState.sigMask && mk.sig) bits.push('3σ');
+            if(ForcDiagState.noiseFloor > 0) bits.push('floor ' + (100*ForcDiagState.noiseFloor).toFixed(0) + '%');
+            extra = ` · ${bits.join(' + ')}: ${(100*mk.kept/mk.total).toFixed(1)}% of cells drawn`;
+          }
+          info.textContent = `${r.forcData.curves.length} curves · ${dt.toFixed(0)}ms` + extra;
         } else {
           info.textContent = 'no FORC data';
         }
