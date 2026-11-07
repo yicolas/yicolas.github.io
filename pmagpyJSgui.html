@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v16 — pyRockmag fitting arcade</title>
+<title>FITQUEST v17 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -162,13 +162,19 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v16 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v17 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
   <div class="stat-pill"><span class="lbl">best</span><b id="hud-best">0</b></div>
+  <button class="btn sm" id="new-btn" title="close the reopened session and start empty (saved fits are kept per specimen)">⟲ new</button>
   <button class="btn sm" id="redo-btn" title="Export all fits as a demag_gui-compatible .redo">⭳ .redo</button>
   <button class="btn sm" id="magic-btn" title="Export fits + measurements + sample data as a MagIC 3.0 contribution">⭳ MagIC</button>
+  <select id="calc-sel" class="btn sm" title="line fit type for every fit (PmagPy demag_gui calculation types)">
+    <option value="DE-BFL">fit: DE-BFL free line</option>
+    <option value="DE-BFL-A">fit: DE-BFL-A anchored</option>
+    <option value="DE-BFL-O">fit: DE-BFL-O origin pt</option>
+  </select>
   <select id="drop-sel" class="btn sm" title="which pre-demag steps are left out of every fit">
     <option value="all">drop: NRM+LN+LN2</option>
     <option value="nrm">drop: NRM</option>
@@ -296,6 +302,8 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>reopen</kbd></td><td>the page reopens with the data, fits, skips and grades you last had loaded (kept in this browser). <b>⟲ new</b> (click twice) closes that session and starts empty; fits you saved still come back if you load the same specimens again.</td></tr>
+    <tr><td><kbd>fit</kbd></td><td>line fit type for every fit: <b>DE-BFL</b> free, <b>DE-BFL-A</b> anchored, <b>DE-BFL-O</b> origin as a point (PmagPy names; written to exports). dang always comes from the free line.</td></tr>
     <tr><td><kbd>drop</kbd></td><td>which pre-demag steps are left out of <b>every</b> fit: the NRM, the first liquid-nitrogen cycle (<b>LN</b>, the first 77&nbsp;K step) and any later cycle (<b>LN2</b>, or a step labelled LN2). Default drops all three. Changing it re-applies to all loaded specimens, including ones you have saved; other skips (reruns, csd, right-clicks) are untouched. Remembered between sessions.</td></tr>
     <tr><td><kbd>⤓ auto</kbd></td><td>when lit, a fresh backup <code>fitquest_&lt;site&gt;_autosave.redo</code> is downloaded to your Downloads shortly after each save (debounced). A local <code>file://</code> page can't overwrite a file in your repo, so this is a download — your browser may append (1),(2)… Keep the newest; it's always current. Toggle off if the Downloads clutter bothers you. Your fits also persist in the browser regardless.</td></tr>
     <tr><td><kbd>eq-area menus</kbd></td><td><b>site</b> picks which site (split by name prefix — NWFA, NWFC, PKSF…; "current" follows the selected specimen), <b>boulder</b> drills into one sub-sample within that site (e.g. NWFC-3), <b>level</b> aggregates at specimen / sample / site / all, <b>component</b> filters LT / MT / HT. Sample &amp; site views add a Fisher mean (diamond) with α95 ring; clicking a star opens that specimen.</td></tr>
@@ -305,7 +313,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>s</kbd></td><td>save fits &amp; advance</td></tr>
   </table>
   <h4>House rules (how you're graded)</h4>
-  <p>Free lines only (DE-BFL) — never anchored to the origin. MAD is per segment against its own points. Only the terminal (last-unblocking) component is judged on origin-trending: <b>dang</b> is shown for the fit that ends on the last surviving step. Usable ChRM: <b>MAD ≤ 10° and dang ≤ 15°</b>. A beautiful MAD on the wrong segment is worth nothing — watch dang. Fit the terminal segment first, then split what precedes it. Don't assume three components; one good fit beats three forced ones.</p>
+  <p>Fit type is set by the <b>fit</b> menu (PmagPy demag_gui types): <b>DE-BFL</b> free line (default), <b>DE-BFL-A</b> anchored through the origin, <b>DE-BFL-O</b> origin added as one data point. It applies to every fit and is written to the .redo and MagIC exports. <b>dang is always the free-line value</b> — the test of whether the data really reach the origin — so anchoring cannot improve a grade; a warning appears when an anchored segment's free dang exceeds its MAD. Anchor only terminal components that already head for the origin (Heslop &amp; Roberts 2016). MAD is per segment against its own points. Only the terminal (last-unblocking) component is judged on origin-trending: <b>dang</b> is shown for the fit that ends on the last surviving step. Usable ChRM: <b>MAD ≤ 10° and dang ≤ 15°</b>. A beautiful MAD on the wrong segment is worth nothing — watch dang. Fit the terminal segment first, then split what precedes it. Don't assume three components; one good fit beats three forced ones.</p>
   <h4>Scoring</h4>
   <p><code>per fit: 100 − 6·MAD − 2·max(0, dang−5) + 2·(n−3) [cap +10]</code><br>
   +15 bonus for a usable terminal ChRM. Grades: S ≥ 95 · A ≥ 85 · B ≥ 70 · C ≥ 50 · D ≥ 30 · F. Streak counts consecutive specimens saved with a usable ChRM. Skipping &gt; 25% of a segment's points caps its grade at C — beyond that the line is wrong, not the points.</p>
@@ -364,15 +372,25 @@ function eigSym3(A){
   pairs.sort((x,y)=>y.val-x.val);
   return {vals:pairs.map(p=>p.val), vecs:pairs.map(p=>p.vec)};
 }
-// Kirschvink DE-BFL free line (never anchored). pts: array of [x,y,z] in measurement order.
-function pcaLine(pts){
+// Kirschvink (1980) PCA line, PmagPy demag_gui calculation types:
+//   DE-BFL   free line (centroid of the segment)            — default
+//   DE-BFL-A anchored line, forced through the origin (orientation tensor about the origin)
+//   DE-BFL-O free line with the origin added as one extra data point
+// MAD is from the chosen fit. dang is ALWAYS the free-line deviation angle (free line vs the
+// segment's centre of mass): it is the test of whether the data really head for the origin,
+// so anchoring cannot hide a segment that misses it (cf. Heslop & Roberts 2016).
+function pcaLine(pts, calc){
+  calc=calc||'DE-BFL';
   const n=pts.length;
   if(n<3) return null;
-  const cm=[0,0,0];
-  pts.forEach(p=>{cm[0]+=p[0];cm[1]+=p[1];cm[2]+=p[2];});
-  cm[0]/=n;cm[1]/=n;cm[2]/=n;
+  const centroid=P=>{ const c=[0,0,0]; P.forEach(p=>{c[0]+=p[0];c[1]+=p[1];c[2]+=p[2];}); return c.map(x=>x/P.length); };
+  const dataCm=centroid(pts);
+  // matches pmag.domean exactly: DE-BFL-O appends the origin but still centres on the mean of the
+  // real steps; DE-BFL-A uses the orientation tensor about the origin (direction set below)
+  const fitPts = calc==='DE-BFL-O' ? pts.concat([[0,0,0]]) : pts;
+  const cm = calc==='DE-BFL-A' ? [0,0,0] : dataCm;   // point the fitted line passes through
   const T=[[0,0,0],[0,0,0],[0,0,0]];
-  pts.forEach(p=>{
+  fitPts.forEach(p=>{
     const d=[p[0]-cm[0],p[1]-cm[1],p[2]-cm[2]];
     for(let i=0;i<3;i++)for(let j=0;j<3;j++)T[i][j]+=d[i]*d[j];
   });
@@ -381,17 +399,21 @@ function pcaLine(pts){
   // orient along demag path: reference = first − last (direction of removed remanence)
   const R=[pts[0][0]-pts[n-1][0], pts[0][1]-pts[n-1][1], pts[0][2]-pts[n-1][2]];
   if(v[0]*R[0]+v[1]*R[1]+v[2]*R[2] < 0){ v=[-v[0],-v[1],-v[2]]; }
+  if(calc==='DE-BFL-A'){   // PmagPy: anchored direction = vector mean of the steps
+    const sr=Math.hypot(dataCm[0],dataCm[1],dataCm[2])||1; v=dataCm.map(x=>x/sr);
+  }
   const s=Math.max(e.vals[0],1e-30);
   const mad=Math.atan(Math.sqrt(Math.max(e.vals[1]+e.vals[2],0)/s))*R2D;
-  // dang: angle between fit direction and centroid vector (origin → CM)
-  const cmr=Math.hypot(cm[0],cm[1],cm[2]);
+  // dang from the FREE line, whatever calc is (see above)
+  const fv = calc==='DE-BFL' ? v : pcaLine(pts,'DE-BFL').v;
+  const cmr=Math.hypot(dataCm[0],dataCm[1],dataCm[2]);
   let dang=NaN;
   if(cmr>0){
-    const dot=(v[0]*cm[0]+v[1]*cm[1]+v[2]*cm[2])/cmr;
+    const dot=(fv[0]*dataCm[0]+fv[1]*dataCm[1]+fv[2]*dataCm[2])/cmr;
     dang=Math.acos(Math.min(1,Math.max(-1,dot)))*R2D;
   }
   const [dec,inc]=cart2dir(v);
-  return {dec,inc,mad,dang,cm,v,n};
+  return {dec,inc,mad,dang,cm,v,n,calc};
 }
 
 /* ═════════════════════════ CIT parsing ═════════════════════════ */
@@ -465,7 +487,7 @@ function parseSpecimenFile(fname, text){
     if(b.treat.type==='TT' && a.treat.type==='TT' && b.treat.C < a.treat.C) b.warn='temperature goes backwards — check step order';
     if(b.treat.type==='TT' && b.treat.C>800) b.warn='implausible temperature (sentinel step?)';
   }
-  return { name:fname, hdr, steps,
+  return { name:fname, hdr, steps, text,
            fits:{LT:null,MT:null,HT:null}, saved:false, scores:{} };
 }
 function parseSam(text){
@@ -490,6 +512,18 @@ function applyDropMode(steps){
     s.skipped=on;
     s.autoskip = on ? 'dropped: '+k+' (drop menu)' : '';
   });
+}
+// line-fit type for every fit (PmagPy demag_gui calculation types)
+const FIT_CALCS={'DE-BFL':'free line','DE-BFL-A':'anchored to origin','DE-BFL-O':'origin as a point'};
+let FIT_CALC=(()=>{ try{ const m=localStorage.getItem('fitquest:calc'); return FIT_CALCS[m]?m:'DE-BFL'; }catch(e){ return 'DE-BFL'; } })();
+function setFitCalc(c){
+  if(!FIT_CALCS[c]) return;
+  FIT_CALC=c;
+  try{ localStorage.setItem('fitquest:calc', c); }catch(e){}
+  const sel=document.getElementById('calc-sel'); if(sel) sel.value=c;
+  if(typeof renderQueue==='function') renderQueue();
+  if(typeof renderAll==='function') renderAll();
+  if(typeof toast==='function') toast('fits: '+c+' ('+FIT_CALCS[c]+') — recomputed'+(c==='DE-BFL'?'':'. dang is still the free-line value, the origin test'));
 }
 function setDropMode(mode){
   if(!DROP_MODES[mode]) return;
@@ -878,14 +912,72 @@ function restoreSpec(sp){
     (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
     SLOTS.forEach(k=>{ if(d.fits && d.fits[k]) sp.fits[k]=d.fits[k]; });
     sp.saved=!!d.saved;
+    if(d.lastGrade) sp.lastGrade=d.lastGrade;
+    if(d.lastPts) sp.lastPts=d.lastPts;
     sp._hadLocal = true;
   }catch(e){}
 }
 function persistSpec(sp){
   lsSet(specKey(sp), JSON.stringify({
     skips:sp.steps.filter(s=>s.skipped).map(s=>s.idx),
-    fits:sp.fits, saved:sp.saved, touched:true
+    fits:sp.fits, saved:sp.saved, lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0, touched:true
   }));
+}
+
+/* ═════════════════════════ session: reopen with the last data, fits and grades ═════════════════════════ */
+// Snapshot of everything loaded (raw specimen text, .sam sites, order, current specimen, skips, fits,
+// saved flags, grades) kept in IndexedDB and restored when the page opens. Fits also stay in
+// localStorage per specimen, so re-dropping the same folder later still brings them back.
+let sessionTimer=null;
+function scheduleSessionSave(){
+  if(S._restoring) return;
+  clearTimeout(sessionTimer);
+  sessionTimer=setTimeout(saveSession, 900);
+}
+async function saveSession(){
+  const specs=Object.values(S.specs).filter(sp=>sp.text);
+  if(!specs.length) return;
+  const snap={ v:1, ts:Date.now(), root:S.scan.root||'', cur:S.cur, order:S.order.slice(), sites:S.sites,
+    specs:specs.map(sp=>({ name:sp.name, text:sp.text, fits:sp.fits,
+      skips:sp.steps.filter(x=>x.skipped).map(x=>x.idx), saved:!!sp.saved,
+      lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0 })) };
+  try{ await idbSet('session', JSON.parse(JSON.stringify(snap))); }catch(e){}
+}
+async function restoreSession(){
+  let snap=null; try{ snap=await idbGet('session'); }catch(e){}
+  if(!snap || !snap.specs || !snap.specs.length || Object.keys(S.specs).length) return false;
+  S._restoring=true;
+  try{
+    S.sites=snap.sites||{};
+    snap.specs.forEach(d=>{
+      const sp=parseSpecimenFile(d.name, d.text);
+      if(!sp) return;
+      sp.steps.forEach(x=>{ x.skipped=false; });
+      (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
+      SLOTS.forEach(k=>{ sp.fits[k]=(d.fits&&d.fits[k])||null; });
+      sp.saved=!!d.saved; if(d.lastGrade) sp.lastGrade=d.lastGrade; sp.lastPts=d.lastPts||0;
+      sp._hadLocal=true;
+      S.specs[sp.name]=sp;
+    });
+    S.order=(snap.order||[]).filter(n=>S.specs[n]);
+    Object.keys(S.specs).forEach(n=>{ if(!S.order.includes(n)) S.order.push(n); });
+    S.scan.root=snap.root||'';
+    const rn=document.getElementById('root-name');
+    if(rn) rn.textContent=(snap.root||'last session')+' · restored';
+    const cur=(snap.cur&&S.specs[snap.cur])?snap.cur:S.order.find(n=>S.specs[n].steps.length>0);
+    S.cur=null; if(cur) selectSpec(cur); else { renderQueue(); renderAll(); }
+  } finally { S._restoring=false; }
+  const nSaved=Object.values(S.specs).filter(sp=>sp.saved).length;
+  toast('reopened last session: '+Object.keys(S.specs).length+' specimens, '+nSaved+' graded ('+new Date(snap.ts).toLocaleString()+')', 4000);
+  return true;
+}
+async function clearSession(){
+  try{ const db=await idb(); await new Promise(r=>{ const t=db.transaction('kv','readwrite').objectStore('kv').delete('session'); t.onsuccess=r; t.onerror=r; }); }catch(e){}
+  S.specs={}; S.sites={}; S.order=[]; S.cur=null; S.pendingRedo=[];
+  S.scan={byName:new Map(), byDir:new Map(), root:''};
+  const rn=document.getElementById('root-name'); if(rn) rn.textContent='—';
+  renderQueue(); renderAll();
+  toast('cleared — drop or pick a folder to start. Your saved fits come back if you load the same data.', 4000);
 }
 
 /* ═════════════════════════ copy / paste fits ═════════════════════════ */
@@ -1025,11 +1117,13 @@ function computeFit(sp, slot){
   const out={slot, seg, used, nTotal:seg.length, nUsed:used.length, warns:[]};
   if(used.length<3){ out.invalid='need ≥3 points ('+used.length+' in segment)'; return out; }
   ['geo','tc','spec'].forEach(cs=>{
-    out[cs]=pcaLine(used.map(s=>stepCart(sp,s,cs)));
+    out[cs]=pcaLine(used.map(s=>stepCart(sp,s,cs)), FIT_CALC);
   });
   const skipFrac=1-used.length/seg.length;
   if(skipFrac>0.25) out.warns.push((100*skipFrac).toFixed(0)+'% of segment skipped — beyond ~25% the line is wrong, not the points (grade capped)');
   if(used.some(s=>s.warn && s.warn.includes('spike'))) out.warns.push('segment contains an intensity-spike step — possible instrument artifact');
+  if(FIT_CALC!=='DE-BFL' && out.geo && isFinite(out.geo.dang) && out.geo.dang>Math.max(out.geo.mad,5))
+    out.warns.push(FIT_CALC+': free-line dang '+out.geo.dang.toFixed(1)+'° > MAD — the segment does not head for the origin, so forcing it there biases the direction');
   out.capped = skipFrac>0.25;
   return out;
 }
@@ -1550,7 +1644,7 @@ function renderSlots(sp){
             (sc?'<span class="slot-grade g-'+sc.grade+'" style="color:'+(sc.grade==='S'?'var(--amb)':sc.grade==='A'?'var(--ac)':sc.grade==='F'||sc.grade==='D'?'var(--red)':'var(--tx)')+'">'+sc.grade+'<span style="font-size:8px"> '+sc.score+'</span></span>':'')+
             hl('geo  D '+rG.dec.toFixed(1)+' / I '+rG.inc.toFixed(1), repG)+'<br>'+
             hl('tilt D '+rT.dec.toFixed(1)+' / I '+rT.inc.toFixed(1), !repG)+'<br>'+
-            'MAD <span class="'+madCls+'">'+rG.mad.toFixed(1)+'°</span>'+
+            'MAD <span class="'+madCls+'">'+rG.mad.toFixed(1)+'°</span>'+(rG.calc&&rG.calc!=='DE-BFL'?' <span style="color:var(--amb)">'+(rG.calc==='DE-BFL-A'?'anch':'+origin')+'</span>':'')+
             (isTerm?' · dang <span class="'+(rG.dang<=15?'crit-ok':'crit-bad')+'">'+rG.dang.toFixed(1)+'°</span>':'')+
             ' · n='+res.nUsed+(res.nTotal>res.nUsed?'/'+res.nTotal:'')+' pts'+
             (isTerm?' · <span style="color:var(--tx3)">terminal</span>':'')+
@@ -1622,6 +1716,7 @@ function renderAll(){
   document.getElementById('hud-streak').textContent=S.streak;
   document.getElementById('hud-best').textContent=S.best;
   document.getElementById('streak-pill').classList.toggle('hot',S.streak>=3);
+  scheduleSessionSave();
 }
 
 /* ═════════════════════════ interaction ═════════════════════════ */
@@ -1796,7 +1891,7 @@ function buildRedoLines(){
       if(!f) return;
       const res=computeFit(sp,k);
       if(!res||res.invalid) return;
-      lines.push([sp.name,'DE-BFL',boundRedoVal(sp.steps[f.i0]),boundRedoVal(sp.steps[f.i1]),(f.name&&f.name!==k?k+':'+f.name:k),f.color||SLOTC[k],'g'].join('\t'));
+      lines.push([sp.name,FIT_CALC,boundRedoVal(sp.steps[f.i0]),boundRedoVal(sp.steps[f.i1]),(f.name&&f.name!==k?k+':'+f.name:k),f.color||SLOTC[k],'g'].join('\t'));
     });
   });
   return lines;
@@ -1892,7 +1987,7 @@ function exportMagic(){
           dir_tilt_correction: tilt, dir_dang: isTerm&&isFinite(r.dang)?r.dang.toFixed(1):'',
           dir_mad_free: r.mad.toFixed(1), meas_step_max: magicTreatTemp(sp.steps[f.i1]),
           meas_step_min: magicTreatTemp(sp.steps[f.i0]), meas_step_unit:'K', software_packages:SW,
-          int_corr:'u', citations:CIT, method_codes:'LP-DIR-T:DE-BFL:'+mc, result_quality:'g',
+          int_corr:'u', citations:CIT, method_codes:'LP-DIR-T:'+FIT_CALC+':'+mc, result_quality:'g',
           location: LOC, site: site,
         });
       });
@@ -2013,6 +2108,14 @@ document.addEventListener('keydown',e=>{
   setAutoBackup(lsGet('fitquest:autobk')!=='off');   // default on
   const dsel=document.getElementById('drop-sel');
   if(dsel){ dsel.value=DROP_MODE; dsel.addEventListener('change',e=>setDropMode(e.target.value)); }
+  const csel=document.getElementById('calc-sel');
+  if(csel){ csel.value=FIT_CALC; csel.addEventListener('change',e=>setFitCalc(e.target.value)); }
+  const nb=document.getElementById('new-btn'); let nbArm=null;
+  if(nb) nb.addEventListener('click',()=>{
+    if(nbArm){ clearTimeout(nbArm); nbArm=null; nb.textContent='⟲ new'; clearSession(); return; }
+    nb.textContent='⟲ sure?'; nbArm=setTimeout(()=>{ nbArm=null; nb.textContent='⟲ new'; },3000);
+  });
+  restoreSession();
   renderAll(); renderClipInfo();
 })();
 window.addEventListener('resize',()=>{['zij','eq','dec'].forEach(id=>{const el=document.getElementById(id); if(el&&el.data)Plotly.Plots.resize(el);});});
