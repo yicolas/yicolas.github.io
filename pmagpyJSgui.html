@@ -1,0 +1,1946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FITQUEST v15 — pyRockmag fitting arcade</title>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e0f;--bg2:#111518;--bg3:#171c1e;--bg4:#1e2426;
+  --bdr:#2a3235;--bdr2:#3a4548;
+  --ac:#00e676;--ac2:#00c853;--ac3:rgba(0,230,118,.1);--acd:#1b5e20;
+  --amb:#ffd54f;--red:#ef5350;
+  --tx:#e0e8e6;--tx2:#8fa8a4;--tx3:#4a6360;
+  --mono:'IBM Plex Mono',monospace;
+  --lt:#3a9d5d;--mt:#2a6f97;--ht:#c1121f;
+  --r:4px;
+}
+html.light{
+  --bg:#f5f2ed;--bg2:#ebe5d8;--bg3:#e0dac8;--bg4:#d5cdb8;
+  --bdr:#c8bfb2;--bdr2:#a89f92;
+  --ac:#2d7a3d;--ac2:#1b5e20;--ac3:rgba(45,122,61,.08);--acd:#0f3d13;
+  --amb:#b45309;--red:#b91c1c;
+  --tx:#1a1208;--tx2:#4a3820;--tx3:#6b5838;
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;overflow:hidden}
+body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
+
+/* ── header ── */
+.hdr{display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid var(--bdr);background:var(--bg2);font-size:12px}
+.hdr .logo{color:var(--ac);font-weight:700;letter-spacing:.12em}
+.hdr .sub{color:var(--tx3);font-size:10px}
+.hdr .sp{flex:1}
+.stat-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr);border-radius:12px;padding:3px 10px;font-size:11px}
+.stat-pill b{color:var(--ac)}
+.stat-pill .lbl{color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+#streak-pill.hot b{color:var(--amb)}
+.btn{background:transparent;border:1px solid var(--bdr);color:var(--tx2);padding:4px 10px;border-radius:var(--r);cursor:pointer;font-family:var(--mono);font-size:11px;transition:all .15s}
+.btn:hover{border-color:var(--ac);color:var(--ac)}
+.btn.pri{background:var(--ac3);border-color:var(--acd);color:var(--ac)}
+#autobk-btn.on{border-color:var(--ac);color:var(--ac);background:var(--ac3)}
+.btn.sm{padding:3px 8px;font-size:10px}
+
+/* ── main grid ── */
+.main{display:grid;grid-template-columns:230px 1fr 252px;overflow:hidden;border-bottom:1px solid var(--bdr)}
+.col{background:var(--bg);overflow:hidden;display:flex;flex-direction:column;border-right:1px solid var(--bdr)}
+.col:last-child{border-right:none;border-left:1px solid var(--bdr)}
+.col-hdr{padding:7px 10px;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:6px;flex:none}
+.col-body{flex:1;overflow-y:auto;padding:8px}
+
+/* ── queue (left) ── */
+#drop-zone{border:2px dashed var(--bdr2);padding:14px 8px;border-radius:var(--r);text-align:center;color:var(--tx3);cursor:pointer;margin-bottom:8px;font-size:10.5px;transition:all .2s}
+#drop-zone:hover,#drop-zone.over{border-color:var(--ac);color:var(--ac);background:var(--ac3)}
+#progress-wrap{margin-bottom:8px}
+#progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--bdr)}
+#progress-fill{height:100%;background:var(--ac);width:0%;transition:width .4s}
+#progress-txt{font-size:9px;color:var(--tx3);margin-top:3px;text-align:right}
+.spec-item{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--bg2);border-left:3px solid transparent;border-radius:var(--r);margin-bottom:3px;cursor:pointer;font-size:11px;transition:all .12s}
+.spec-item:hover{background:var(--bg3)}
+.spec-item.sel{border-left-color:var(--ac);background:var(--bg3)}
+.spec-item.nodata{opacity:.35;cursor:default}
+.spec-item .name{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spec-item .meta{color:var(--tx3);font-size:9px;flex:none}
+.grade-badge{flex:none;min-width:18px;text-align:center;font-size:9px;font-weight:700;border-radius:3px;padding:1px 3px}
+.g-S{background:#ffd54f22;color:#ffd54f}.g-A{background:#00e67622;color:var(--ac)}
+.g-B{background:#4fc3f722;color:#4fc3f7}.g-C{background:#ffb74d22;color:#ffb74d}
+.g-D,.g-F{background:#ef535022;color:var(--red)}
+.site-hdr{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin:8px 0 4px;border-bottom:1px dashed var(--bdr);padding-bottom:2px}
+#queue-controls{display:flex;gap:3px;padding:5px 8px;border-bottom:1px solid var(--bdr);background:var(--bg2);flex:none;align-items:center}
+#queue-controls select{flex:1;min-width:0;font-size:9px;padding:2px}
+#queue-controls .btn.xs{flex:none;padding:2px 6px}
+.spec-item .mi{color:var(--tx3);font-size:8.5px;flex:none}
+
+/* ── plots (center) ── */
+#plots{display:grid;grid-template-columns:58% 1fr;grid-template-rows:1fr 1fr;overflow:hidden;background:var(--bg)}
+#zij-div{grid-row:1/3;border-right:1px solid var(--bdr)}
+#eq-div{border-bottom:1px solid var(--bdr)}
+.plot-cell{position:relative;overflow:hidden;min-width:0;min-height:0}
+.plot-cell .ptitle{position:absolute;top:4px;left:8px;z-index:5;font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;pointer-events:none}
+#eq-ctl{position:absolute;top:2px;right:6px;z-index:6;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#eq-ctl select{width:auto;font-size:9px;padding:1px 2px}
+#eq-cong{font-size:9px;padding:1px 6px;border:1px solid var(--bdr);border-radius:3px;background:var(--bg3);color:var(--tx3);cursor:pointer;font-family:var(--mono)}
+#eq-cong.on{border-color:var(--amb);color:var(--amb);background:rgba(255,213,79,.12)}
+#eq-stats{position:absolute;left:6px;right:6px;bottom:3px;z-index:6;font-size:8.5px;line-height:1.35;color:var(--tx2);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--bg) 55%,rgba(0,0,0,0));padding-top:3px}
+#eq-stats .sline b{color:var(--tx)}
+#eq-stats .verdict-ok{color:var(--ac)}
+#eq-stats .verdict-bad{color:var(--amb)}
+
+/* ── fit console (right) ── */
+.slot{border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:8px;background:var(--bg2);overflow:hidden;transition:border-color .15s}
+.slot.armed{border-color:var(--slotc);box-shadow:0 0 0 1px var(--slotc)}
+.slot-hdr{display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;user-select:none}
+.slot-hdr:hover{background:var(--bg3)}
+.slot-dot{width:10px;height:10px;border-radius:50%;background:var(--slotc);flex:none}
+.slot-name{font-weight:700;letter-spacing:.08em;flex:1}
+.slot-armtag{font-size:8px;color:var(--slotc);letter-spacing:.1em;display:none}
+.slot.armed .slot-armtag{display:inline}
+.slot-x{color:var(--tx3);cursor:pointer;padding:0 4px;font-size:13px}
+.slot-x:hover{color:var(--red)}
+.slot-body{padding:0 8px 7px;display:none}
+.slot.hasfit .slot-body,.slot.armed .slot-body{display:block}
+.bnd-row{display:flex;gap:5px;margin-bottom:5px}
+.bnd-row input{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--bdr);color:var(--tx);padding:3px 5px;border-radius:3px;font-family:var(--mono);font-size:10px}
+.bnd-row input:focus{outline:none;border-color:var(--slotc)}
+.fit-stats{font-size:10px;line-height:1.55;color:var(--tx2)}
+.fit-stats b{color:var(--tx)}
+.fit-stats .crit-ok{color:var(--ac)}
+.fit-stats .crit-bad{color:var(--red)}
+.fit-warn{font-size:9px;color:var(--amb);margin-top:3px;line-height:1.4}
+.slot-grade{float:right;font-size:14px;font-weight:700}
+
+#spec-summary{border-top:1px solid var(--bdr);padding:8px;flex:none}
+#clip-row{display:flex;gap:4px;margin-bottom:4px}
+#clip-row select{flex:none;width:auto;font-size:10px}
+#clip-row .btn{flex:1}
+#clip-info{font-size:9px;color:var(--tx3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#save-btn{width:100%;padding:8px;font-size:12px;font-weight:700;letter-spacing:.08em;margin-top:6px}
+#save-btn:disabled{opacity:.3;cursor:default}
+.coord-row{display:flex;gap:4px;margin-bottom:8px}
+.coord-btn{flex:1;text-align:center;padding:3px 0;font-size:9px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;color:var(--tx3);letter-spacing:.05em}
+.coord-btn.on{border-color:var(--ac);color:var(--ac);background:var(--ac3)}
+select{background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-family:var(--mono);font-size:10px;padding:3px;border-radius:3px;width:100%}
+
+/* ── step strip (bottom) ── */
+#step-strip{display:flex;gap:4px;padding:7px 10px;background:var(--bg2);overflow-x:auto;min-height:46px;align-items:center}
+.chip{flex:none;padding:4px 7px;border:1px solid var(--bdr);border-radius:var(--r);cursor:pointer;font-size:10px;background:var(--bg3);color:var(--tx2);user-select:none;position:relative;transition:all .1s;text-align:center;line-height:1.3}
+.chip:hover{border-color:var(--ac)}
+.chip .j{display:block;font-size:8px;color:var(--tx3)}
+.chip.skipped{opacity:.45;text-decoration:line-through;border-color:var(--red);color:var(--red)}
+.chip.inLT{border-color:var(--lt);box-shadow:inset 0 -3px 0 var(--lt)}
+.chip.inMT{border-color:var(--mt);box-shadow:inset 0 -3px 0 var(--mt)}
+.chip.inHT{border-color:var(--ht);box-shadow:inset 0 -3px 0 var(--ht)}
+.chip.pend{outline:2px solid var(--amb)}
+.chip.warnstep::after{content:'⚠';position:absolute;top:-6px;right:-3px;font-size:8px;color:var(--amb)}
+
+/* ── popups ── */
+#score-pop{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.8);background:var(--bg2);border:1px solid var(--ac);border-radius:8px;padding:18px 30px;text-align:center;z-index:200;opacity:0;pointer-events:none;transition:all .25s}
+#score-pop.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#score-pop .big{font-size:30px;font-weight:700;color:var(--ac)}
+#score-pop .tag{font-size:11px;color:var(--tx2);letter-spacing:.15em;margin-top:4px}
+#score-pop.chrm{border-color:var(--amb)}
+#score-pop.chrm .big{color:var(--amb)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+.ov.vis{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;max-width:620px;max-height:84vh;overflow-y:auto;padding:18px;font-size:11px;line-height:1.6}
+.modal h3{color:var(--ac);font-size:12px;letter-spacing:.1em;margin-bottom:8px}
+.modal h4{color:var(--tx);font-size:11px;margin:12px 0 4px}
+.modal code{background:var(--bg3);padding:1px 4px;border-radius:3px;font-size:10px}
+.modal td{padding:1px 10px 1px 0;color:var(--tx2)}
+kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding:0 4px;font-size:9px}
+#toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--bdr2);color:var(--tx);padding:6px 14px;border-radius:var(--r);font-size:11px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.vis{opacity:1}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <span class="logo">⬡ FITQUEST</span>
+  <span class="sub">v15 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sp"></span>
+  <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
+  <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
+  <div class="stat-pill"><span class="lbl">best</span><b id="hud-best">0</b></div>
+  <button class="btn sm" id="redo-btn" title="Export all fits as a demag_gui-compatible .redo">⭳ .redo</button>
+  <button class="btn sm" id="magic-btn" title="Export fits + measurements + sample data as a MagIC 3.0 contribution">⭳ MagIC</button>
+  <button class="btn sm" id="autobk-btn" title="Auto-download a fresh backup .redo to your Downloads after each save">⤓ auto</button>
+  <button class="btn sm" id="help-btn">? help</button>
+  <button class="btn sm" id="theme-btn">◐</button>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <!-- queue -->
+  <div class="col">
+    <div class="col-hdr">⬡ specimen queue</div>
+    <div id="queue-controls">
+      <select id="q-sort" title="sort specimens within each site">
+        <option value="queue">sort: queue</option>
+        <option value="name">name</option>
+        <option value="mad">MAD</option>
+        <option value="dang">dang</option>
+        <option value="grade">grade</option>
+        <option value="nfits"># fits</option>
+        <option value="chrm">ChRM first</option>
+      </select>
+      <button id="q-dir" class="btn xs" title="ascending / descending">↑</button>
+      <select id="q-filter" title="filter specimens">
+        <option value="all">all</option>
+        <option value="unsaved">unsaved</option>
+        <option value="saved">saved</option>
+        <option value="flagged">flagged</option>
+        <option value="usable">ChRM ok</option>
+        <option value="overlap">fit overlap</option>
+      </select>
+    </div>
+    <div class="col-body">
+      <div id="drop-zone"><b style="color:var(--ac)">drag your repo folder here</b><br>finds the .redo inside &amp; queues all fits<br><span style="font-size:9px">(or drop a .redo, then pick the folder;<br>or drop .sam + specimen files)</span></div>
+      <input type="file" id="file-input" multiple style="display:none">
+      <input type="file" id="dir-input" webkitdirectory style="display:none">
+      <div id="root-row" style="font-size:9px;color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:5px">data root: <span id="root-name" style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span><button class="btn sm" id="root-btn" style="flex:none">pick</button></div>
+      <div id="progress-wrap" style="display:none">
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <div id="progress-txt"></div>
+      </div>
+      <div id="spec-list"></div>
+    </div>
+  </div>
+
+  <!-- plots -->
+  <div id="plots">
+    <div class="plot-cell" id="zij-div"><span class="ptitle">zijderveld · <span id="zij-sub"></span></span><div id="zij" style="width:100%;height:100%"></div></div>
+    <div class="plot-cell" id="eq-div"><span class="ptitle" id="eq-ptitle">equal area</span>
+      <div id="eq-ctl">
+        <button id="eq-cong" title="conglomerate test: one Fisher mean per boulder (sub-sample) across the site">⬡ cong</button>
+        <select id="eq-site" title="which site (by name prefix)"><option value="current">site: current</option></select>
+        <select id="eq-sample" title="which sub-sample / boulder within the site"><option value="all">boulder: all</option></select>
+        <select id="eq-level" title="aggregation level">
+          <option value="specimen">specimen</option>
+          <option value="sample">sample</option>
+          <option value="site">site</option>
+          <option value="all">all loaded</option>
+        </select>
+        <select id="eq-comp" title="component filter">
+          <option value="ALL">all</option><option>LT</option><option>MT</option><option>HT</option>
+        </select>
+      </div>
+      <div id="eq" style="width:100%;height:100%"></div>
+      <div id="eq-stats"></div></div>
+    <div class="plot-cell" id="dec-div"><span class="ptitle">intensity decay</span><div id="dec" style="width:100%;height:100%"></div></div>
+  </div>
+
+  <!-- fit console -->
+  <div class="col">
+    <div class="col-hdr">⬡ fit console <span class="sp" style="flex:1"></span><span id="spec-title" style="color:var(--ac);text-transform:none;letter-spacing:0"></span></div>
+    <div class="col-body" id="console-body">
+      <div class="coord-row" id="coord-row">
+        <div class="coord-btn" data-cs="spec">core</div>
+        <div class="coord-btn on" data-cs="geo">geo</div>
+        <div class="coord-btn" data-cs="tc">tilt</div>
+      </div>
+      <select id="zij-conv" style="margin-bottom:8px">
+        <option value="NE">zij: x=N · E / Up</option>
+        <option value="EN">zij: x=E · N / Up</option>
+        <option value="ROT">zij: rotated to NRM dec</option>
+      </select>
+      <div id="slots"></div>
+      <div style="font-size:9px;color:var(--tx3);line-height:1.5;margin-top:4px">
+        set a mode (LT/MT/HT); single-click toggles a point, window stays contiguous · dropdowns set exact bounds · right-click = skip/unskip · tip: fit HT first, then split what precedes it
+      </div>
+    </div>
+    <div id="spec-summary">
+      <div id="clip-row">
+        <select id="clip-scope" title="which components to copy">
+          <option value="all">all</option><option>LT</option><option>MT</option><option>HT</option>
+        </select>
+        <button class="btn sm" id="copy-btn" title="copy the chosen fits from this specimen">⧉ copy</button>
+        <button class="btn sm" id="paste-btn" title="paste copied fits onto this specimen by matching temperature/field">paste ▸</button>
+      </div>
+      <div id="clip-info">clipboard empty</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx2)">
+        <span id="sum-fits">0 fits</span><span id="sum-chrm"></span>
+      </div>
+      <button class="btn pri" id="save-btn" disabled>SAVE FITS ▸ NEXT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STEP STRIP ═══ -->
+<div id="step-strip"><span style="color:var(--tx3);font-size:10px">load files to begin…</span></div>
+
+<!-- popups -->
+<div id="score-pop"><div class="big"></div><div class="tag"></div></div>
+<div id="toast"></div>
+<div class="ov" id="help-ov"><div class="modal">
+  <h3>⬡ FITQUEST — how to play</h3>
+  <h4>Controls</h4>
+  <table>
+    <tr><td><kbd>click slot</kbd></td><td>set the mode (LT / MT / HT) — it stays on until you change it. A single click on a point (step strip or any plot) <b>selects/deselects</b> it and the window is remade <b>contiguous</b> each time: deselect an endpoint → window shrinks by one; deselect an interior point → it stays filled (to really drop it, right-click to skip); click outside the window → it extends and fills the gap. Dropdowns set exact from/to bounds.</td></tr>
+    <tr><td><kbd>dropdowns</kbd></td><td>the from/to selects in each slot set a contiguous range in one go — then click points to drop or add any</td></tr>
+    <tr><td><kbd>right-click</kbd></td><td>skip / unskip a point everywhere (the point skipper — excluded from all fits)</td></tr>
+    <tr><td><kbd>copy / paste</kbd></td><td>at the bottom of the console: pick a scope (all / LT / MT / HT), <b>copy</b> this specimen's fits, then move to another specimen and <b>paste</b> — the windows transfer by matching temperature/field, so they land on the right steps even if the step list differs. The clipboard survives reloads.</td></tr>
+    <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps; earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
+    <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
+    <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>⤓ auto</kbd></td><td>when lit, a fresh backup <code>fitquest_&lt;site&gt;_autosave.redo</code> is downloaded to your Downloads shortly after each save (debounced). A local <code>file://</code> page can't overwrite a file in your repo, so this is a download — your browser may append (1),(2)… Keep the newest; it's always current. Toggle off if the Downloads clutter bothers you. Your fits also persist in the browser regardless.</td></tr>
+    <tr><td><kbd>eq-area menus</kbd></td><td><b>site</b> picks which site (split by name prefix — NWFA, NWFC, PKSF…; "current" follows the selected specimen), <b>boulder</b> drills into one sub-sample within that site (e.g. NWFC-3), <b>level</b> aggregates at specimen / sample / site / all, <b>component</b> filters LT / MT / HT. Sample &amp; site views add a Fisher mean (diamond) with α95 ring; clicking a star opens that specimen.</td></tr>
+    <tr><td><kbd>⬡ cong</kbd></td><td>conglomerate-test overlay: one Fisher mean per boulder across the active site (each a labeled, colored diamond with its specimens faint behind), plus a Watson (1956) randomness verdict on the clast means — <b>R &lt; Ro → RANDOM</b>, passes (pre-depositional); <b>R ≥ Ro → CLUSTERED</b>, fails (likely remagnetized). Uses the ChRM/terminal component unless you set a specific one.</td></tr>
+    <tr><td><kbd>1 2 3</kbd></td><td>set LT / MT / HT mode</td></tr>
+    <tr><td><kbd>← →</kbd></td><td>previous / next specimen</td></tr>
+    <tr><td><kbd>s</kbd></td><td>save fits &amp; advance</td></tr>
+  </table>
+  <h4>House rules (how you're graded)</h4>
+  <p>Free lines only (DE-BFL) — never anchored to the origin. MAD is per segment against its own points. Only the terminal (last-unblocking) component is judged on origin-trending: <b>dang</b> is shown for the fit that ends on the last surviving step. Usable ChRM: <b>MAD ≤ 10° and dang ≤ 15°</b>. A beautiful MAD on the wrong segment is worth nothing — watch dang. Fit the terminal segment first, then split what precedes it. Don't assume three components; one good fit beats three forced ones.</p>
+  <h4>Scoring</h4>
+  <p><code>per fit: 100 − 6·MAD − 2·max(0, dang−5) + 2·(n−3) [cap +10]</code><br>
+  +15 bonus for a usable terminal ChRM. Grades: S ≥ 95 · A ≥ 85 · B ≥ 70 · C ≥ 50 · D ≥ 30 · F. Streak counts consecutive specimens saved with a usable ChRM. Skipping &gt; 25% of a segment's points caps its grade at C — beyond that the line is wrong, not the points.</p>
+  <h4>Easiest: drag the whole repo folder in</h4>
+  <p>Drag the Laos repo folder (the one containing <code>Magnetometer_Data_corrected</code>) onto the drop zone. The app finds the best <code>.redo</code> inside it — preferring <code>Magnetometer_Data_corrected/demag_gui.redo</code>, the manuscript fits — loads every specimen it names, and queues them. This is one gesture and works even when the page is opened as a local <code>file://</code> (where the folder-picker button is disabled). When a specimen exists in several places it prefers paths containing <code>corrected</code> and avoids <code>_archive</code>/<code>safety</code>/old copies.</p>
+  <h4>Or drop a .redo on its own</h4>
+  <p>Drop a <code>.redo</code> file and the app asks for your data root once (remembered in Chrome when served over http/https), then resolves its specimens. If it reports <b>0 found</b>, you pointed it at a folder without the specimen files — drag the repo folder in instead. <code>.sam</code> files beside the matched specimens set the site grouping and queue order. Fit names map <code>lt</code> → LT, <code>lt2</code> → MT, <code>mt</code> (the ChRM) → HT, and keep their original names and colors on export. Dropping a folder with no redo inside loads all its <code>.sam</code> sites.</p>
+  <h4>Output</h4>
+  <p><code>⭳ .redo</code> exports every fit in demag_gui format (thermal bounds in K, AF in T) — import it straight into demag_gui. Progress autosaves locally per specimen. Drop an existing .redo with your files to resume previous picks.</p>
+  <p style="margin-top:10px;text-align:right"><button class="btn" onclick="document.getElementById('help-ov').classList.remove('vis')">close</button></p>
+</div></div>
+
+<script>
+'use strict';
+/* ═════════════════════════ math core ═════════════════════════ */
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+function dir2cart(dec, inc, J){
+  J = (J===undefined)?1:J;
+  return [J*Math.cos(inc*D2R)*Math.cos(dec*D2R),
+          J*Math.cos(inc*D2R)*Math.sin(dec*D2R),
+          J*Math.sin(inc*D2R)];
+}
+function cart2dir(c){
+  const [x,y,z]=c, r=Math.hypot(x,y,z);
+  if(r===0) return [0,0,0];
+  let dec=(Math.atan2(y,x)*R2D)%360; if(dec<0)dec+=360;
+  return [dec, Math.asin(z/r)*R2D, r];
+}
+// Jacobi eigen-decomposition for symmetric 3×3. Returns {vals:[desc], vecs:[v1,v2,v3]}
+function eigSym3(A){
+  let a=[[A[0][0],A[0][1],A[0][2]],[A[1][0],A[1][1],A[1][2]],[A[2][0],A[2][1],A[2][2]]];
+  let v=[[1,0,0],[0,1,0],[0,0,1]];
+  for(let sweep=0; sweep<60; sweep++){
+    let off=Math.abs(a[0][1])+Math.abs(a[0][2])+Math.abs(a[1][2]);
+    if(off<1e-14) break;
+    for(let p=0;p<2;p++) for(let q=p+1;q<3;q++){
+      if(Math.abs(a[p][q])<1e-15) continue;
+      const theta=(a[q][q]-a[p][p])/(2*a[p][q]);
+      const t=Math.sign(theta||1)/(Math.abs(theta)+Math.sqrt(theta*theta+1));
+      const c=1/Math.sqrt(t*t+1), s=t*c;
+      for(let k=0;k<3;k++){
+        const akp=a[k][p], akq=a[k][q];
+        a[k][p]=c*akp-s*akq; a[k][q]=s*akp+c*akq;
+      }
+      for(let k=0;k<3;k++){
+        const apk=a[p][k], aqk=a[q][k];
+        a[p][k]=c*apk-s*aqk; a[q][k]=s*apk+c*aqk;
+        const vkp=v[k][p], vkq=v[k][q];
+        v[k][p]=c*vkp-s*vkq; v[k][q]=s*vkp+c*vkq;
+      }
+    }
+  }
+  const pairs=[0,1,2].map(i=>({val:a[i][i], vec:[v[0][i],v[1][i],v[2][i]]}));
+  pairs.sort((x,y)=>y.val-x.val);
+  return {vals:pairs.map(p=>p.val), vecs:pairs.map(p=>p.vec)};
+}
+// Kirschvink DE-BFL free line (never anchored). pts: array of [x,y,z] in measurement order.
+function pcaLine(pts){
+  const n=pts.length;
+  if(n<3) return null;
+  const cm=[0,0,0];
+  pts.forEach(p=>{cm[0]+=p[0];cm[1]+=p[1];cm[2]+=p[2];});
+  cm[0]/=n;cm[1]/=n;cm[2]/=n;
+  const T=[[0,0,0],[0,0,0],[0,0,0]];
+  pts.forEach(p=>{
+    const d=[p[0]-cm[0],p[1]-cm[1],p[2]-cm[2]];
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)T[i][j]+=d[i]*d[j];
+  });
+  const e=eigSym3(T);
+  let v=e.vecs[0].slice();
+  // orient along demag path: reference = first − last (direction of removed remanence)
+  const R=[pts[0][0]-pts[n-1][0], pts[0][1]-pts[n-1][1], pts[0][2]-pts[n-1][2]];
+  if(v[0]*R[0]+v[1]*R[1]+v[2]*R[2] < 0){ v=[-v[0],-v[1],-v[2]]; }
+  const s=Math.max(e.vals[0],1e-30);
+  const mad=Math.atan(Math.sqrt(Math.max(e.vals[1]+e.vals[2],0)/s))*R2D;
+  // dang: angle between fit direction and centroid vector (origin → CM)
+  const cmr=Math.hypot(cm[0],cm[1],cm[2]);
+  let dang=NaN;
+  if(cmr>0){
+    const dot=(v[0]*cm[0]+v[1]*cm[1]+v[2]*cm[2])/cmr;
+    dang=Math.acos(Math.min(1,Math.max(-1,dot)))*R2D;
+  }
+  const [dec,inc]=cart2dir(v);
+  return {dec,inc,mad,dang,cm,v,n};
+}
+
+/* ═════════════════════════ CIT parsing ═════════════════════════ */
+// treatment field = chars 0..5
+function parseTreat(f6){
+  const t=f6.trim();
+  let m;
+  if(/^NRM/i.test(t)) return {type:'NRM', label:'NRM', K:273, sort:0};
+  if(/^(LN2|LT)/i.test(t)) return {type:'LN2', label:'LN2', K:77, sort:1};
+  if((m=t.match(/^TT\s*([\d.]+)/i))) { const c=parseFloat(m[1]); return {type:'TT', label:'TT'+c, C:c, K:c+273, sort:c}; }
+  if((m=t.match(/^M?AFz?\s*([\d.]+)/i))) { const g=parseFloat(m[1]); return {type:'AF', label:'AF'+g, G:g, mT:g/10, T:g/1e4, sort:g}; }
+  return {type:'OTH', label:t||'?', sort:NaN};
+}
+function parseSpecimenFile(fname, text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  if(lines.length<2) return null;
+  const l1=lines[0].trim().split(/\s+/);
+  const info=lines[1].trim().split(/\s+/).map(Number);
+  // from the end: mass, bed_dip, bed_strike, core_dip, core_strike, [strat]
+  const k=info.length;
+  const hdr={ site:l1[0]||'', mass:info[k-1], bedDip:info[k-2], bedStrike:info[k-3],
+              coreDip:info[k-4], coreStrike:info[k-5], strat:(k>=6?info[0]:null) };
+  const steps=[];
+  for(let i=2;i<lines.length;i++){
+    const ln=lines[i];
+    if(ln.trim().length<10) continue;
+    const treat=parseTreat(ln.slice(0,6));
+    const f=ln.slice(6).trim().split(/\s+/);
+    if(f.length<6) continue;
+    const nums=f.slice(0,8).map(Number);
+    if(nums.slice(0,5).some(isNaN)) continue;
+    steps.push({
+      treat, idx:steps.length,
+      decG:nums[0], incG:nums[1], decT:nums[2], incT:nums[3],
+      J:nums[4], csd:isNaN(nums[5])?null:nums[5],
+      decS:isNaN(nums[6])?nums[0]:nums[6], incS:isNaN(nums[7])?nums[1]:nums[7],
+      skipped:false, raw:ln
+    });
+  }
+  // duplicate-treatment labels: TT360, TT360·2 …
+  const seen={};
+  steps.forEach(s=>{
+    seen[s.treat.label]=(seen[s.treat.label]||0)+1;
+    s.label = seen[s.treat.label]>1 ? s.treat.label+'·'+seen[s.treat.label] : s.treat.label;
+  });
+  // ── auto-skip defaults (fresh specimens only; saved skip sets override in restoreSpec) ──
+  // NRM and liquid-nitrogen (LN/LN2) steps are not part of the demag component fit
+  steps.forEach(s=>{ if(s.treat.type==='NRM' || s.treat.type==='LN2'){ s.skipped=true; s.autoskip='NRM/LN step'; } });
+  // reruns: steps sharing a base treatment (e.g. the four TT360 lines) are repeats —
+  // keep only the LAST occurrence, skip the earlier runs
+  const groups={};
+  steps.forEach(s=>{ (groups[s.treat.label]=groups[s.treat.label]||[]).push(s); });
+  Object.values(groups).forEach(g=>{
+    if(g.length>1) for(let i=0;i<g.length-1;i++){ g[i].skipped=true; g[i].autoskip='superseded by later rerun'; }
+  });
+  // high circular standard deviation = bad measurement — auto-skip csd ≥ 12°
+  steps.forEach(s=>{ if(s.csd!==null && s.csd>=CSD_SKIP){ s.skipped=true; s.autoskip=(s.autoskip?s.autoskip+' · ':'')+'csd '+s.csd.toFixed(1)+'° ≥ '+CSD_SKIP; } });
+  // flag suspicious steps: intensity spike >3× previous, or thermal temp out of order
+  for(let i=1;i<steps.length;i++){
+    const a=steps[i-1], b=steps[i];
+    b.warn='';
+    if(a.J>0 && b.J>3*a.J) b.warn='intensity spike ('+(b.J/a.J).toFixed(1)+'× previous) — instrument artifact?';
+    if(b.treat.type==='TT' && a.treat.type==='TT' && b.treat.C < a.treat.C) b.warn='temperature goes backwards — check step order';
+    if(b.treat.type==='TT' && b.treat.C>800) b.warn='implausible temperature (sentinel step?)';
+  }
+  return { name:fname, hdr, steps,
+           fits:{LT:null,MT:null,HT:null}, saved:false, scores:{} };
+}
+function parseSam(text){
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length<3) return null;
+  const geo=lines[1].split(/\s+/).map(Number);
+  return { title:lines[0], lat:geo[0], lon:geo[1], dec:geo[2]||0, files:lines.slice(2) };
+}
+
+/* ═════════════════════════ state ═════════════════════════ */
+const CSD_SKIP=12;   // auto-skip measurements with circular standard deviation ≥ this (degrees)
+const SLOTS=['LT','MT','HT'];
+const SLOTC={LT:getComputedStyle(document.documentElement).getPropertyValue('--lt').trim()||'#3a9d5d',
+             MT:getComputedStyle(document.documentElement).getPropertyValue('--mt').trim()||'#2a6f97',
+             HT:getComputedStyle(document.documentElement).getPropertyValue('--ht').trim()||'#c1121f'};
+const S={
+  sites:{},            // samName → {sam, order:[specNames]}
+  specs:{},            // name → spec object
+  order:[],            // display order
+  cur:null,            // current spec name
+  cs:'geo',            // 'spec'|'geo'|'tc'
+  conv:'NE',
+  eqLevel:'specimen',  // 'specimen'|'sample'|'site'|'all'
+  eqComp:'ALL',        // 'ALL'|'LT'|'MT'|'HT'
+  eqSite:'current',    // 'current' | a site prefix like 'NWFA-'
+  eqSample:'all',      // 'all' | a sample/boulder like 'NWFC-1'
+  eqCong:false,        // conglomerate test overlay: per-boulder Fisher means
+  qSort:'queue', qDir:1, qFilter:'all',   // queue sort key, direction (1=asc), filter
+  autoBackup:true,     // auto-download a backup .redo after each save
+  fitClip:null,        // copied fits: {source, scope, slots:{LT:{keys,name,color},…}}
+  zijZoom:null,        // {x:[lo,hi], y:[lo,hi]} manual Zijderveld zoom, kept across fit edits
+  armed:null,          // slot being set
+  pendIdx:null,        // first click of bracket
+  score:0, streak:0, best:0,
+  hover:{plot:null, idx:null, t:0},
+  pendingRedo:[],      // redo lines awaiting specimens
+};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function specKey(sp){ return 'fitquest:'+(sp.hdr.site||'')+':'+sp.name; }
+
+/* ═════════════════════════ data-root scan ═════════════════════════
+   Drop a .redo and the app finds the specimen + .sam files itself:
+   it scans the data root (picked once; remembered in Chrome), indexes every
+   file by name, and when several copies of a specimen exist it prefers paths
+   containing "corrected" and avoids _archive / safety / old copies.        */
+S.scan={byName:new Map(), byDir:new Map(), root:''};
+const SKIP_DIR=/^(\.git|node_modules|__pycache__|\.Trash)$/;
+const JUNK_EXT=/\.(rmg|up|stat|log|magic|txt|csv|png|jpg|jpeg|pdf|json|xlsx?|docx?|zip|pyc?|ipynb|md|html|kml|tif|aux|points|psd|ai|xml|bak.*|pre.*)$/i;
+function dirOf(en){ return en.path.slice(0, en.path.length-en.name.length).replace(/\/+$/,''); }
+function registerScan(entries, rootName){
+  let n=0;
+  entries.forEach(en=>{
+    if(!en || SKIP_DIR.test(en.name)) return;
+    if(!S.scan.byName.has(en.name)) S.scan.byName.set(en.name,[]);
+    S.scan.byName.get(en.name).push(en);
+    const d=dirOf(en);
+    if(!S.scan.byDir.has(d)) S.scan.byDir.set(d,[]);
+    S.scan.byDir.get(d).push(en);
+    n++;
+  });
+  if(rootName) S.scan.root=rootName;
+  const rn=document.getElementById('root-name');
+  if(rn) rn.textContent=(S.scan.root||'(folder)')+' · '+S.scan.byName.size+' files';
+  return n;
+}
+function scorePath(p){
+  let s=0;
+  if(/corrected/i.test(p)) s+=4;
+  if(/_archive|safety|\bold\b|precorrect|onedrive/i.test(p)) s-=4;
+  return s - p.split('/').length*0.01;
+}
+function bestEntry(cands){
+  return cands.slice().sort((a,b)=>(scorePath(b.path)-scorePath(a.path))||((b.mtime||0)-(a.mtime||0)))[0];
+}
+// ── IndexedDB handle persistence (File System Access API, Chrome) ──
+function idb(){ return new Promise((res,rej)=>{ const q=indexedDB.open('fitquest',1);
+  q.onupgradeneeded=()=>q.result.createObjectStore('kv');
+  q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function idbGet(k){ try{ const db=await idb(); return await new Promise((res,rej)=>{ const t=db.transaction('kv').objectStore('kv').get(k); t.onsuccess=()=>res(t.result); t.onerror=()=>rej(t.error); }); }catch(e){ return null; } }
+async function idbSet(k,v){ try{ const db=await idb(); await new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k); t.onsuccess=res; t.onerror=()=>rej(t.error); }); }catch(e){} }
+async function scanHandle(h, path, out){
+  for await (const [name,child] of h.entries()){
+    if(SKIP_DIR.test(name)) continue;
+    if(child.kind==='directory') await scanHandle(child, path+name+'/', out);
+    else if(!JUNK_EXT.test(name)) out.push({name, path:path+name, getText:async()=>(await child.getFile()).text(), mtime:0});
+  }
+}
+function registerScanFromFileList(files){
+  const entries=[...files].filter(f=>!JUNK_EXT.test(f.name)).map(f=>({
+    name:f.name, path:f.webkitRelativePath||f.name, getText:()=>f.text(), mtime:f.lastModified}));
+  const root=entries.length&&entries[0].path.includes('/')?entries[0].path.split('/')[0]:'';
+  return registerScan(entries, root);
+}
+async function pickRoot(){
+  if(window.showDirectoryPicker){
+    try{
+      const h=await showDirectoryPicker({mode:'read'});
+      await idbSet('rootHandle',h);
+      const out=[]; await scanHandle(h,'',out);
+      registerScan(out, h.name);
+      return S.scan.byName.size>0;
+    }catch(e){ if(e&&e.name==='AbortError') return false; }
+  }
+  return new Promise(res=>{
+    const di=document.getElementById('dir-input');
+    di.onchange=()=>{ registerScanFromFileList(di.files); res(S.scan.byName.size>0); di.value=''; };
+    di.click();
+  });
+}
+async function ensureRoot(){
+  if(S.scan.byName.size) return true;
+  try{
+    const h=await idbGet('rootHandle');
+    if(h){
+      let p=await h.queryPermission({mode:'read'});
+      if(p!=='granted') p=await h.requestPermission({mode:'read'});
+      if(p==='granted'){ const out=[]; await scanHandle(h,'',out); registerScan(out,h.name); if(S.scan.byName.size) return true; }
+    }
+  }catch(e){}
+  toast('pick your data root folder (e.g. the Laos repo)…');
+  return pickRoot();
+}
+async function loadSamEntry(en){
+  if(S.sites[en.path]) return;
+  try{ const sam=parseSam(await en.getText()); if(sam) S.sites[en.path]={sam, order:sam.files.slice()}; }catch(e){}
+}
+async function resolveFromScan(names){
+  let loaded=0; const missing=[], usedDirs=new Set();
+  for(const name of names){
+    if(S.specs[name]) continue;
+    const cands=S.scan.byName.get(name);
+    if(!cands||!cands.length){ missing.push(name); continue; }
+    const en=bestEntry(cands);
+    try{
+      const sp=parseSpecimenFile(name, await en.getText());
+      if(sp && sp.steps.length){ S.specs[name]=sp; restoreSpec(sp); loaded++; usedDirs.add(dirOf(en)); }
+      else missing.push(name);
+    }catch(e){ missing.push(name); }
+  }
+  for(const d of usedDirs){
+    for(const en of (S.scan.byDir.get(d)||[])) if(/\.sam$/i.test(en.name)) await loadSamEntry(en);
+  }
+  return {loaded, missing};
+}
+function redoSpecimenNames(){
+  return [...new Set(S.pendingRedo.map(l=>{ let n=l.split('\t')[0]; return n.startsWith('current_')?n.slice(8):n; }))];
+}
+// redo files found inside a scanned folder, best first (manuscript corrected redo wins)
+function findRedosInScan(){
+  const out=[];
+  for(const [name,cands] of S.scan.byName) if(/\.redo$/i.test(name)) out.push(...cands);
+  return out.sort((a,b)=>{
+    const sc=p=>{ let s=scorePath(p); if(/demag_gui\.redo$/i.test(p)) s+=2; if(/last_session/i.test(p)) s-=1; return s; };
+    return sc(b.path)-sc(a.path);
+  });
+}
+// count scan entries that look like CIT specimen files (no extension, has a site-ish prefix)
+function specimenLikeCount(){
+  let n=0;
+  for(const [name] of S.scan.byName) if(/^[A-Za-z]/.test(name) && !/\./.test(name)) n++;
+  return n;
+}
+async function resolveNeeded(){
+  const needed=redoSpecimenNames().filter(n=>!S.specs[n]);
+  let msg='', loaded=0;
+  if(needed.length){
+    if(!(await ensureRoot())){ toast('no data folder yet — drag your repo folder onto the app, or use "pick"'); renderQueue(); renderAll(); return; }
+    const res=await resolveFromScan(needed); loaded=res.loaded; const missing=res.missing;
+    if(loaded===0){
+      // diagnostics: did the scan even contain specimen files?
+      const seen=specimenLikeCount();
+      const sample=missing.slice(0,3).join(', ');
+      if(seen===0) msg='0 found — the folder "'+(S.scan.root||'?')+'" has no specimen files. Drag the repo FOLDER (the one containing Magnetometer_Data_corrected), not just the .redo.';
+      else msg='0 of '+needed.length+' matched (scanned '+seen+' specimen files). Redo wants e.g. '+sample+' — check you picked the right data folder, not an empty/iCloud copy.';
+    } else {
+      msg=loaded+' specimens loaded from '+(S.scan.root||'data root')+(missing.length?' · '+missing.length+' not found':'');
+    }
+  }
+  applyPendingRedo();
+  rebuildOrder();
+  if(!S.cur){ const first=S.order.find(n=>S.specs[n].steps.length>0); if(first) selectSpec(first); }
+  renderQueue(); renderAll();
+  if(msg) toast(msg, loaded===0&&needed.length?6000:3000);
+}
+// no redo in hand: load every .sam found (deduped by name, best path wins) + its specimens
+async function autoloadFromScan(){
+  const samNames=new Set();
+  for(const [name,c] of S.scan.byName) if(/\.sam$/i.test(name)) samNames.add(name);
+  if(!samNames.size){ toast('no .sam files found in that folder'); return; }
+  const wanted=[];
+  for(const name of samNames){
+    const en=bestEntry(S.scan.byName.get(name));
+    await loadSamEntry(en);
+    const site=S.sites[en.path];
+    if(site) wanted.push(...site.order);
+  }
+  const {loaded}=await resolveFromScan([...new Set(wanted)].filter(n=>!S.specs[n]));
+  rebuildOrder();
+  if(!S.cur){ const first=S.order.find(n=>S.specs[n].steps.length>0); if(first) selectSpec(first); }
+  renderQueue(); renderAll();
+  toast(loaded+' specimens loaded from '+samNames.size+' .sam file'+(samNames.size===1?'':'s'));
+}
+
+/* ═════════════════════════ file loading ═════════════════════════ */
+const dz=document.getElementById('drop-zone'), fi=document.getElementById('file-input');
+dz.onclick=()=>fi.click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
+dz.ondragleave=()=>dz.classList.remove('over');
+fi.onchange=()=>{ loadFiles(fi.files); fi.value=''; };
+document.getElementById('root-btn').onclick=async()=>{
+  S.scan={byName:new Map(), byDir:new Map(), root:''};
+  if(await pickRoot()){ if(S.pendingRedo.length) await resolveNeeded(); else toast('root set — now drop a .redo'); }
+};
+document.body.addEventListener('dragover',e=>e.preventDefault());
+document.body.addEventListener('drop',e=>e.preventDefault());
+function walkEntry(entry){
+  return new Promise(resolve=>{
+    if(entry.isFile){
+      entry.file(f=>resolve(JUNK_EXT.test(entry.name)?[]:[{name:entry.name, path:entry.fullPath.replace(/^\//,''), getText:()=>f.text(), mtime:f.lastModified}]), ()=>resolve([]));
+    } else if(entry.isDirectory && !SKIP_DIR.test(entry.name)){
+      const reader=entry.createReader(), all=[];
+      const batch=()=>reader.readEntries(async ents=>{
+        if(!ents.length){ resolve(all); return; }
+        for(const e of ents) all.push(...await walkEntry(e));
+        batch();
+      }, ()=>resolve(all));
+      batch();
+    } else resolve([]);
+  });
+}
+dz.ondrop=async e=>{
+  e.preventDefault(); dz.classList.remove('over');
+  const items=[...(e.dataTransfer.items||[])];
+  const plain=[], dirEntries=[];
+  for(const it of items){
+    const ent=it.webkitGetAsEntry && it.webkitGetAsEntry();
+    if(ent && ent.isDirectory) dirEntries.push(ent);
+    else { const f=it.getAsFile(); if(f) plain.push(f); }
+  }
+  if(!items.length) plain.push(...e.dataTransfer.files);
+  let scanned=0;
+  for(const ent of dirEntries){
+    const out=await walkEntry(ent);
+    scanned+=registerScan(out, S.scan.root||ent.name);
+  }
+  if(plain.length){ await loadFiles(plain); return; }
+  if(!scanned) return;
+  // folder dropped. If a redo is already waiting, resolve against this scan.
+  if(S.pendingRedo.length || redoSpecimenNames().length){ await resolveNeeded(); return; }
+  // otherwise auto-find the best redo INSIDE the dropped folder and apply it.
+  const redos=findRedosInScan();
+  if(redos.length){
+    try{
+      const txt=await redos[0].getText();
+      txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
+      toast('using '+redos[0].path.split('/').slice(-2).join('/')+' — loading its specimens…');
+      await resolveNeeded();
+      return;
+    }catch(err){}
+  }
+  // no redo in the folder: just load every .sam site
+  await autoloadFromScan();
+};
+
+async function loadFiles(fileList){
+  const files=[...fileList];
+  const sams=[], redos=[], others=[];
+  for(const f of files){
+    const n=f.name.toLowerCase();
+    if(n.endsWith('.sam')) sams.push(f);
+    else if(n.endsWith('.redo')) redos.push(f);
+    else if(JUNK_EXT.test(n)) continue;
+    else others.push(f);
+  }
+  let nLoaded=0;
+  for(const f of sams){
+    const sam=parseSam(await f.text());
+    if(sam) S.sites[f.name]={sam, order:sam.files.slice()};
+  }
+  for(const f of others){
+    const sp=parseSpecimenFile(f.name, await f.text());
+    if(sp && !(sp.name in S.specs)){ S.specs[sp.name]=sp; restoreSpec(sp); nLoaded++; }
+  }
+  for(const f of redos){
+    const txt=await f.text();
+    txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
+  }
+  if(redos.length){
+    toast('redo loaded — finding its specimens…');
+    await resolveNeeded();
+    return;
+  }
+  applyPendingRedo();
+  rebuildOrder();
+  if(!S.cur){
+    const first=S.order.find(n=>S.specs[n].steps.length>0);
+    if(first) selectSpec(first);
+  }
+  renderQueue(); renderAll();
+  if(nLoaded||sams.length) toast(nLoaded+' specimen file'+(nLoaded===1?'':'s')+' loaded');
+}
+function rebuildOrder(){
+  const placed=new Set(); S.order=[];
+  Object.values(S.sites).forEach(site=>{
+    site.order.forEach(n=>{ if(S.specs[n] && !placed.has(n)){ S.order.push(n); placed.add(n);} });
+  });
+  Object.keys(S.specs).sort().forEach(n=>{ if(!placed.has(n)){ S.order.push(n); placed.add(n);} });
+}
+// match a redo bound value to a step index (tmin→first ≥, tmax→last ≤)
+function boundToIdx(sp, val, isMax){
+  const v=parseFloat(val);
+  const keyOf=s=> s.treat.type==='AF' ? s.treat.T : (s.treat.type==='NRM'?0:s.treat.K);
+  let best=null;
+  sp.steps.forEach((s,i)=>{
+    const k=keyOf(s);
+    const ok = isMax ? k<=v+1e-9 : k>=v-1e-9;
+    if(ok && (best===null || (isMax? k>=keyOf(sp.steps[best]) : (best===null)))) {
+      if(isMax) best=i; else if(best===null) best=i;
+    }
+  });
+  return best;
+}
+// redo fit names → slots: lt→LT, lt2→MT, mt→HT (mt is the ChRM / terminal), else first free
+function slotForRedoName(sp, nm){
+  const n=(nm||'').toLowerCase();
+  if(SLOTS.includes(nm)) return nm;
+  if(n==='lt') return 'LT';
+  if(n==='lt2') return 'MT';
+  if(n==='mt'||n==='ht'||n==='chrm') return 'HT';
+  return sp.fits.LT===null?'LT':sp.fits.MT===null?'MT':sp.fits.HT===null?'HT':null;
+}
+function applyPendingRedo(){
+  const rest=[];
+  S.pendingRedo.forEach(line=>{
+    const f=line.split('\t');
+    let name=f[0]; if(name.startsWith('current_')) name=name.slice(8);
+    const sp=S.specs[name];
+    if(!sp || f.length<5){ if(f.length>=5) rest.push(line); return; }
+    if(sp._hadLocal) return;   // you've worked this specimen — your saved state wins, don't revert to redo
+    const slot=slotForRedoName(sp, f[4]);
+    if(!slot) return;
+    const i0=boundToIdx(sp,f[2],false), i1=boundToIdx(sp,f[3],true);
+    if(i0!==null && i1!==null && i1>i0) sp.fits[slot]={i0,i1,name:f[4],color:f[5]||SLOTC[slot]};
+  });
+  S.pendingRedo=rest;
+}
+function restoreSpec(sp){
+  const raw=lsGet(specKey(sp));
+  if(!raw) return;   // no saved state → keep the auto-skip defaults from parsing
+  try{
+    const d=JSON.parse(raw);
+    // you've interacted with this specimen → your saved skip set is authoritative:
+    // clear the auto-skips and apply exactly what you saved
+    sp.steps.forEach(s=>{ s.skipped=false; });
+    (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
+    SLOTS.forEach(k=>{ if(d.fits && d.fits[k]) sp.fits[k]=d.fits[k]; });
+    sp.saved=!!d.saved;
+    sp._hadLocal = true;
+  }catch(e){}
+}
+function persistSpec(sp){
+  lsSet(specKey(sp), JSON.stringify({
+    skips:sp.steps.filter(s=>s.skipped).map(s=>s.idx),
+    fits:sp.fits, saved:sp.saved, touched:true
+  }));
+}
+
+/* ═════════════════════════ copy / paste fits ═════════════════════════ */
+// identify a step by its treatment so a window copies across specimens with
+// matching temperatures/fields even when step order or index differs
+function treatKey(s){
+  const t=s.treat;
+  if(t.type==='TT') return 'TT:'+t.C;
+  if(t.type==='AF') return 'AF:'+t.G;
+  if(t.type==='LN2') return 'LN2';
+  if(t.type==='NRM') return 'NRM';
+  return 'OTH:'+t.label;
+}
+function copyFits(scope){
+  const sp=S.cur?S.specs[S.cur]:null;
+  if(!sp){ toast('no specimen selected'); return; }
+  const want = scope==='all' ? SLOTS : [scope];
+  const slots={}; let n=0;
+  want.forEach(k=>{
+    const f=sp.fits[k];
+    if(!f) return;
+    const sel=fitSel(sp,f);
+    slots[k]={ keys:sel.map(i=>treatKey(sp.steps[i])), name:f.name||k, color:f.color||SLOTC[k] };
+    n++;
+  });
+  if(!n){ toast('no '+(scope==='all'?'':scope+' ')+'fits on '+sp.name+' to copy'); return; }
+  S.fitClip={ source:sp.name, scope, slots };
+  try{ lsSet('fitquest:clip', JSON.stringify(S.fitClip)); }catch(e){}
+  toast('copied '+Object.keys(slots).join('+')+' from '+sp.name);
+  renderClipInfo();
+}
+function pasteFits(){
+  const sp=S.cur?S.specs[S.cur]:null;
+  if(!sp){ toast('no specimen selected'); return; }
+  if(!S.fitClip){ toast('nothing copied yet'); return; }
+  // index target steps by treatment key; prefer a non-skipped match (the kept rerun)
+  const byKey={};
+  sp.steps.forEach(s=>{ const k=treatKey(s); (byKey[k]=byKey[k]||[]).push(s); });
+  const pasted=[], missed=[];
+  Object.entries(S.fitClip.slots).forEach(([slot,def])=>{
+    const sel=[];
+    def.keys.forEach(key=>{
+      const cands=byKey[key];
+      if(!cands||!cands.length) return;
+      const pick=cands.find(s=>!s.skipped)||cands[cands.length-1];
+      if(!sel.includes(pick.idx)) sel.push(pick.idx);
+    });
+    sel.sort((a,b)=>a-b);
+    if(sel.length>=2){ const i0=sel[0],i1=sel[sel.length-1]; sp.fits[slot]={ sel:contiguousSel(sp,i0,i1), i0, i1, name:def.name, color:def.color }; pasted.push(slot); }
+    else missed.push(slot);
+  });
+  if(pasted.length){ persistSpec(sp); renderAll(); }
+  toast(pasted.length ? 'pasted '+pasted.join('+')+' onto '+sp.name+(missed.length?' · '+missed.join('+')+' had no matching steps':'')
+                      : 'no steps on '+sp.name+' matched the copied fit'+(S.fitClip.source?' from '+S.fitClip.source:''));
+}
+function renderClipInfo(){
+  const el=document.getElementById('clip-info');
+  if(!el) return;
+  el.textContent = S.fitClip ? 'clipboard: '+Object.keys(S.fitClip.slots).join('+')+' from '+S.fitClip.source : 'clipboard empty';
+}
+
+/* ═════════════════════════ fitting & grading ═════════════════════════ */
+function stepCart(sp, s, cs){
+  const dec = cs==='spec'?s.decS : cs==='tc'?s.decT : s.decG;
+  const inc = cs==='spec'?s.incS : cs==='tc'?s.incT : s.incG;
+  return dir2cart(dec,inc,s.J);
+}
+// fits hold an arbitrary point set f.sel (sorted step indices); i0/i1 mirror min/max
+// for redo export and span shading. Legacy {i0,i1} fits normalize lazily to a range.
+function fitSel(sp, f){
+  if(!f) return null;
+  if(!f.sel){ f.sel=[]; for(let i=f.i0;i<=f.i1;i++) if(sp.steps[i]) f.sel.push(i); }
+  return f.sel;
+}
+function syncBounds(sp, f){
+  const sel=fitSel(sp,f);
+  if(sel.length){ f.i0=sel[0]; f.i1=sel[sel.length-1]; }
+  return sel;
+}
+function selRuns(sel){  // contiguous runs for decay shading
+  const runs=[]; let a=null,b=null;
+  sel.forEach(i=>{ if(a===null){a=b=i;} else if(i===b+1){b=i;} else {runs.push([a,b]); a=b=i;} });
+  if(a!==null) runs.push([a,b]);
+  return runs;
+}
+function fisherMean(dirs){
+  let x=0,y=0,z=0;
+  dirs.forEach(d=>{ const c=dir2cart(d.dec,d.inc,1); x+=c[0]; y+=c[1]; z+=c[2]; });
+  const R=Math.hypot(x,y,z), n=dirs.length;
+  if(R===0) return null;
+  const [dec,inc]=cart2dir([x,y,z]);
+  const k=(n>R)?(n-1)/(n-R):1e9;
+  let a95=NaN;
+  if(n>1 && n>R){
+    const arg=1-((n-R)/R)*(Math.pow(1/0.05, 1/(n-1))-1);
+    a95=Math.acos(Math.min(1,Math.max(-1,arg)))*R2D;
+  }
+  return {dec,inc,n,k,a95};
+}
+function a95CirclePts(mean){
+  const m=dir2cart(mean.dec,mean.inc,1);
+  let u=[-m[1],m[0],0], un=Math.hypot(u[0],u[1],u[2]);
+  if(un<1e-6){ u=[1,0,0]; un=1; }
+  u=u.map(v=>v/un);
+  const w=[m[1]*u[2]-m[2]*u[1], m[2]*u[0]-m[0]*u[2], m[0]*u[1]-m[1]*u[0]];
+  const A=mean.a95*D2R, ca=Math.cos(A), sa=Math.sin(A), pts=[];
+  for(let t=0;t<=360;t+=5){
+    const ct=Math.cos(t*D2R), st=Math.sin(t*D2R);
+    const d=[0,1,2].map(i=>m[i]*ca+(u[i]*ct+w[i]*st)*sa);
+    const [dec,inc]=cart2dir(d);
+    pts.push(eqXY(dec,inc));
+  }
+  return pts;
+}
+function lastAliveIdx(sp){
+  for(let i=sp.steps.length-1;i>=0;i--) if(!sp.steps[i].skipped) return i;
+  return -1;
+}
+// terminal slot = valid fit whose i1 reaches the last surviving step; fall back to highest i1
+function terminalSlot(sp){
+  const la=lastAliveIdx(sp);
+  let best=null, bestI1=-1;
+  SLOTS.forEach(k=>{
+    const f=sp.fits[k];
+    if(!f) return;
+    if(f.i1>=bestI1){ bestI1=f.i1; best=k; }
+  });
+  if(best===null) return null;
+  return {slot:best, reaches: sp.fits[best].i1>=la && la>=0};
+}
+function computeFit(sp, slot){
+  const fit=sp.fits[slot];
+  if(!fit) return null;
+  const sel=syncBounds(sp,fit);
+  const seg=sel.map(i=>sp.steps[i]).filter(Boolean);
+  const used=seg.filter(s=>!s.skipped);
+  const out={slot, seg, used, nTotal:seg.length, nUsed:used.length, warns:[]};
+  if(used.length<3){ out.invalid='need ≥3 points ('+used.length+' in segment)'; return out; }
+  ['geo','tc','spec'].forEach(cs=>{
+    out[cs]=pcaLine(used.map(s=>stepCart(sp,s,cs)));
+  });
+  const skipFrac=1-used.length/seg.length;
+  if(skipFrac>0.25) out.warns.push((100*skipFrac).toFixed(0)+'% of segment skipped — beyond ~25% the line is wrong, not the points (grade capped)');
+  if(used.some(s=>s.warn && s.warn.includes('spike'))) out.warns.push('segment contains an intensity-spike step — possible instrument artifact');
+  out.capped = skipFrac>0.25;
+  return out;
+}
+function gradeOf(score){ return score>=95?'S':score>=85?'A':score>=70?'B':score>=50?'C':score>=30?'D':'F'; }
+function scoreFit(sp, slot, res, term){
+  if(!res || res.invalid) return null;
+  const r=res[S.cs==='spec'?'spec':S.cs];  // grade in active coord system (MAD/dang rotation-invariant)
+  const isTerm = term && term.slot===slot && term.reaches;
+  let sc=100 - 6*r.mad;
+  if(isTerm && isFinite(r.dang)) sc -= 2*Math.max(0, r.dang-5);
+  sc += Math.min(10, 2*Math.max(0, r.n-3));
+  sc=Math.max(0,Math.round(sc));
+  const usable = isTerm && r.mad<=10 && isFinite(r.dang) && r.dang<=15;
+  if(usable) sc+=15;
+  if(res.capped) sc=Math.min(sc,69);
+  return {score:Math.min(sc,120), grade:gradeOf(Math.min(sc,100)), usable, isTerm, mad:r.mad, dang:r.dang};
+}
+
+/* ═════════════════════════ rendering: queue ═════════════════════════ */
+const GRADE_RANK={S:0,A:1,B:2,C:3,D:4,F:5};
+// terminal-fit metrics for a specimen (for queue sort/filter)
+function specMetrics(sp){
+  let nfits=0, mad=Infinity, dang=Infinity, usable=false;
+  const term=terminalSlot(sp);
+  SLOTS.forEach(k=>{ if(sp.fits[k]){ const r=computeFit(sp,k); if(r&&!r.invalid) nfits++; } });
+  if(term && term.slot && sp.fits[term.slot]){
+    const r=computeFit(sp,term.slot);
+    if(r && !r.invalid){
+      const g=r[S.cs==='spec'?'spec':S.cs];
+      mad=g.mad; dang=term.reaches&&isFinite(g.dang)?g.dang:Infinity;
+      usable=term.reaches && g.mad<=10 && isFinite(g.dang) && g.dang<=15;
+    }
+  }
+  return {nfits, mad, dang, usable, grade:sp.saved?sp.lastGrade:null};
+}
+// a step shared by two or more fits = overlapping component windows (usually a mistake to fix)
+function specHasOverlap(sp){
+  for(const s of sp.steps){ if(!s.skipped && slotsOfStep(sp,s.idx).length>=2) return true; }
+  return false;
+}
+function passFilter(sp, m){
+  switch(S.qFilter){
+    case 'unsaved': return !sp.saved;
+    case 'saved':   return sp.saved;
+    case 'flagged': return m.nfits>0 && (m.mad>10 || (isFinite(m.dang)&&m.dang>15));
+    case 'usable':  return m.usable;
+    case 'overlap': return specHasOverlap(sp);
+    default: return true;
+  }
+}
+function sortKey(sp, m, orderIdx){
+  switch(S.qSort){
+    case 'name':  return sp.name;
+    case 'mad':   return m.nfits?m.mad:1e9;
+    case 'dang':  return isFinite(m.dang)?m.dang:1e9;
+    case 'grade': return m.grade?GRADE_RANK[m.grade]:9;
+    case 'nfits': return -m.nfits;        // more fits first by default
+    case 'chrm':  return m.usable?0:1;
+    default:      return orderIdx;        // original queue order
+  }
+}
+function renderQueue(){
+  const list=document.getElementById('spec-list');
+  list.innerHTML='';
+  if(S.order.length===0) return;
+  const needMetrics = S.qSort!=='queue' && S.qSort!=='name' || S.qFilter!=='all';
+  const idxOf={}; S.order.forEach((n,i)=>idxOf[n]=i);
+  const bySite={};
+  S.order.forEach(n=>{
+    const site=S.specs[n].hdr.site||'—';
+    (bySite[site]=bySite[site]||[]).push(n);
+  });
+  let shown=0;
+  Object.entries(bySite).forEach(([site,names])=>{
+    let rows=names.map(n=>{ const sp=S.specs[n]; const m=needMetrics?specMetrics(sp):null; return {n,sp,m}; });
+    if(S.qFilter!=='all') rows=rows.filter(r=>passFilter(r.sp, r.m||specMetrics(r.sp)));
+    if(!rows.length) return;
+    if(S.qSort!=='queue'){
+      rows.sort((a,b)=>{
+        const ka=sortKey(a.sp, a.m||{}, idxOf[a.n]), kb=sortKey(b.sp, b.m||{}, idxOf[b.n]);
+        let c = (typeof ka==='string') ? ka.localeCompare(kb) : (ka-kb);
+        if(c===0) c=a.sp.name.localeCompare(b.sp.name);
+        return S.qDir*c;
+      });
+    }
+    const h=document.createElement('div'); h.className='site-hdr'; h.textContent=siteLabel(site)+' ('+rows.length+')';
+    list.appendChild(h);
+    rows.forEach(({n,sp,m})=>{
+      shown++;
+      const d=document.createElement('div');
+      d.className='spec-item'+(n===S.cur?' sel':'')+(sp.steps.length===0?' nodata':'');
+      let badge='';
+      if(sp.saved && sp.lastGrade) badge='<span class="grade-badge g-'+sp.lastGrade+'">'+sp.lastGrade+'</span>';
+      else if(SLOTS.some(k=>sp.fits[k])) badge='<span class="grade-badge" style="color:var(--amb)">…</span>';
+      // inline metric when sorting by one
+      let mi='';
+      if(m){
+        if(S.qSort==='mad'&&m.nfits) mi='<span class="mi">'+m.mad.toFixed(1)+'°</span>';
+        else if(S.qSort==='dang'&&isFinite(m.dang)) mi='<span class="mi">d'+m.dang.toFixed(0)+'</span>';
+        else if(S.qSort==='nfits') mi='<span class="mi">'+m.nfits+'f</span>';
+        else if(S.qSort==='chrm'&&m.usable) mi='<span class="mi" style="color:var(--amb)">★</span>';
+      }
+      d.innerHTML='<span class="name">'+n+'</span>'+mi+'<span class="meta">'+sp.steps.length+'</span>'+badge+(sp.saved?'<span style="color:var(--ac);font-size:10px">✓</span>':'');
+      if(sp.steps.length>0) d.onclick=()=>selectSpec(n);
+      list.appendChild(d);
+    });
+  });
+  if(shown===0){ const e=document.createElement('div'); e.style.cssText='font-size:10px;color:var(--tx3);padding:8px'; e.textContent='no specimens match this filter'; list.appendChild(e); }
+  const total=S.order.filter(n=>S.specs[n].steps.length>0).length;
+  const done=S.order.filter(n=>S.specs[n].saved).length;
+  const pw=document.getElementById('progress-wrap');
+  if(total>0){
+    pw.style.display='block';
+    document.getElementById('progress-fill').style.width=(100*done/total)+'%';
+    document.getElementById('progress-txt').textContent=done+' / '+total+' fitted';
+  }
+}
+
+/* ═════════════════════════ rendering: plots ═════════════════════════ */
+function themeColors(){
+  const cs=getComputedStyle(document.documentElement);
+  return {bg:cs.getPropertyValue('--bg').trim(), tx:cs.getPropertyValue('--tx').trim(),
+          tx2:cs.getPropertyValue('--tx2').trim(), tx3:cs.getPropertyValue('--tx3').trim(),
+          bdr:cs.getPropertyValue('--bdr').trim(), red:cs.getPropertyValue('--red').trim(),
+          amb:cs.getPropertyValue('--amb').trim()};
+}
+function convAxes(){
+  switch(S.conv){
+    case 'EN': return {x:'E', h:'N', lab:'x=E, y=N (solid) / Up (open)'};
+    case 'ROT': return {x:'H′', h:'⊥', lab:'x along NRM dec'};
+    default: return {x:'N', h:'E', lab:'x=N, y=E (solid) / Up (open)'};
+  }
+}
+function zijXY(sp, s){
+  const c=stepCart(sp,s,S.cs);     // [N,E,Down]
+  let x,hy;
+  if(S.conv==='EN'){ x=c[1]; hy=c[0]; }
+  else if(S.conv==='ROT'){
+    const s0=sp.steps.find(q=>!q.skipped)||sp.steps[0];
+    const d0=(S.cs==='spec'?s0.decS:S.cs==='tc'?s0.decT:s0.decG)*D2R;
+    x =  c[0]*Math.cos(d0)+c[1]*Math.sin(d0);
+    hy= -c[0]*Math.sin(d0)+c[1]*Math.cos(d0);
+  }
+  else { x=c[0]; hy=c[1]; }
+  return {x, hy, vy:-c[2]};        // Up positive
+}
+function slotsOfStep(sp, idx){
+  return SLOTS.filter(k=>{ const f=sp.fits[k]; return f && fitSel(sp,f).includes(idx); });
+}
+function slotOfStep(sp, idx){
+  const m=slotsOfStep(sp,idx);
+  return m.length?m[m.length-1]:null;
+}
+function hoverTxt(sp,s){
+  return s.label+'<br>J='+s.J.toExponential(2)+(s.csd!==null?' · csd '+s.csd.toFixed(1)+'°':'')+
+    '<br>D/I geo '+s.decG.toFixed(1)+'/'+s.incG.toFixed(1)+(s.skipped?'<br><b>SKIPPED</b>':'')+
+    (s.warn?'<br>⚠ '+s.warn:'')+'<br><i>right-click to '+(s.skipped?'unskip':'skip')+'</i>';
+}
+function markerColors(sp, fillWhenNone){
+  const t=themeColors();
+  return sp.steps.map(s=>{
+    if(s.skipped) return t.red;
+    const sl=slotOfStep(sp,s.idx);
+    return sl?SLOTC[sl]:fillWhenNone;
+  });
+}
+function markerSymbols(sp, base, open){
+  return sp.steps.map(s=> s.skipped ? 'x' : (open?base+'-open':base));
+}
+function plotZij(sp){
+  const t=themeColors(), ca=convAxes();
+  document.getElementById('zij-sub').textContent=ca.lab+' · '+S.cs;
+  const P=sp.steps.map(s=>zijXY(sp,s));
+  const xs=P.map(p=>p.x), hys=P.map(p=>p.hy), vys=P.map(p=>p.vy);
+  const cd=sp.steps.map(s=>s.idx);
+  const txt=sp.steps.map(s=>hoverTxt(sp,s));
+  const colH=markerColors(sp,t.tx), colV=markerColors(sp,t.tx);
+  const alive=sp.steps.map((s,i)=>!s.skipped?i:null).filter(i=>i!==null);
+  const data=[
+    {x:alive.map(i=>xs[i]),y:alive.map(i=>hys[i]),mode:'lines',type:'scatter',hoverinfo:'skip',
+     line:{color:t.tx3,width:1},showlegend:false},
+    {x:alive.map(i=>xs[i]),y:alive.map(i=>vys[i]),mode:'lines',type:'scatter',hoverinfo:'skip',
+     line:{color:t.tx3,width:1,dash:'dot'},showlegend:false},
+    {x:xs,y:hys,customdata:cd,text:txt,hoverinfo:'text',mode:'markers',type:'scatter',name:'horizontal',
+     marker:{size:7,color:colH,symbol:sp.steps.map(s=>s.skipped?'x':'square'),line:{width:1,color:t.bdr}}},
+    {x:xs,y:vys,customdata:cd,text:txt,hoverinfo:'text',mode:'markers',type:'scatter',name:'vertical',
+     marker:{size:7,symbol:sp.steps.map(s=>s.skipped?'x':'circle-open'),color:colV,line:{width:1.5,color:colV}}},
+  ];
+  // fit overlays: line over each segment, positioned on the segment centroid
+  SLOTS.forEach(k=>{
+    const res=sp._res && sp._res[k];
+    if(!res || res.invalid) return;
+    const r=res[S.cs==='spec'?'spec':S.cs];
+    const pts=res.used.map(s=>stepCart(sp,s,S.cs));
+    const ts=pts.map(p=>(p[0]-r.cm[0])*r.v[0]+(p[1]-r.cm[1])*r.v[1]+(p[2]-r.cm[2])*r.v[2]);
+    const t0=Math.min(...ts), t1=Math.max(...ts);
+    [t0,t1].forEach(()=>{});
+    const ends=[t0,t1].map(tt=>[r.cm[0]+tt*r.v[0], r.cm[1]+tt*r.v[1], r.cm[2]+tt*r.v[2]]);
+    const exy=ends.map(c=>{
+      const fake={decS:0,incS:0,decG:0,incG:0,decT:0,incT:0,J:1};
+      // reuse zijXY math manually:
+      let x,hy;
+      if(S.conv==='EN'){ x=c[1]; hy=c[0]; }
+      else if(S.conv==='ROT'){
+        const s0=sp.steps.find(q=>!q.skipped)||sp.steps[0];
+        const d0=(S.cs==='spec'?s0.decS:S.cs==='tc'?s0.decT:s0.decG)*D2R;
+        x=c[0]*Math.cos(d0)+c[1]*Math.sin(d0); hy=-c[0]*Math.sin(d0)+c[1]*Math.cos(d0);
+      } else { x=c[0]; hy=c[1]; }
+      return {x,hy,vy:-c[2]};
+    });
+    data.push({x:exy.map(p=>p.x),y:exy.map(p=>p.hy),mode:'lines',type:'scatter',hoverinfo:'skip',
+               line:{color:SLOTC[k],width:2.5},showlegend:false});
+    data.push({x:exy.map(p=>p.x),y:exy.map(p=>p.vy),mode:'lines',type:'scatter',hoverinfo:'skip',
+               line:{color:SLOTC[k],width:2.5,dash:'dash'},showlegend:false});
+  });
+  const layout={
+    paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+    font:{family:'IBM Plex Mono',size:9,color:t.tx2},
+    margin:{l:42,r:12,t:24,b:34},showlegend:false,
+    xaxis:{title:{text:ca.x,font:{size:9}},zeroline:true,zerolinecolor:t.bdr,zerolinewidth:1.5,gridcolor:t.bdr,griddash:'dot'},
+    yaxis:{title:{text:ca.h+' / Up',font:{size:9}},zeroline:true,zerolinecolor:t.bdr,zerolinewidth:1.5,gridcolor:t.bdr,griddash:'dot',scaleanchor:'x',scaleratio:1},
+    dragmode:'pan',
+  };
+  // keep the manual zoom/pan across fit edits; only specimen/coord changes reset it
+  if(S.zijZoom){
+    layout.xaxis.range=S.zijZoom.x.slice(); layout.xaxis.autorange=false;
+    layout.yaxis.range=S.zijZoom.y.slice(); layout.yaxis.autorange=false;
+  }
+  Plotly.react('zij',data,layout,{displayModeBar:false,responsive:true,scrollZoom:true});
+}
+function eqXY(dec,inc){
+  const r=Math.sqrt(2)*Math.sin((90-Math.abs(inc))*D2R/2); // =1 at inc 0
+  return {x:r*Math.sin(dec*D2R), y:r*Math.cos(dec*D2R)};
+}
+function sampleOf(name){ return name.replace(/[A-Za-z]$/,''); }
+// site = leading non-digit prefix of the specimen name (NWFA-1B → "NWFA-", PKSF-0 → "PKSF-")
+function siteOf(name){ const m=(name||'').match(/^\D+/); return m?m[0]:name; }
+function siteLabel(prefix){ return prefix.replace(/[-_\s]+$/,''); }
+// distinct sites across loaded specimens, in queue order
+function allSites(){
+  const seen=[], set=new Set();
+  S.order.forEach(n=>{ const s=siteOf(n); if(!set.has(s)){ set.add(s); seen.push(s); } });
+  return seen;
+}
+// resolve which site the eq plot should show: explicit pick, else the current specimen's site
+function eqActiveSite(){
+  const cur=S.cur?S.specs[S.cur]:null;
+  if(S.eqSite && S.eqSite!=='current') return S.eqSite;
+  return cur?siteOf(cur.name):null;
+}
+// distinct samples (boulders) within a site, in queue order
+function samplesInSite(site){
+  const seen=[], set=new Set();
+  S.order.forEach(n=>{ if(siteOf(n)!==site) return; const s=sampleOf(n); if(!set.has(s)){ set.add(s); seen.push(s); } });
+  return seen;
+}
+// one ChRM direction per specimen: the chosen component, or the terminal component when comp=ALL
+function specimenDir(sp, comp){
+  let slot = (comp!=='ALL') ? comp : (terminalSlot(sp)||{}).slot;
+  if((!slot || !sp.fits[slot]) && comp==='ALL') slot = ['HT','MT','LT'].find(k=>sp.fits[k]);
+  if(!slot || !sp.fits[slot]) return null;
+  const res=(sp===S.specs[S.cur]&&sp._res)?sp._res[slot]:computeFit(sp,slot);
+  if(!res||res.invalid) return null;
+  const r=res[S.cs==='spec'?'spec':S.cs];
+  return {dec:r.dec, inc:r.inc, slot, name:sp.name};
+}
+// per-boulder Fisher means across a site (the conglomerate-test units)
+function boulderMeans(site, comp){
+  const byB={};
+  Object.values(S.specs).filter(s=>siteOf(s.name)===site).forEach(sp=>{
+    const d=specimenDir(sp,comp); if(!d) return;
+    (byB[sampleOf(sp.name)]=byB[sampleOf(sp.name)]||[]).push(d);
+  });
+  const out=[];
+  Object.keys(byB).sort().forEach(b=>{
+    const fm=fisherMean(byB[b]);
+    if(fm){ fm.boulder=b; fm.dirs=byB[b]; out.push(fm); }
+  });
+  return out;
+}
+// Watson (1956) test for randomness — the conglomerate-test statistic on the clast means
+function watsonRandom(dirs){
+  const n=dirs.length;
+  let x=0,y=0,z=0; dirs.forEach(d=>{ const c=dir2cart(d.dec,d.inc,1); x+=c[0];y+=c[1];z+=c[2]; });
+  const R=Math.hypot(x,y,z);
+  const Ro=Math.sqrt(7.815*n/3);   // 95% critical value (χ²₃,₀.₀₅ = 7.815)
+  return {R, Ro, n, random:R<Ro};
+}
+function csLabel(){ return S.cs==='spec'?'core':S.cs==='tc'?'tilt-corr':'geographic'; }
+function setEqStats(html){ const el=document.getElementById('eq-stats'); if(el) el.innerHTML=html||''; }
+function boulderColor(i, total){
+  const h=Math.round(360*i/Math.max(total,1));
+  return 'hsl('+h+',70%,'+(document.documentElement.classList.contains('light')?'42%':'62%')+')';
+}
+// collect fitted directions at the chosen aggregation level, filtered by component
+function eqFitDirs(level, comp){
+  const cur=S.cur?S.specs[S.cur]:null;
+  if(!cur) return [];
+  let specs;
+  if(S.eqSample && S.eqSample!=='all') specs=Object.values(S.specs).filter(s=>sampleOf(s.name)===S.eqSample);
+  else if(level==='sample') specs=Object.values(S.specs).filter(s=>sampleOf(s.name)===sampleOf(cur.name));
+  else if(level==='site'){ const site=eqActiveSite(); specs=Object.values(S.specs).filter(s=>siteOf(s.name)===site); }
+  else if(level==='all') specs=Object.values(S.specs);
+  else specs=[cur];
+  const out=[];
+  specs.forEach(sp=>{
+    SLOTS.forEach(k=>{
+      if(comp!=='ALL' && comp!==k) return;
+      if(!sp.fits[k]) return;
+      const res=(sp===cur && sp._res)?sp._res[k]:computeFit(sp,k);
+      if(!res||res.invalid) return;
+      const r=res[S.cs==='spec'?'spec':S.cs];
+      out.push({name:sp.name, slot:k, fname:sp.fits[k].name||k, dec:r.dec, inc:r.inc, mad:r.mad});
+    });
+  });
+  return out;
+}
+// keep the site dropdown in sync with loaded specimens
+function refreshSiteDropdown(){
+  const sel=document.getElementById('eq-site');
+  if(!sel) return;
+  const sites=allSites();
+  const want='current::'+sites.join(',');
+  if(sel._sig===want) return;        // unchanged — don't rebuild
+  sel._sig=want;
+  const cur=S.cur?siteOf(S.specs[S.cur].name):null;
+  let html='<option value="current">site: current'+(cur?' ('+siteLabel(cur)+')':'')+'</option>';
+  sites.forEach(s=>{ html+='<option value="'+s+'">'+siteLabel(s)+'</option>'; });
+  sel.innerHTML=html;
+  sel.value = (S.eqSite && sites.includes(S.eqSite)) ? S.eqSite : 'current';
+}
+// keep the sub-sample (boulder) dropdown in sync with the active site
+function refreshSampleDropdown(){
+  const sel=document.getElementById('eq-sample');
+  if(!sel) return;
+  const site=eqActiveSite();
+  const samples=site?samplesInSite(site):[];
+  const want=(site||'')+'::'+samples.join(',');
+  if(sel._sig!==want){
+    sel._sig=want;
+    let html='<option value="all">boulder: all</option>';
+    samples.forEach(s=>{ html+='<option value="'+s+'">'+s+'</option>'; });
+    sel.innerHTML=html;
+  }
+  if(S.eqSample!=='all' && !samples.includes(S.eqSample)) S.eqSample='all';
+  sel.value=S.eqSample;
+}
+const eqLayout=t=>({
+  paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+  font:{family:'IBM Plex Mono',size:9,color:t.tx2},
+  margin:{l:10,r:10,t:20,b:10},showlegend:false,
+  xaxis:{visible:false,range:[-1.12,1.12]},
+  yaxis:{visible:false,range:[-1.12,1.12],scaleanchor:'x',scaleratio:1},
+  dragmode:false,
+});
+function eqBase(t){
+  const circ={x:[],y:[]};
+  for(let a=0;a<=360;a+=3){ circ.x.push(Math.sin(a*D2R)); circ.y.push(Math.cos(a*D2R)); }
+  return [
+    {x:circ.x,y:circ.y,mode:'lines',hoverinfo:'skip',line:{color:t.bdr,width:1},type:'scatter'},
+    {x:[-1,1,null,0,0],y:[0,0,null,-1,1],mode:'lines',hoverinfo:'skip',line:{color:t.bdr,width:.5,dash:'dot'},type:'scatter'},
+  ];
+}
+// conglomerate test view: one Fisher mean per boulder across the active site
+function plotConglomerate(t){
+  const site=eqActiveSite();
+  const data=eqBase(t);
+  if(!site){ setEqStats(''); Plotly.react('eq',data,eqLayout(t),{displayModeBar:false,responsive:true}); return; }
+  const means=boulderMeans(site, S.eqComp);
+  means.forEach((fm,i)=>{
+    const col=boulderColor(i, means.length);
+    // faint individual specimen directions for this boulder
+    const sp=fm.dirs.map(d=>eqXY(d.dec,d.inc));
+    data.push({x:sp.map(p=>p.x),y:sp.map(p=>p.y),mode:'markers',type:'scatter',hoverinfo:'skip',
+      marker:{size:5,color:col,opacity:0.35,symbol:fm.dirs.map(d=>d.inc>=0?'circle':'circle-open'),line:{width:0.5,color:col}},showlegend:false});
+    // the boulder mean (labeled diamond)
+    const mp=eqXY(fm.dec,fm.inc);
+    data.push({x:[mp.x],y:[mp.y],customdata:['spec:'+fm.dirs[0].name],mode:'markers+text',type:'scatter',hoverinfo:'text',
+      text:[siteLabel(fm.boulder)],textposition:'top center',textfont:{size:8,color:col},
+      hovertext:[fm.boulder+' mean (n='+fm.n+')<br>D '+fm.dec.toFixed(1)+' / I '+fm.inc.toFixed(1)+'<br>α95 '+(isFinite(fm.a95)?fm.a95.toFixed(1):'—')+'° · k '+(fm.k>999?'∞':fm.k.toFixed(1))+'<br><i>click to open a specimen</i>'],
+      marker:{size:13,symbol:fm.inc>=0?'diamond':'diamond-open',color:col,line:{width:1.5,color:t.bg}},showlegend:false});
+  });
+  // stats bar: overall Fisher mean of the boulder means + Watson randomness verdict
+  let html='conglomerate · '+siteLabel(site)+' · '+means.length+' boulders · '+csLabel();
+  if(means.length>=1){
+    const gm=fisherMean(means);
+    if(gm) html+='<br><b>clast-mean</b> D '+gm.dec.toFixed(1)+' / I '+gm.inc.toFixed(1)+' · α95 '+(isFinite(gm.a95)?gm.a95.toFixed(1):'—')+'° · k '+(gm.k>999?'∞':gm.k.toFixed(1))+' · N '+gm.n;
+  }
+  if(means.length>=3){
+    const w=watsonRandom(means);
+    html+= w.random
+      ? '<br><span class="verdict-ok">✓ RANDOM — R '+w.R.toFixed(2)+' &lt; Ro '+w.Ro.toFixed(2)+' · passes (pre-depositional)</span>'
+      : '<br><span class="verdict-bad">✗ CLUSTERED — R '+w.R.toFixed(2)+' ≥ Ro '+w.Ro.toFixed(2)+' · fails (likely remagnetized)</span>';
+  } else html+='<br><span style="color:var(--tx3)">need ≥3 boulders with fits for Watson test</span>';
+  setEqStats(html);
+  Plotly.react('eq',data,eqLayout(t),{displayModeBar:false,responsive:true});
+}
+function plotEq(sp){
+  const t=themeColors();
+  refreshSiteDropdown(); refreshSampleDropdown();
+  const title=document.getElementById('eq-ptitle');
+  if(title) title.textContent = S.eqCong ? 'conglomerate test' : 'equal area';
+  if(S.eqCong){ plotConglomerate(t); return; }
+  // sub-sample selection pins the view to one boulder (shown as a group with its mean)
+  let level=S.eqLevel;
+  if(S.eqSample && S.eqSample!=='all') level='sample';
+  const comp=S.eqComp;
+  const data=eqBase(t);
+  if(level==='specimen'){
+    // demag path of the current specimen
+    const di=sp.steps.map(s=>({dec:(S.cs==='spec'?s.decS:S.cs==='tc'?s.decT:s.decG), inc:(S.cs==='spec'?s.incS:S.cs==='tc'?s.incT:s.incG)}));
+    const P=di.map(d=>eqXY(d.dec,d.inc));
+    data.push(
+      {x:sp.steps.filter(s=>!s.skipped).map(s=>P[s.idx].x),y:sp.steps.filter(s=>!s.skipped).map(s=>P[s.idx].y),
+       mode:'lines',type:'scatter',hoverinfo:'skip',line:{color:t.tx3,width:.7},showlegend:false},
+      {x:P.map(p=>p.x),y:P.map(p=>p.y),customdata:sp.steps.map(s=>s.idx),
+       text:sp.steps.map(s=>hoverTxt(sp,s)),hoverinfo:'text',
+       mode:'markers',type:'scatter',
+       marker:{size:7,color:markerColors(sp,t.tx),
+         symbol:sp.steps.map((s,i)=> s.skipped?'x': (di[i].inc>=0?'circle':'circle-open')),
+         line:{width:1.2,color:markerColors(sp,t.tx)}}});
+  }
+  // fitted directions at the chosen level (stars), plus Fisher mean + α95 per slot group
+  const dirs=eqFitDirs(level, comp);
+  const statLines=[];
+  SLOTS.forEach(k=>{
+    const dk=dirs.filter(d=>d.slot===k);
+    if(!dk.length) return;
+    data.push({
+      x:dk.map(d=>eqXY(d.dec,d.inc).x), y:dk.map(d=>eqXY(d.dec,d.inc).y),
+      customdata:dk.map(d=>'spec:'+d.name),
+      text:dk.map(d=>d.name+' · '+k+(d.fname!==k?' ('+d.fname+')':'')+'<br>D '+d.dec.toFixed(1)+' / I '+d.inc.toFixed(1)+'<br>MAD '+d.mad.toFixed(1)+'°'+(level!=='specimen'?'<br><i>click to open specimen</i>':'')),
+      hoverinfo:'text', mode:'markers', type:'scatter', showlegend:false,
+      marker:{size:level==='specimen'?13:9, color:SLOTC[k],
+        symbol:dk.map(d=>d.inc>=0?'star':'star-open'), line:{width:1,color:SLOTC[k]}}});
+    if(level!=='specimen' && dk.length>=2){
+      const fm=fisherMean(dk);
+      if(fm){
+        if(isFinite(fm.a95)&&fm.a95>0&&fm.a95<90){
+          const ring=a95CirclePts(fm);
+          data.push({x:ring.map(p=>p.x),y:ring.map(p=>p.y),mode:'lines',type:'scatter',hoverinfo:'skip',
+            line:{color:SLOTC[k],width:1,dash:'dot'},showlegend:false});
+        }
+        const mp=eqXY(fm.dec,fm.inc);
+        data.push({x:[mp.x],y:[mp.y],mode:'markers',type:'scatter',hoverinfo:'text',
+          text:[k+' Fisher mean (n='+fm.n+')<br>D '+fm.dec.toFixed(1)+' / I '+fm.inc.toFixed(1)+'<br>α95 '+(isFinite(fm.a95)?fm.a95.toFixed(1):'—')+'° · k '+(fm.k>999?'∞':fm.k.toFixed(1))],
+          marker:{size:14,symbol:fm.inc>=0?'diamond':'diamond-open',color:SLOTC[k],line:{width:2,color:t.bg}},showlegend:false});
+        statLines.push('<span class="sline" style="color:'+SLOTC[k]+'"><b>'+k+'</b> D '+fm.dec.toFixed(1)+' / I '+fm.inc.toFixed(1)+' · α95 '+(isFinite(fm.a95)?fm.a95.toFixed(1):'—')+'° · k '+(fm.k>999?'∞':fm.k.toFixed(1))+' · n '+fm.n+'</span>');
+      }
+    }
+  });
+  setEqStats(statLines.length ? csLabel()+' Fisher means<br>'+statLines.join('<br>') : '');
+  Plotly.react('eq',data,eqLayout(t),{displayModeBar:false,responsive:true});
+}
+function plotDecay(sp){
+  const t=themeColors();
+  const Jmax=Math.max(...sp.steps.map(s=>s.J),1e-30);
+  const data=[
+    {x:sp.steps.filter(s=>!s.skipped).map(s=>s.idx), y:sp.steps.filter(s=>!s.skipped).map(s=>s.J/Jmax),
+     mode:'lines',type:'scatter',hoverinfo:'skip',line:{color:t.tx3,width:1},showlegend:false},
+    {x:sp.steps.map(s=>s.idx), y:sp.steps.map(s=>s.J/Jmax),
+     customdata:sp.steps.map(s=>s.idx), text:sp.steps.map(s=>hoverTxt(sp,s)),hoverinfo:'text',
+     mode:'markers',type:'scatter',
+     marker:{size:6,color:markerColors(sp,t.tx),symbol:sp.steps.map(s=>s.skipped?'x':'circle'),line:{width:1,color:t.bdr}}},
+  ];
+  const shapes=[];
+  SLOTS.forEach(k=>{
+    const f=sp.fits[k];
+    if(!f) return;
+    selRuns(fitSel(sp,f)).forEach(([a,b])=>shapes.push({
+      type:'rect',x0:a-0.4,x1:b+0.4,y0:0,y1:1,yref:'paper',
+      fillcolor:SLOTC[k],opacity:0.10,line:{width:0}
+    }));
+  });
+  Plotly.react('dec',data,{
+    paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+    font:{family:'IBM Plex Mono',size:8.5,color:t.tx2},
+    margin:{l:38,r:8,t:20,b:52},showlegend:false,shapes,
+    xaxis:{tickmode:'array',tickvals:sp.steps.map(s=>s.idx),ticktext:sp.steps.map(s=>s.label),tickangle:-60,gridcolor:t.bdr,griddash:'dot'},
+    yaxis:{title:{text:'J/J<sub>max</sub>',font:{size:9}},gridcolor:t.bdr,griddash:'dot',rangemode:'tozero'},
+    dragmode:false,
+  },{displayModeBar:false,responsive:true});
+}
+
+/* ═════════════════════════ rendering: console & strip ═════════════════════════ */
+function renderSlots(sp){
+  const host=document.getElementById('slots');
+  host.innerHTML='';
+  const term=sp?terminalSlot(sp):null;
+  let nFits=0, anyUsable=false, specTotal=0;
+  SLOTS.forEach(k=>{
+    const res=sp?(sp._res&&sp._res[k]):null;
+    const d=document.createElement('div');
+    d.className='slot'+(S.armed===k?' armed':'')+((sp&&sp.fits[k])?' hasfit':'');
+    d.style.setProperty('--slotc',SLOTC[k]);
+    let body='';
+    if(sp){
+      const f=sp.fits[k];
+      if(f) syncBounds(sp,f);
+      const mkSel=(end,cur)=>{
+        let o='<select data-slot="'+k+'" data-end="'+end+'" title="sets a contiguous range '+(end?'ending':'starting')+' here (then click points to drop/add any)"><option value="">'+(end?'to…':'from…')+'</option>';
+        sp.steps.forEach((s,i)=>{ o+='<option value="'+i+'"'+(cur===i?' selected':'')+'>'+s.label+'</option>'; });
+        return o+'</select>';
+      };
+      body+='<div class="bnd-row">'+mkSel(0, f?f.i0:null)+mkSel(1, f?f.i1:null)+'</div>';
+      if(res){
+        if(res.invalid){
+          body+='<div class="fit-stats crit-bad">'+res.invalid+'</div>';
+        } else {
+          const rG=res.geo, rT=res.tc;
+          const isTerm=term&&term.slot===k&&term.reaches;
+          const sc=scoreFit(sp,k,res,term);
+          nFits++;
+          if(sc){ specTotal+=sc.score; if(sc.usable) anyUsable=true; }
+          const madCls=(rG.mad<=10)?'crit-ok':'crit-bad';
+          const repG = k==='LT', hl=(x,on)=> on?'<b>'+x+'</b>':x;
+          body+='<div class="fit-stats">'+
+            (sc?'<span class="slot-grade g-'+sc.grade+'" style="color:'+(sc.grade==='S'?'var(--amb)':sc.grade==='A'?'var(--ac)':sc.grade==='F'||sc.grade==='D'?'var(--red)':'var(--tx)')+'">'+sc.grade+'<span style="font-size:8px"> '+sc.score+'</span></span>':'')+
+            hl('geo  D '+rG.dec.toFixed(1)+' / I '+rG.inc.toFixed(1), repG)+'<br>'+
+            hl('tilt D '+rT.dec.toFixed(1)+' / I '+rT.inc.toFixed(1), !repG)+'<br>'+
+            'MAD <span class="'+madCls+'">'+rG.mad.toFixed(1)+'°</span>'+
+            (isTerm?' · dang <span class="'+(rG.dang<=15?'crit-ok':'crit-bad')+'">'+rG.dang.toFixed(1)+'°</span>':'')+
+            ' · n='+res.nUsed+(res.nTotal>res.nUsed?'/'+res.nTotal:'')+' pts'+
+            (isTerm?' · <span style="color:var(--tx3)">terminal</span>':'')+
+            '</div>';
+          if(res.warns.length) body+='<div class="fit-warn">⚠ '+res.warns.join('<br>⚠ ')+'</div>';
+          if(isTerm && sc && sc.usable) body+='<div style="color:var(--amb);font-size:9px;margin-top:3px">★ USABLE ChRM</div>';
+        }
+      } else if(S.armed===k){
+        body+='<div class="fit-stats" style="color:var(--tx3)">mode on — click points (strip or plots) to build the fit</div>';
+      }
+    }
+    const orig=(sp&&sp.fits[k]&&sp.fits[k].name&&sp.fits[k].name!==k)?'<span style="font-size:8px;color:var(--tx3)">·'+sp.fits[k].name+'</span>':'';
+    d.innerHTML='<div class="slot-hdr"><span class="slot-dot"></span><span class="slot-name">'+k+orig+'</span>'+
+      '<span class="slot-armtag">MODE ON</span>'+
+      ((sp&&sp.fits[k])?'<span class="slot-x" title="clear fit">×</span>':'')+'</div>'+
+      '<div class="slot-body">'+body+'</div>';
+    d.querySelector('.slot-hdr').onclick=e=>{
+      if(e.target.classList.contains('slot-x')){ clearFit(k); return; }
+      armSlot(S.armed===k?null:k);
+    };
+    d.querySelectorAll('select').forEach(sel=>{
+      sel.onclick=e=>e.stopPropagation();
+      sel.onchange=()=>applyRangeBound(sel.dataset.slot, +sel.dataset.end, sel.value);
+    });
+    host.appendChild(d);
+  });
+  document.getElementById('sum-fits').textContent=nFits+' fit'+(nFits===1?'':'s')+(nFits?' · '+specTotal+' pts':'');
+  document.getElementById('sum-chrm').innerHTML=anyUsable?'<span style="color:var(--amb)">★ ChRM</span>':'';
+  document.getElementById('save-btn').disabled=!(sp&&nFits>0);
+  sp&&(sp._specTotal=specTotal)&&(sp._anyUsable=anyUsable);
+  if(sp){ sp._specTotal=specTotal; sp._anyUsable=anyUsable; }
+}
+function renderStrip(sp){
+  const host=document.getElementById('step-strip');
+  host.innerHTML='';
+  if(!sp){ host.innerHTML='<span style="color:var(--tx3);font-size:10px">load files to begin…</span>'; return; }
+  sp.steps.forEach(s=>{
+    const c=document.createElement('div');
+    c.className='chip'+(s.skipped?' skipped':'')+(s.warn?' warnstep':'');
+    c.innerHTML=s.label+'<span class="j">'+s.J.toExponential(1)+'</span>';
+    const mem=slotsOfStep(sp,s.idx);
+    if(mem.length && !s.skipped){
+      const w=100/mem.length;
+      const segs=mem.map((k,i)=>SLOTC[k]+' '+(i*w)+'% '+((i+1)*w)+'%').join(',');
+      c.style.backgroundImage='linear-gradient(to right,'+segs+')';
+      c.style.backgroundSize='100% 3px';
+      c.style.backgroundPosition='bottom';
+      c.style.backgroundRepeat='no-repeat';
+      c.style.borderColor=SLOTC[mem[mem.length-1]];
+    }
+    c.title=(s.warn?('⚠ '+s.warn+'\n'):'')+'click: toggle in '+(S.armed||'the armed')+' fit · right-click: skip';
+    c.onclick=()=>pointClicked(s.idx);
+    c.oncontextmenu=e=>{e.preventDefault();toggleSkip(s.idx);};
+    host.appendChild(c);
+  });
+}
+function renderAll(){
+  const sp=S.cur?S.specs[S.cur]:null;
+  if(sp){
+    sp._res={};
+    SLOTS.forEach(k=>{ sp._res[k]=sp.fits[k]?computeFit(sp,k):null; });
+    document.getElementById('spec-title').textContent=sp.name;
+    plotZij(sp); plotEq(sp); plotDecay(sp);
+  } else {
+    document.getElementById('spec-title').textContent='';
+  }
+  renderSlots(sp); renderStrip(sp);
+  document.getElementById('hud-score').textContent=S.score;
+  document.getElementById('hud-streak').textContent=S.streak;
+  document.getElementById('hud-best').textContent=S.best;
+  document.getElementById('streak-pill').classList.toggle('hot',S.streak>=3);
+}
+
+/* ═════════════════════════ interaction ═════════════════════════ */
+function selectSpec(name){
+  S.cur=name;              // mode (S.armed) is sticky across specimens
+  S.zijZoom=null;          // new specimen → re-fit the Zijderveld view
+  renderQueue(); renderAll();
+}
+function armSlot(k){
+  S.armed=k;
+  renderSlots(S.cur?S.specs[S.cur]:null); renderStrip(S.cur?S.specs[S.cur]:null);
+  if(k) toast(k+' mode — click points to add/remove them from the fit');
+}
+// sticky-mode point toggling: every click adds/removes that point in the armed fit
+// contiguous index span [i0..i1] (gaps auto-filled); computeFit still drops skipped points
+function contiguousSel(sp, i0, i1){
+  const sel=[]; for(let i=i0;i<=i1;i++) if(sp.steps[i]) sel.push(i); return sel;
+}
+// single click toggles a point in/out of the armed fit, then the window is remade contiguous:
+//  • deselect an endpoint  → window shrinks by one
+//  • deselect an interior  → stays filled (contiguous enforced); right-click skip to really drop it
+//  • click outside         → window extends to it, filling the gap
+function pointClicked(idx){
+  const sp=S.specs[S.cur];
+  if(!sp || !sp.steps[idx]) return;
+  if(!S.armed){ toast('set a mode first — click LT / MT / HT (or press 1/2/3)'); return; }
+  let f=sp.fits[S.armed];
+  if(!f){ sp.fits[S.armed]={sel:contiguousSel(sp,idx,idx), i0:idx, i1:idx}; persistSpec(sp); renderAll(); return; }
+  const sel = f.sel ? f.sel.slice() : contiguousSel(sp,f.i0,f.i1);
+  const at = sel.indexOf(idx);
+  if(at>=0) sel.splice(at,1); else sel.push(idx);
+  if(!sel.length){ sp.fits[S.armed]=null; persistSpec(sp); renderAll(); return; }
+  sel.sort((a,b)=>a-b);
+  const i0=sel[0], i1=sel[sel.length-1];
+  f.i0=i0; f.i1=i1; f.sel=contiguousSel(sp,i0,i1);   // remake contiguous series each time
+  persistSpec(sp);
+  renderAll();
+}
+function toggleSkip(idx){
+  const sp=S.specs[S.cur];
+  if(!sp||!sp.steps[idx]) return;
+  sp.steps[idx].skipped=!sp.steps[idx].skipped;
+  persistSpec(sp);
+  renderAll();
+}
+function clearFit(k){
+  const sp=S.specs[S.cur];
+  if(!sp) return;
+  sp.fits[k]=null; persistSpec(sp); renderAll();
+}
+// dropdown range entry: sets the fit to the contiguous run between the two bounds
+// (point clicks can then drop or add arbitrary steps)
+function applyRangeBound(slot, end, val){
+  const sp=S.specs[S.cur];
+  if(!sp || val==='') return;
+  const idx=parseInt(val);
+  if(isNaN(idx) || !sp.steps[idx]) return;
+  const f=sp.fits[slot];
+  let i0=f?f.i0:idx, i1=f?f.i1:idx;
+  if(end===0) i0=idx; else i1=idx;
+  if(i1<i0){ const t=i0; i0=i1; i1=t; }
+  const sel=[]; for(let i=i0;i<=i1;i++) sel.push(i);
+  sp.fits[slot]=Object.assign({}, f||{}, {sel, i0, i1});
+  persistSpec(sp); renderAll();
+}
+
+// plot click + right-click wiring
+function wirePlot(id){
+  const gd=document.getElementById(id);
+  gd.on('plotly_click', ev=>{
+    const p=ev.points&&ev.points[0];
+    if(!p||p.customdata===undefined) return;
+    if(typeof p.customdata==='string'){
+      if(p.customdata.startsWith('spec:')){ const n=p.customdata.slice(5); if(n!==S.cur&&S.specs[n]) selectSpec(n); }
+    } else pointClicked(p.customdata);
+  });
+  gd.on('plotly_hover', ev=>{
+    const p=ev.points&&ev.points[0];
+    if(p&&typeof p.customdata==='number') S.hover={plot:id, idx:p.customdata, t:Date.now()};
+  });
+  if(id==='zij'){
+    gd.on('plotly_relayout', ev=>{
+      if(ev['xaxis.autorange'] || ev['yaxis.autorange']){ S.zijZoom=null; return; }  // double-click = reset to auto
+      const fl=gd._fullLayout;
+      if(('xaxis.range[0]' in ev)||('yaxis.range[0]' in ev)||('xaxis.range' in ev)){
+        S.zijZoom={ x:[fl.xaxis.range[0],fl.xaxis.range[1]], y:[fl.yaxis.range[0],fl.yaxis.range[1]] };
+      }
+    });
+  }
+  gd.parentElement.addEventListener('contextmenu', e=>{
+    e.preventDefault();
+    // fresh hover → use it
+    if(S.hover.plot===id && Date.now()-S.hover.t<2500){ toggleSkip(S.hover.idx); return; }
+    // fallback: nearest point in pixel space
+    const sp=S.cur?S.specs[S.cur]:null;
+    if(!sp||!gd._fullLayout) return;
+    const fl=gd._fullLayout, xa=fl.xaxis, ya=fl.yaxis;
+    const rect=gd.getBoundingClientRect();
+    const px=e.clientX-rect.left, py=e.clientY-rect.top;
+    let best=null,bestD=18*18;
+    (gd.data||[]).forEach(tr=>{
+      if(!tr.customdata || typeof tr.customdata[0]!=='number') return;
+      tr.x.forEach((xv,i)=>{
+        const X=xa.d2p(xv)+xa._offset, Y=ya.d2p(tr.y[i])+ya._offset;
+        const d=(X-px)*(X-px)+(Y-py)*(Y-py);
+        if(d<bestD){ bestD=d; best=tr.customdata[i]; }
+      });
+    });
+    if(best!==null) toggleSkip(best);
+  });
+}
+
+/* ═════════════════════════ save / score / advance ═════════════════════════ */
+function saveSpec(){
+  const sp=S.specs[S.cur];
+  if(!sp) return;
+  const pts=sp._specTotal||0;
+  const wasUsable=!!sp._anyUsable;
+  const prev=sp.saved?(sp.lastPts||0):0;
+  sp.saved=true;
+  sp.lastPts=pts;
+  // specimen grade = average of fit grades weight: use max fit grade logic → from points/numFits
+  const nFits=SLOTS.filter(k=>sp.fits[k]&&sp._res[k]&&!sp._res[k].invalid).length;
+  sp.lastGrade=gradeOf(Math.min(100, nFits?Math.round(pts/nFits):0));
+  S.score+=pts-prev;
+  if(wasUsable){ S.streak+=1; } else { S.streak=0; }
+  S.best=Math.max(S.best,S.streak);
+  lsSet('fitquest:session',JSON.stringify({score:S.score,streak:S.streak,best:S.best}));
+  persistSpec(sp);
+  autoBackupRedo();
+  showScore(pts, wasUsable, sp.lastGrade);
+  renderQueue();
+  // advance to next unsaved specimen with data
+  const i=S.order.indexOf(S.cur);
+  for(let j=1;j<=S.order.length;j++){
+    const n=S.order[(i+j)%S.order.length];
+    if(!S.specs[n].saved && S.specs[n].steps.length>0){ selectSpec(n); return; }
+  }
+  renderAll();
+  toast('queue complete — export your .redo!');
+}
+function showScore(pts, usable, grade){
+  const pop=document.getElementById('score-pop');
+  pop.querySelector('.big').textContent='+'+pts;
+  pop.querySelector('.tag').textContent=usable?'★ CLEAN ChRM · grade '+grade+' · streak '+(S.streak):'grade '+grade;
+  pop.classList.toggle('chrm',usable);
+  pop.classList.add('show');
+  setTimeout(()=>pop.classList.remove('show'),1400);
+}
+let toastTimer=null;
+function toast(msg, ms){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('vis');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('vis'), ms||2200);
+}
+
+/* ═════════════════════════ redo export ═════════════════════════ */
+function boundRedoVal(step){
+  const tr=step.treat;
+  if(tr.type==='TT') return (tr.C+273).toFixed(0);
+  if(tr.type==='AF') return (tr.T).toExponential(2);
+  if(tr.type==='LN2') return '77';
+  return '0';
+}
+function buildRedoLines(){
+  const lines=[];
+  S.order.forEach(n=>{
+    const sp=S.specs[n];
+    SLOTS.forEach(k=>{
+      const f=sp.fits[k];
+      if(!f) return;
+      const res=computeFit(sp,k);
+      if(!res||res.invalid) return;
+      lines.push([sp.name,'DE-BFL',boundRedoVal(sp.steps[f.i0]),boundRedoVal(sp.steps[f.i1]),f.name||k,f.color||SLOTC[k],'g'].join('\t'));
+    });
+  });
+  return lines;
+}
+function downloadRedo(suffix){
+  const lines=buildRedoLines();
+  if(!lines.length) return 0;
+  const blob=new Blob([lines.join('\n')+'\n'],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  // all sites in one redo; name generically when more than one site is loaded
+  const nSites=new Set(S.order.filter(n=>S.specs[n].steps.length).map(n=>siteOf(n))).size;
+  const one=Object.keys(S.sites)[0];
+  const tag = nSites>1 ? 'Laos_allsites' : (one?one.replace(/\.sam$/i,''):'export');
+  a.download='fitquest_'+tag+(suffix||'')+'.redo';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return lines.length;
+}
+function exportRedo(){
+  const n=downloadRedo('');
+  toast(n ? n+' fits exported (demag_gui format)' : 'no valid fits to export yet');
+}
+// auto-backup: drop a fresh .redo to Downloads shortly after each save (debounced to
+// coalesce bursts). file:// can't silently overwrite a repo file, so this is a download.
+let autoBkTimer=null;
+function autoBackupRedo(){
+  if(!S.autoBackup) return;
+  clearTimeout(autoBkTimer);
+  autoBkTimer=setTimeout(()=>{
+    const n=downloadRedo('_autosave');
+    if(n) toast('↓ auto-backup saved to Downloads ('+n+' fits)', 1600);
+  }, 1500);
+}
+function setAutoBackup(on){
+  S.autoBackup=on;
+  lsSet('fitquest:autobk', on?'on':'off');
+  const btn=document.getElementById('autobk-btn');
+  if(btn){ btn.classList.toggle('on',on); btn.textContent = on?'⤓ auto ✓':'⤓ auto'; }
+}
+
+/* ═════════════════════════ MagIC 3.0 export ═════════════════════════ */
+function magicTable(name, cols, rows){
+  const esc=v=>(v===undefined||v===null)?'':String(v);
+  let out='tab\t'+name+'\n'+cols.join('\t')+'\n';
+  rows.forEach(r=>{ out+=cols.map(c=>esc(r[c])).join('\t')+'\n'; });
+  return out;
+}
+function magicTreatTemp(s){ const t=s.treat; if(t.type==='TT')return (t.C+273).toFixed(0); if(t.type==='LN2')return '77'; return '273'; }
+function magicMethodMeas(s){ const t=s.treat; return t.type==='NRM'?'LT-NO':t.type==='TT'?'LT-T-Z':t.type==='AF'?'LT-AF-Z':t.type==='LN2'?'LT-LT-Z':'LT-NO'; }
+function exportMagic(){
+  const SITE=n=>siteLabel(siteOf(n));
+  const sampleRows=[], specRows=[], measRows=[];
+  const LOC='Laos'; const CIT='This study'; const SW='FITQUEST';
+  let nf=0;
+  S.order.forEach(n=>{
+    const sp=S.specs[n];
+    if(!sp.steps.length) return;
+    const site=SITE(n), samp=sp.name;
+    // measurements: every step (specimen coordinates)
+    const expT='LP-DIR-T', hasAF=sp.steps.some(s=>s.treat.type==='AF');
+    sp.steps.forEach((s,i)=>{
+      measRows.push({
+        measurement: sp.name+'_'+(i+1), experiment: sp.name+':'+(hasAF?'LP-DIR-AF':'LP-DIR-T'),
+        specimen: sp.name, dir_csd: s.csd!==null?s.csd:'', dir_dec: s.decS.toFixed(1), dir_inc: s.incS.toFixed(1),
+        treat_ac_field: s.treat.type==='AF'?s.treat.T.toExponential(3):'0', treat_dc_field:'0',
+        treat_dc_field_phi:'0', treat_dc_field_theta:'0', treat_step_num:i+1, treat_temp: magicTreatTemp(s),
+        citations:CIT, method_codes: magicMethodMeas(s), quality: s.skipped?'b':'g', sequence:i+1,
+        standard:'u', meas_temp:'273', software_packages:SW, magn_moment: s.J.toExponential(4),
+        sample: samp, site: site, location: LOC,
+      });
+    });
+    // samples: orientation from the specimen header
+    sampleRows.push({
+      sample: samp, site: site, specimens: sp.name,
+      azimuth: (sp.hdr.coreStrike||0).toFixed(1), dip: (sp.hdr.coreDip||0).toFixed(1),
+      bed_dip_direction: (sp.hdr.bedStrike||0).toFixed(1), bed_dip: (sp.hdr.bedDip||0).toFixed(1),
+      azimuth_dec_correction:'0', method_codes:'SO-CMD-NORTH', citations:CIT, result_quality:'g',
+      location: LOC, software_packages:SW,
+    });
+    // specimens: one row per fit per coordinate frame (tilt 0 = geo, 100 = tilt)
+    SLOTS.forEach(k=>{
+      const f=sp.fits[k]; if(!f) return;
+      const res=computeFit(sp,k); if(!res||res.invalid) return;
+      nf++;
+      const term=terminalSlot(sp), isTerm=term&&term.slot===k&&term.reaches;
+      [['geo',0,'DA-DIR-GEO'],['tc',100,'DA-DIR-TILT']].forEach(([cs,tilt,mc])=>{
+        const r=res[cs];
+        specRows.push({
+          specimen: sp.name, experiments: sp.name+':'+(hasAF?'LP-DIR-AF':'LP-DIR-T'), sample: samp,
+          dir_comp: f.name||k, dir_dec: r.dec.toFixed(1), dir_inc: r.inc.toFixed(1),
+          dir_n_comps: SLOTS.filter(x=>sp.fits[x]).length, dir_n_measurements: res.nUsed,
+          dir_tilt_correction: tilt, dir_dang: isTerm&&isFinite(r.dang)?r.dang.toFixed(1):'',
+          dir_mad_free: r.mad.toFixed(1), meas_step_max: magicTreatTemp(sp.steps[f.i1]),
+          meas_step_min: magicTreatTemp(sp.steps[f.i0]), meas_step_unit:'K', software_packages:SW,
+          int_corr:'u', citations:CIT, method_codes:'LP-DIR-T:DE-BFL:'+mc, result_quality:'g',
+          location: LOC, site: site,
+        });
+      });
+    });
+  });
+  if(!nf){ toast('no valid fits to export yet'); return; }
+  // ── sites table: Fisher mean of the ChRM (terminal) direction per site, all sites ──
+  const siteLatLon={};
+  Object.values(S.sites).forEach(st=>{ (st.order||[]).forEach(fn=>{ const sk=SITE(fn); if(!(sk in siteLatLon)) siteLatLon[sk]={lat:st.sam.lat,lon:st.sam.lon}; }); });
+  const bySiteDirs={};
+  S.order.forEach(n=>{ const sp=S.specs[n]; if(!sp.steps.length) return; const d=specimenDir(sp,'ALL'); if(d){ (bySiteDirs[SITE(n)]=bySiteDirs[SITE(n)]||[]).push({dec:d.dec,inc:d.inc, samp:sampleOf(sp.name), spec:sp.name}); } });
+  const siteRows=[]; const lats=[], lons=[];
+  Object.keys(bySiteDirs).sort().forEach(site=>{
+    const ds=bySiteDirs[site], fm=fisherMean(ds);
+    const ll=siteLatLon[site]||{};
+    if(ll.lat!==undefined){ lats.push(ll.lat); lons.push(ll.lon); }
+    const samples=[...new Set(ds.map(d=>d.samp))];
+    siteRows.push({
+      site, location:LOC, samples:samples.join(':'), specimens:ds.map(d=>d.spec).join(':'),
+      dir_comp_name:'ChRM', dir_dec:fm?fm.dec.toFixed(1):'', dir_inc:fm?fm.inc.toFixed(1):'',
+      dir_k:fm&&fm.k<9999?fm.k.toFixed(1):'', dir_alpha95:fm&&isFinite(fm.a95)?fm.a95.toFixed(1):'',
+      dir_n_samples:samples.length, dir_n_specimens:ds.length, dir_n_specimens_lines:ds.length,
+      dir_n_specimens_planes:0, dir_polarity:fm?((fm.inc<0)?'r':'n'):'', dir_r:fm?(fm.n-(fm.k>0?(fm.n-1)/fm.k:0)).toFixed(3):'',
+      dir_tilt_correction:0, lat:ll.lat!==undefined?ll.lat:'', lon:ll.lon!==undefined?ll.lon:'',
+      result_quality:'g', method_codes:'LP-DC:DE-FM', citations:CIT, software_packages:SW,
+    });
+  });
+  // ── locations table: one row bounding all sites ──
+  const locRows=[{ location:LOC, location_type:'outcrop', citations:CIT, software_packages:SW,
+    lat_s:lats.length?Math.min(...lats):'', lat_n:lats.length?Math.max(...lats):'',
+    lon_w:lons.length?Math.min(...lons):'', lon_e:lons.length?Math.max(...lons):'' }];
+  const measCols=['measurement','experiment','specimen','dir_csd','dir_dec','dir_inc','treat_ac_field','treat_dc_field','treat_dc_field_phi','treat_dc_field_theta','treat_step_num','treat_temp','citations','instrument_codes','method_codes','quality','sequence','standard','meas_n_orient','meas_temp','analysts','description','software_packages','magn_moment','magn_x_sigma','magn_y_sigma','magn_z_sigma','sample','site','location'];
+  const sampCols=['sample','site','specimens','dir_alpha95','dir_comp_name','dir_dec','dir_inc','dir_k','dir_n_specimens','dir_n_specimens_lines','dir_n_specimens_planes','dir_r','dir_tilt_correction','height','geologic_classes','geologic_types','lithologies','analysts','software_packages','azimuth','azimuth_dec_correction','bed_dip','bed_dip_direction','dip','citations','method_codes','result_quality','location','tilt_correction'];
+  const specCols=['specimen','experiments','sample','dir_alpha95','dir_comp','dir_dec','dir_inc','dir_n_comps','dir_n_measurements','dir_tilt_correction','dir_dang','dir_mad_free','meas_step_max','meas_step_min','meas_step_unit','analysts','instrument_codes','software_packages','int_corr','citations','method_codes','result_quality','volume','weight','location','site'];
+  const siteCols=['site','location','samples','specimens','dir_alpha95','dir_comp_name','dir_dec','dir_inc','dir_k','dir_n_samples','dir_n_specimens','dir_n_specimens_lines','dir_n_specimens_planes','dir_polarity','dir_r','dir_tilt_correction','lat','lon','analysts','criteria','software_packages','citations','method_codes','result_quality'];
+  const locCols=['location','location_type','lat_s','lat_n','lon_w','lon_e','citations','software_packages'];
+  // standard MagIC contribution order: locations, sites, samples, specimens, measurements
+  const txt = magicTable('locations',locCols,locRows)
+            + magicTable('sites',siteCols,siteRows)
+            + magicTable('samples',sampCols,sampleRows)
+            + magicTable('specimens',specCols,specRows)
+            + magicTable('measurements',measCols,measRows);
+  const blob=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='fitquest_Laos_magic.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('MagIC: '+locRows.length+' loc · '+siteRows.length+' sites · '+sampleRows.length+' samples · '+nf+' fits · '+measRows.length+' meas');
+}
+
+/* ═════════════════════════ global wiring ═════════════════════════ */
+document.getElementById('save-btn').onclick=saveSpec;
+document.getElementById('magic-btn').onclick=exportMagic;
+document.getElementById('autobk-btn').onclick=()=>setAutoBackup(!S.autoBackup);
+document.getElementById('copy-btn').onclick=()=>copyFits(document.getElementById('clip-scope').value);
+document.getElementById('paste-btn').onclick=pasteFits;
+document.getElementById('redo-btn').onclick=exportRedo;
+document.getElementById('help-btn').onclick=()=>document.getElementById('help-ov').classList.add('vis');
+document.getElementById('help-ov').onclick=e=>{ if(e.target.id==='help-ov') e.target.classList.remove('vis'); };
+document.getElementById('theme-btn').onclick=()=>{
+  document.documentElement.classList.toggle('light');
+  renderAll();
+};
+document.querySelectorAll('.coord-btn').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.coord-btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    S.cs=b.dataset.cs;
+    S.zijZoom=null;        // coordinate system rotates the data → re-fit view
+    renderAll();
+  };
+});
+document.getElementById('zij-conv').onchange=e=>{ S.conv=e.target.value; S.zijZoom=null; renderAll(); };
+document.getElementById('eq-level').onchange=e=>{ S.eqLevel=e.target.value; renderAll(); };
+document.getElementById('eq-comp').onchange=e=>{ S.eqComp=e.target.value; renderAll(); };
+document.getElementById('eq-site').onchange=e=>{
+  S.eqSite=e.target.value; S.eqSample='all';   // changing site resets the boulder pick
+  if(S.eqSite!=='current' && (S.eqLevel==='specimen'||S.eqLevel==='all')){
+    S.eqLevel='site'; document.getElementById('eq-level').value='site';
+  }
+  renderAll();
+};
+document.getElementById('eq-sample').onchange=e=>{ S.eqSample=e.target.value; renderAll(); };
+document.getElementById('q-sort').onchange=e=>{ S.qSort=e.target.value; renderQueue(); };
+document.getElementById('q-filter').onchange=e=>{ S.qFilter=e.target.value; renderQueue(); };
+document.getElementById('q-dir').onclick=()=>{ S.qDir=-S.qDir; document.getElementById('q-dir').textContent=S.qDir>0?'↑':'↓'; renderQueue(); };
+document.getElementById('eq-cong').onclick=()=>{
+  S.eqCong=!S.eqCong;
+  document.getElementById('eq-cong').classList.toggle('on',S.eqCong);
+  renderAll();
+};
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  if(e.key==='1') armSlot(S.armed==='LT'?null:'LT');
+  else if(e.key==='2') armSlot(S.armed==='MT'?null:'MT');
+  else if(e.key==='3') armSlot(S.armed==='HT'?null:'HT');
+  else if(e.key==='s'||e.key==='S'){ if(!document.getElementById('save-btn').disabled) saveSpec(); }
+  else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+    const avail=S.order.filter(n=>S.specs[n].steps.length>0);
+    if(!avail.length) return;
+    let i=avail.indexOf(S.cur);
+    i=(i+(e.key==='ArrowRight'?1:-1)+avail.length)%avail.length;
+    selectSpec(avail[i]);
+  }
+  else if(e.key==='Escape'){ armSlot(null); document.getElementById('help-ov').classList.remove('vis'); }
+});
+// init empty plots & wire interactions once
+['zij','eq','dec'].forEach(id=>{
+  Plotly.newPlot(id,[],{paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+    xaxis:{visible:false},yaxis:{visible:false},margin:{l:0,r:0,t:0,b:0}},
+    {displayModeBar:false,responsive:true}).then(()=>wirePlot(id));
+});
+// restore session HUD + fit clipboard
+(function(){
+  const raw=lsGet('fitquest:session');
+  if(raw){ try{ const d=JSON.parse(raw); S.score=d.score||0; S.streak=d.streak||0; S.best=d.best||0; }catch(e){} }
+  const clip=lsGet('fitquest:clip');
+  if(clip){ try{ S.fitClip=JSON.parse(clip); }catch(e){} }
+  setAutoBackup(lsGet('fitquest:autobk')!=='off');   // default on
+  renderAll(); renderClipInfo();
+})();
+window.addEventListener('resize',()=>{['zij','eq','dec'].forEach(id=>{const el=document.getElementById(id); if(el&&el.data)Plotly.Plots.resize(el);});});
+</script>
+</body>
+</html>
