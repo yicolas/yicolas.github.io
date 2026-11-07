@@ -312,7 +312,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
   <h4>Easiest: drag the whole repo folder in</h4>
   <p>Drag the Laos repo folder (the one containing <code>Magnetometer_Data_corrected</code>) onto the drop zone. The app finds the best <code>.redo</code> inside it — preferring <code>Magnetometer_Data_corrected/demag_gui.redo</code>, the manuscript fits — loads every specimen it names, and queues them. This is one gesture and works even when the page is opened as a local <code>file://</code> (where the folder-picker button is disabled). When a specimen exists in several places it prefers paths containing <code>corrected</code> and avoids <code>_archive</code>/<code>safety</code>/old copies.</p>
   <h4>Or drop a .redo on its own</h4>
-  <p>Drop a <code>.redo</code> file and the app asks for your data root once (remembered in Chrome when served over http/https), then resolves its specimens. If it reports <b>0 found</b>, you pointed it at a folder without the specimen files — drag the repo folder in instead. <code>.sam</code> files beside the matched specimens set the site grouping and queue order. Fit names map <code>lt</code> → LT, <code>lt2</code> → MT, <code>mt</code> (the ChRM) → HT, and keep their original names and colors on export. Dropping a folder with no redo inside loads all its <code>.sam</code> sites.</p>
+  <p>Drop a <code>.redo</code> file and the app asks for your data root once (remembered in Chrome when served over http/https), then resolves its specimens. If it reports <b>0 found</b>, you pointed it at a folder without the specimen files — drag the repo folder in instead. <code>.sam</code> files beside the matched specimens set the site grouping and queue order. A name written as <code>HT:REV</code> pins the fit to that slot and keeps the label (this is how ⭳ .redo exports labelled fits). Fit names map <code>lt</code> → LT, <code>lt2</code> → MT, <code>mt</code> (the ChRM) → HT, and keep their original names and colors on export. Dropping a folder with no redo inside loads all its <code>.sam</code> sites.</p>
   <h4>Output</h4>
   <p><code>⭳ .redo</code> exports every fit in demag_gui format (thermal bounds in K, AF in T) — import it straight into demag_gui. Progress autosaves locally per specimen. Drop an existing .redo with your files to resume previous picks.</p>
   <p style="margin-top:10px;text-align:right"><button class="btn" onclick="document.getElementById('help-ov').classList.remove('vis')">close</button></p>
@@ -819,7 +819,10 @@ function boundToIdx(sp, val, isMax){
   return best;
 }
 // redo fit names → slots: lt→LT, lt2→MT, mt→HT (mt is the ChRM / terminal), else first free
+// "HT:REV" style names pin a fit to a slot while keeping its component label
+function splitSlotName(nm){ const m=/^(LT|MT|HT):(.+)$/.exec(nm||''); return m?{slot:m[1],name:m[2]}:{slot:null,name:nm}; }
 function slotForRedoName(sp, nm){
+  const pin=splitSlotName(nm).slot; if(pin) return pin;
   const n=(nm||'').toLowerCase();
   if(SLOTS.includes(nm)) return nm;
   if(n==='lt') return 'LT';
@@ -838,7 +841,7 @@ function applyPendingRedo(){
     const slot=slotForRedoName(sp, f[4]);
     if(!slot) return;
     const i0=boundToIdx(sp,f[2],false), i1=boundToIdx(sp,f[3],true);
-    if(i0!==null && i1!==null && i1>i0) sp.fits[slot]={i0,i1,name:f[4],color:f[5]||SLOTC[slot]};
+    if(i0!==null && i1!==null && i1>i0) sp.fits[slot]={i0,i1,name:splitSlotName(f[4]).name,color:f[5]||SLOTC[slot]};
   });
   S.pendingRedo=rest;
 }
@@ -1771,7 +1774,7 @@ function buildRedoLines(){
       if(!f) return;
       const res=computeFit(sp,k);
       if(!res||res.invalid) return;
-      lines.push([sp.name,'DE-BFL',boundRedoVal(sp.steps[f.i0]),boundRedoVal(sp.steps[f.i1]),f.name||k,f.color||SLOTC[k],'g'].join('\t'));
+      lines.push([sp.name,'DE-BFL',boundRedoVal(sp.steps[f.i0]),boundRedoVal(sp.steps[f.i1]),(f.name&&f.name!==k?k+':'+f.name:k),f.color||SLOTC[k],'g'].join('\t'));
     });
   });
   return lines;
