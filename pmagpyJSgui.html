@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v24 — pyRockmag fitting arcade</title>
+<title>FITQUEST v25 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -179,7 +179,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v24 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v25 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -296,8 +296,8 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
         <select id="clip-scope" title="which components to copy">
           <option value="all">all</option><option>LT</option><option>MT</option><option>HT</option>
         </select>
-        <button class="btn sm" id="copy-btn" title="copy the chosen fits from this specimen">⧉ copy</button>
-        <button class="btn sm" id="paste-btn" title="paste copied fits onto this specimen by matching temperature/field">paste ▸</button>
+        <button class="btn sm" id="copy-btn" title="copy the chosen fits from this specimen · ⌘C / Ctrl+C">⧉ copy</button>
+        <button class="btn sm" id="paste-btn" title="paste copied fits onto this specimen by matching temperature/field · ⌘V / Ctrl+V">paste ▸</button>
       </div>
       <div id="clip-info">clipboard empty</div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx2)">
@@ -336,6 +336,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_&lt;folder&gt;_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>⌘C</kbd> / <kbd>⌘V</kbd></td><td>copy this specimen's fits (scope from the menu next to <i>copy</i>: all / LT / MT / HT) and paste them onto another specimen, matched by temperature/field — same as the copy / paste buttons. Ctrl+C / Ctrl+V on Windows. If you have page text selected, ⌘C copies the text instead. Pastes are undoable.</td></tr>
     <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
     <tr><td><kbd>tilt</kbd></td><td><b>core / geo / tilt</b> pick the frame for plots, grading and site means (remembered). Tilt-corrected directions come from each CIT file's own tilt columns; under the buttons the console shows the specimen's bedding (dip and dip direction, declination applied) and nudges you to <b>tilt</b> for MT/HT when beds dip. The MagIC export writes specimen and site directions in <b>both</b> frames (tilt 0 and 100), and sample orientations as PmagPy expects them (azimuth = core strike + declination − 90, plunge = −dip, bed dip direction = strike + declination + 90), with the declination solved from each file's own columns.</td></tr>
     <tr><td><kbd>notes</kbd></td><td>the bar along the bottom holds a note for the current specimen; it saves as you type (shortcut keys are off while typing, <kbd>Esc</kbd> leaves the box). Specimens with notes show <span style="color:var(--amb)">✎</span> in the queue. Notes are written into the .redo as <code>#note &lt;specimen&gt; &lt;text&gt;</code> lines (ignored by demag_gui, read back by FITQUEST — they never overwrite a note you already have) and into the MagIC specimens table as <code>description</code>.</td></tr>
@@ -2502,6 +2503,9 @@ document.addEventListener('keydown',e=>{
     const k=e.key.toLowerCase();
     if(k==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
     if(k==='y'){ e.preventDefault(); redo(); return; }
+    // ⌘C / ⌘V copy and paste fits — unless you have page text selected (then the browser copies it)
+    if(k==='c' && !e.shiftKey && !(window.getSelection && String(window.getSelection()).trim())){ e.preventDefault(); copyFits(document.getElementById('clip-scope').value); return; }
+    if(k==='v' && !e.shiftKey){ e.preventDefault(); pasteFits(); return; }
     return;   // leave other ⌘/Ctrl shortcuts (copy, reload…) to the browser
   }
   if(e.key==='1') armSlot(S.armed==='LT'?null:'LT');
