@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v17 — pyRockmag fitting arcade</title>
+<title>FITQUEST v18 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -162,7 +162,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v17 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v18 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -302,6 +302,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
     <tr><td><kbd>reopen</kbd></td><td>the page reopens with the data, fits, skips and grades you last had loaded (kept in this browser). <b>⟲ new</b> (click twice) closes that session and starts empty; fits you saved still come back if you load the same specimens again.</td></tr>
     <tr><td><kbd>fit</kbd></td><td>line fit type for every fit: <b>DE-BFL</b> free, <b>DE-BFL-A</b> anchored, <b>DE-BFL-O</b> origin as a point (PmagPy names; written to exports). dang always comes from the free line.</td></tr>
     <tr><td><kbd>drop</kbd></td><td>which pre-demag steps are left out of <b>every</b> fit: the NRM, the first liquid-nitrogen cycle (<b>LN</b>, the first 77&nbsp;K step) and any later cycle (<b>LN2</b>, or a step labelled LN2). Default drops all three. Changing it re-applies to all loaded specimens, including ones you have saved; other skips (reruns, csd, right-clicks) are untouched. Remembered between sessions.</td></tr>
@@ -518,6 +519,7 @@ const FIT_CALCS={'DE-BFL':'free line','DE-BFL-A':'anchored to origin','DE-BFL-O'
 let FIT_CALC=(()=>{ try{ const m=localStorage.getItem('fitquest:calc'); return FIT_CALCS[m]?m:'DE-BFL'; }catch(e){ return 'DE-BFL'; } })();
 function setFitCalc(c){
   if(!FIT_CALCS[c]) return;
+  if(c!==FIT_CALC) pushUndoSetting('calc','fit type '+FIT_CALC+' → '+c, FIT_CALC);
   FIT_CALC=c;
   try{ localStorage.setItem('fitquest:calc', c); }catch(e){}
   const sel=document.getElementById('calc-sel'); if(sel) sel.value=c;
@@ -527,6 +529,7 @@ function setFitCalc(c){
 }
 function setDropMode(mode){
   if(!DROP_MODES[mode]) return;
+  if(mode!==DROP_MODE) pushUndoSetting('drop','drop '+DROP_MODE+' → '+mode, DROP_MODE);
   DROP_MODE=mode;
   try{ localStorage.setItem('fitquest:drop', mode); }catch(e){}
   const sel=document.getElementById('drop-sel'); if(sel) sel.value=mode;
@@ -980,6 +983,72 @@ async function clearSession(){
   toast('cleared — drop or pick a folder to start. Your saved fits come back if you load the same data.', 4000);
 }
 
+/* ═════════════════════════ undo / redo (⌘Z / ⌘⇧Z, Ctrl+Z / Ctrl+Y) ═════════════════════════ */
+// Every edit pushes the state it is about to change: a specimen edit stores that specimen's fits,
+// skips, saved flag and grade plus the score HUD; a menu change stores the previous setting.
+const UNDO_MAX=50;           // remember the last 50 changes
+const UNDO=[], REDO=[];
+let UNDO_APPLYING=false;
+function specState(sp){
+  return { name:sp.name, fits:JSON.parse(JSON.stringify(sp.fits)), skips:sp.steps.filter(x=>x.skipped).map(x=>x.idx),
+           saved:!!sp.saved, lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0 };
+}
+function hudState(){ return {score:S.score, streak:S.streak, best:S.best}; }
+function captureLike(e){   // current state of whatever entry e refers to
+  if(e.kind==='spec'){ const sp=S.specs[e.spec.name]; return sp?{kind:'spec', label:e.label, spec:specState(sp), hud:hudState()}:null; }
+  if(e.kind==='drop') return {kind:'drop', label:e.label, value:DROP_MODE};
+  if(e.kind==='calc') return {kind:'calc', label:e.label, value:FIT_CALC};
+  return null;
+}
+function pushUndo(label, sp){
+  if(UNDO_APPLYING) return;
+  if(sp===undefined) sp=S.cur?S.specs[S.cur]:null;
+  if(!sp) return;
+  UNDO.push({kind:'spec', label, spec:specState(sp), hud:hudState()});
+  if(UNDO.length>UNDO_MAX) UNDO.shift();
+  REDO.length=0;
+}
+function pushUndoSetting(kind, label, value){
+  if(UNDO_APPLYING) return;
+  UNDO.push({kind, label, value});
+  if(UNDO.length>UNDO_MAX) UNDO.shift();
+  REDO.length=0;
+}
+function applyUndoEntry(e){
+  UNDO_APPLYING=true;
+  try{
+    if(e.kind==='spec'){
+      const sp=S.specs[e.spec.name]; if(!sp) return false;
+      sp.fits=JSON.parse(JSON.stringify(e.spec.fits));
+      sp.steps.forEach(x=>{ x.skipped=false; }); e.spec.skips.forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
+      sp.saved=e.spec.saved; sp.lastGrade=e.spec.lastGrade; sp.lastPts=e.spec.lastPts;
+      S.score=e.hud.score; S.streak=e.hud.streak; S.best=e.hud.best;
+      lsSet('fitquest:session',JSON.stringify({score:S.score,streak:S.streak,best:S.best}));
+      lsSet(specKey(sp), JSON.stringify({ skips:e.spec.skips, fits:sp.fits, saved:sp.saved,
+        lastGrade:sp.lastGrade, lastPts:sp.lastPts, touched:true }));
+      selectSpec(sp.name);          // show the specimen the change was made on
+    } else if(e.kind==='drop') setDropMode(e.value);
+    else if(e.kind==='calc') setFitCalc(e.value);
+    return true;
+  } finally { UNDO_APPLYING=false; }
+}
+function undo(){
+  const e=UNDO.pop();
+  if(!e){ toast('nothing to undo'); return; }
+  const now=captureLike(e);
+  if(applyUndoEntry(e)===false){ toast('undo: specimen no longer loaded'); return; }
+  if(now){ REDO.push(now); if(REDO.length>UNDO_MAX) REDO.shift(); }
+  toast('↶ undid '+e.label+(e.spec?' ('+e.spec.name+')':'')+' · '+UNDO.length+' more', 1800);
+}
+function redo(){
+  const e=REDO.pop();
+  if(!e){ toast('nothing to redo'); return; }
+  const now=captureLike(e);
+  if(applyUndoEntry(e)===false){ toast('redo: specimen no longer loaded'); return; }
+  if(now){ UNDO.push(now); if(UNDO.length>UNDO_MAX) UNDO.shift(); }
+  toast('↷ redid '+e.label+(e.spec?' ('+e.spec.name+')':''), 1800);
+}
+
 /* ═════════════════════════ copy / paste fits ═════════════════════════ */
 // identify a step by its treatment so a window copies across specimens with
 // matching temperatures/fields even when step order or index differs
@@ -1013,6 +1082,7 @@ function pasteFits(){
   const sp=S.cur?S.specs[S.cur]:null;
   if(!sp){ toast('no specimen selected'); return; }
   if(!S.fitClip){ toast('nothing copied yet'); return; }
+  pushUndo('paste fits', sp);
   // index target steps by treatment key; prefer a non-skipped match (the kept rerun)
   const byKey={};
   sp.steps.forEach(s=>{ const k=treatKey(s); (byKey[k]=byKey[k]||[]).push(s); });
@@ -1743,6 +1813,7 @@ function pointClicked(idx){
   const sp=S.specs[S.cur];
   if(!sp || !sp.steps[idx]) return;
   if(!S.armed){ toast('set a mode first — click LT / MT / HT (or press 1/2/3)'); return; }
+  pushUndo(S.armed+' point', sp);
   let f=sp.fits[S.armed];
   if(!f){ sp.fits[S.armed]={sel:contiguousSel(sp,idx,idx), i0:idx, i1:idx}; persistSpec(sp); renderAll(); return; }
   const sel = f.sel ? f.sel.slice() : contiguousSel(sp,f.i0,f.i1);
@@ -1758,13 +1829,15 @@ function pointClicked(idx){
 function toggleSkip(idx){
   const sp=S.specs[S.cur];
   if(!sp||!sp.steps[idx]) return;
+  pushUndo(sp.steps[idx].skipped?'unskip':'skip', sp);
   sp.steps[idx].skipped=!sp.steps[idx].skipped;
   persistSpec(sp);
   renderAll();
 }
 function clearFit(k){
   const sp=S.specs[S.cur];
-  if(!sp) return;
+  if(!sp || !sp.fits[k]) return;
+  pushUndo('clear '+k, sp);
   sp.fits[k]=null; persistSpec(sp); renderAll();
 }
 // dropdown range entry: sets the fit to the contiguous run between the two bounds
@@ -1774,6 +1847,7 @@ function applyRangeBound(slot, end, val){
   if(!sp || val==='') return;
   const idx=parseInt(val);
   if(isNaN(idx) || !sp.steps[idx]) return;
+  pushUndo(slot+' range', sp);
   const f=sp.fits[slot];
   let i0=f?f.i0:idx, i1=f?f.i1:idx;
   if(end===0) i0=idx; else i1=idx;
@@ -1836,6 +1910,7 @@ function saveSpec(){
   const pts=sp._specTotal||0;
   const wasUsable=!!sp._anyUsable;
   const prev=sp.saved?(sp.lastPts||0):0;
+  pushUndo('save', sp);
   sp.saved=true;
   sp.lastPts=pts;
   // specimen grade = average of fit grades weight: use max fit grade logic → from points/numFits
@@ -2079,7 +2154,13 @@ document.getElementById('eq-cong').onclick=()=>{
   renderAll();
 };
 document.addEventListener('keydown',e=>{
-  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+  if((e.metaKey||e.ctrlKey) && !e.altKey){
+    const k=e.key.toLowerCase();
+    if(k==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
+    if(k==='y'){ e.preventDefault(); redo(); return; }
+    return;   // leave other ⌘/Ctrl shortcuts (copy, reload…) to the browser
+  }
   if(e.key==='1') armSlot(S.armed==='LT'?null:'LT');
   else if(e.key==='2') armSlot(S.armed==='MT'?null:'MT');
   else if(e.key==='3') armSlot(S.armed==='HT'?null:'HT');
