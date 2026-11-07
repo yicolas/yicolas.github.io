@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v23 — pyRockmag fitting arcade</title>
+<title>FITQUEST v24 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -179,7 +179,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v23 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v24 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -280,6 +280,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
         <div class="coord-btn on" data-cs="geo">geo</div>
         <div class="coord-btn" data-cs="tc">tilt</div>
       </div>
+      <div id="bed-info" style="font-size:9px;color:var(--tx3);margin:-4px 0 8px;min-height:11px"></div>
       <select id="zij-conv" style="margin-bottom:8px">
         <option value="NE">zij: x=N · E / Up</option>
         <option value="EN">zij: x=E · N / Up</option>
@@ -336,6 +337,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_&lt;folder&gt;_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
     <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
+    <tr><td><kbd>tilt</kbd></td><td><b>core / geo / tilt</b> pick the frame for plots, grading and site means (remembered). Tilt-corrected directions come from each CIT file's own tilt columns; under the buttons the console shows the specimen's bedding (dip and dip direction, declination applied) and nudges you to <b>tilt</b> for MT/HT when beds dip. The MagIC export writes specimen and site directions in <b>both</b> frames (tilt 0 and 100), and sample orientations as PmagPy expects them (azimuth = core strike + declination − 90, plunge = −dip, bed dip direction = strike + declination + 90), with the declination solved from each file's own columns.</td></tr>
     <tr><td><kbd>notes</kbd></td><td>the bar along the bottom holds a note for the current specimen; it saves as you type (shortcut keys are off while typing, <kbd>Esc</kbd> leaves the box). Specimens with notes show <span style="color:var(--amb)">✎</span> in the queue. Notes are written into the .redo as <code>#note &lt;specimen&gt; &lt;text&gt;</code> lines (ignored by demag_gui, read back by FITQUEST — they never overwrite a note you already have) and into the MagIC specimens table as <code>description</code>.</td></tr>
     <tr><td><kbd>skips in exports</kbd></td><td>every skipped point (your right-clicks and the automatic skips, with the reason) is written into the .redo as <code>#bad &lt;specimen&gt; &lt;treatment&gt; &lt;occurrence&gt; &lt;measurement&gt; &lt;reason&gt; b</code> lines. demag_gui ignores those lines, so the file still imports there; FITQUEST reads them back and restores the skip set. In <b>⭳ MagIC</b> the same points are <code>measurements.quality = b</code> — the way demag_gui stores a right-clicked bad point.</td></tr>
     <tr><td><kbd>save buttons</kbd></td><td><b>SAVE ▸ NEXT</b> (key <kbd>N</kbd>) saves and goes to the next specimen in the queue as shown — it follows the current sort and filter. <b>SAVE ▸ NEXT UNFIT</b> (key <kbd>S</kbd>) saves and jumps to the next specimen you have not saved yet (no ✓). Both are undoable with ⌘Z.</td></tr>
@@ -467,7 +469,7 @@ function parseTreat(f6){
   return {type:'OTH', label:t||'?', sort:NaN};
 }
 function parseSpecimenFile(fname, text){
-  const lines=text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  const lines=text.replace(/\r\n?/g,'\n').split('\n').filter(l=>l.trim().length>0);   // CRLF, LF or CR-only
   if(lines.length<2) return null;
   const l1=lines[0].trim().split(/\s+/);
   const info=lines[1].trim().split(/\s+/).map(Number);
@@ -480,7 +482,8 @@ function parseSpecimenFile(fname, text){
     const ln=lines[i];
     if(ln.trim().length<10) continue;
     const treat=parseTreat(ln.slice(0,6));
-    const f=ln.slice(6).trim().split(/\s+/);
+    // fixed-width CIT files write small negatives with a gap ("- 8.1"); rejoin before splitting
+    const f=ln.slice(6).replace(/(^|\s)-\s+(?=\d)/g,'$1-').trim().split(/\s+/);
     if(f.length<6) continue;
     const nums=f.slice(0,8).map(Number);
     if(nums.slice(0,5).some(isNaN)) continue;
@@ -529,11 +532,18 @@ function parseSpecimenFile(fname, text){
   return { name:fname, hdr, steps, text,
            fits:{LT:null,MT:null,HT:null}, saved:false, scores:{} };
 }
+// CIT .SAM index. Handles CR-only (classic Mac) line endings, an optional leading "CIT" line, and
+// specimen lines that carry extra columns ("TSPB1   761" = name + strat height): the name is the first token.
 function parseSam(text){
-  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-  if(lines.length<3) return null;
-  const geo=lines[1].split(/\s+/).map(Number);
-  return { title:lines[0], lat:geo[0], lon:geo[1], dec:geo[2]||0, files:lines.slice(2) };
+  const lines=text.replace(/\r\n?/g,'\n').split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  let i=(lines[0]&&lines[0].toUpperCase()==='CIT')?1:0;
+  if(lines.length<i+2) return null;
+  const title=lines[i];
+  let ci=-1;
+  for(let k=i+1;k<Math.min(i+4,lines.length);k++){ const nums=lines[k].match(/-?\d+\.\d+/g); if(nums&&nums.length>=2){ ci=k; break; } }
+  if(ci<0) ci=i+1;
+  const geo=lines[ci].split(/\s+/).map(Number);
+  return { title, lat:geo[0], lon:geo[1], dec:isFinite(geo[2])?geo[2]:0, files:lines.slice(ci+1).map(l=>l.split(/\s+/)[0]).filter(Boolean) };
 }
 
 /* ═════════════════════════ state ═════════════════════════ */
@@ -1215,6 +1225,70 @@ function redo(){
   if(applyUndoEntry(e)===false){ toast('redo: specimen no longer loaded'); return; }
   if(now){ UNDO.push(now); if(UNDO.length>UNDO_MAX) UNDO.shift(); }
   toast('↷ redid '+e.label+(e.spec?' ('+e.spec.name+')':''), 1800);
+}
+
+/* ═════════════════════════ orientation / tilt (PmagPy conventions) ═════════════════════════ */
+// pmag.dotilt and pmag.dogeo, line for line
+function dotiltJS(dec, inc, bedAz, bedDip){
+  const X=dir2cart(dec,inc,1), sa=-Math.sin(bedAz*D2R), ca=Math.cos(bedAz*D2R), cdp=Math.cos(bedDip*D2R), sdp=Math.sin(bedDip*D2R);
+  const xc=X[0]*(sa*sa+ca*ca*cdp)+X[1]*(ca*sa*(1-cdp))+X[2]*sdp*ca;
+  const yc=X[0]*ca*sa*(1-cdp)+X[1]*(ca*ca+sa*sa*cdp)-X[2]*sa*sdp;
+  const zc=X[0]*ca*sdp-X[1]*sdp*sa-X[2]*cdp;
+  const d=cart2dir([xc,yc,-zc]); return [d[0],d[1]];
+}
+function dogeoJS(dec, inc, az, pl){
+  const X=dir2cart(dec,inc,1), A1=dir2cart(az,pl,1), A2=dir2cart(az+90,0,1), A3=dir2cart(az-180,90-pl,1);
+  const d=cart2dir([A1[0]*X[0]+A2[0]*X[1]+A3[0]*X[2], A1[1]*X[0]+A2[1]*X[1]+A3[1]*X[2], A1[2]*X[0]+A2[2]*X[1]+A3[2]*X[2]]);
+  return [d[0],d[1]];
+}
+function angBetween(d1,i1,d2,i2){ const a=dir2cart(d1,i1,1), b=dir2cart(d2,i2,1); return Math.acos(Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2])))*R2D; }
+function median(a){ const b=a.slice().sort((x,y)=>x-y); const n=b.length; return n?(n%2?b[(n-1)/2]:(b[n/2-1]+b[n/2])/2):NaN; }
+function bestOffset(cost){   // 1° scan, then 0.1° refinement
+  let best={off:0,mis:Infinity};
+  for(let o=-180;o<180;o+=1){ const c=cost(o); if(c<best.mis) best={off:o,mis:c}; }
+  for(let o=best.off-1;o<=best.off+1;o+=0.1){ const c=cost(o); if(c<best.mis) best={off:Math.round(o*10)/10,mis:c}; }
+  return best;
+}
+function samDecFor(sp){
+  const hit=Object.values(S.sites).find(st=>(st.order||[]).includes(sp.name));
+  return hit&&hit.sam&&isFinite(hit.sam.dec)?hit.sam.dec:null;
+}
+// CIT headers carry core strike/dip and bedding strike/dip in MAGNETIC azimuth; PmagPy's cit conversion
+// turns them into azimuth = strike + dec - 90, plunge = -dip, bed_dip_direction = strike + dec + 90.
+// The declination is solved from each file's own stored columns (core -> geographic, geographic ->
+// tilt-corrected) so a wrong .SAM value cannot slip through; the .SAM value is the fallback.
+function solveOrientation(sp){
+  if(sp._orient) return sp._orient;
+  const h=sp.hdr, st=sp.steps.filter(x=>isFinite(x.decG)&&isFinite(x.incG)).slice(0,10), samDec=samDecFor(sp), notes=[];
+  const o={samDec, azimuth:'', dip:'', bedDipDir:'', bedDip:isFinite(h.bedDip)?h.bedDip:'', decAz:null, decBed:null};
+  const hasCore=st.some(x=>Math.abs(x.decS-x.decG)>0.05||Math.abs(x.incS-x.incG)>0.05);
+  if(hasCore){
+    const b=bestOffset(off=>median(st.map(x=>{ const g=dogeoJS(x.decS,x.incS,h.coreStrike+off-90,-h.coreDip); return angBetween(g[0],g[1],x.decG,x.incG); })));
+    if(b.mis<=2) o.decAz=b.off; else notes.push('stored geographic directions not reproducible from the header core orientation (block/sun-compass oriented?)');
+  } else if(samDec!==null){ o.decAz=samDec; notes.push('no core-frame columns: declination taken from .SAM'); }
+  if(o.decAz!==null){ o.azimuth=((h.coreStrike+o.decAz-90)%360+360)%360; o.dip=-h.coreDip; }
+  if(h.bedDip>0){
+    const t=st.filter(x=>isFinite(x.decT));
+    const b=bestOffset(off=>median(t.map(x=>{ const g=dotiltJS(x.decG,x.incG,h.bedStrike+off+90,h.bedDip); return angBetween(g[0],g[1],x.decT,x.incT); })));
+    if(b.mis<=2) o.decBed=b.off; else notes.push('stored tilt-corrected directions not reproducible from the header bedding');
+    if(o.decBed===null && samDec!==null) o.decBed=samDec;
+    o.misBed=b.mis;
+  } else o.decBed=o.decAz!==null?o.decAz:(samDec||0);
+  if(o.decBed!==null) o.bedDipDir=((h.bedStrike+o.decBed+90)%360+360)%360;
+  if(samDec!==null && o.decAz!==null && Math.abs(((o.decAz-samDec+540)%360)-180)>2)
+    notes.push('.SAM declination '+samDec+'° but the data were processed with '+o.decAz.toFixed(1)+'°');
+  o.note=notes.join('; ');
+  sp._orient=o; return o;
+}
+function renderBedInfo(sp){
+  const el=document.getElementById('bed-info'); if(!el) return;
+  if(!sp){ el.textContent=''; return; }
+  const h=sp.hdr;
+  if(!(h.bedDip>0)){ el.innerHTML='bedding flat — tilt view = geographic'; return; }
+  const o=solveOrientation(sp);
+  const dd=o.bedDipDir!==''?o.bedDipDir.toFixed(0)+'°':'?';
+  el.innerHTML='bedding dips <b style="color:var(--tx2)">'+h.bedDip.toFixed(0)+'° → '+dd+'</b> (strike '+h.bedStrike.toFixed(0)+'° mag)'
+    + (S.cs!=='tc'?' · <span style="color:var(--amb)">MT/HT belong in <b>tilt</b></span>':' · tilt-corrected');
 }
 
 /* ═════════════════════════ specimen notes ═════════════════════════ */
@@ -1981,7 +2055,7 @@ function renderAll(){
   } else {
     document.getElementById('spec-title').textContent='';
   }
-  renderSlots(sp); renderStrip(sp); syncNoteBar();
+  renderSlots(sp); renderStrip(sp); syncNoteBar(); renderBedInfo(sp);
   document.getElementById('hud-score').textContent=S.score;
   document.getElementById('hud-streak').textContent=S.streak;
   document.getElementById('hud-best').textContent=S.best;
@@ -2298,9 +2372,10 @@ function exportMagic(){
     // samples: orientation from the specimen header
     sampleRows.push({
       sample: samp, site: site, specimens: sp.name,
-      azimuth: (sp.hdr.coreStrike||0).toFixed(1), dip: (sp.hdr.coreDip||0).toFixed(1),
-      bed_dip_direction: (sp.hdr.bedStrike||0).toFixed(1), bed_dip: (sp.hdr.bedDip||0).toFixed(1),
-      azimuth_dec_correction:'0', method_codes:'SO-CMD-NORTH', citations:CIT, result_quality:'g',
+      ...(o=>({ azimuth: o.azimuth!==''?o.azimuth.toFixed(1):'', dip: o.dip!==''?o.dip.toFixed(1):'',
+        bed_dip_direction: o.bedDipDir!==''?o.bedDipDir.toFixed(1):'', bed_dip: o.bedDip!==''?(+o.bedDip).toFixed(1):'',
+        azimuth_dec_correction: o.decAz!==null?o.decAz.toFixed(1):'', description: o.note }))(solveOrientation(sp)),
+      method_codes:'SO-CMD-NORTH', citations:CIT, result_quality:'g',
       location: LOC, software_packages:SW,
     });
     // specimens: one row per fit per coordinate frame (tilt 0 = geo, 100 = tilt)
@@ -2332,13 +2407,18 @@ function exportMagic(){
   // ── sites table: Fisher mean of the ChRM (terminal) direction per site, all sites ──
   const siteLatLon={};
   Object.values(S.sites).forEach(st=>{ (st.order||[]).forEach(fn=>{ const sk=SITE(fn); if(!(sk in siteLatLon)) siteLatLon[sk]={lat:st.sam.lat,lon:st.sam.lon}; }); });
-  const bySiteDirs={};
-  S.order.forEach(n=>{ const sp=S.specs[n]; if(!sp.steps.length) return; const d=specimenDir(sp,'ALL'); if(d){ (bySiteDirs[SITE(n)]=bySiteDirs[SITE(n)]||[]).push({dec:d.dec,inc:d.inc, samp:sampleOf(sp.name), spec:sp.name}); } });
+  // terminal (ChRM) fit per specimen, in BOTH frames — independent of the on-screen view
+  const bySiteDirs={geo:{}, tc:{}};
+  S.order.forEach(n=>{ const sp=S.specs[n]; if(!sp.steps.length) return;
+    let slot=(terminalSlot(sp)||{}).slot; if(!slot||!sp.fits[slot]) slot=['HT','MT','LT'].find(k=>sp.fits[k]); if(!slot) return;
+    const res=computeFit(sp,slot); if(!res||res.invalid) return;
+    ['geo','tc'].forEach(cs=>{ const r=res[cs]; (bySiteDirs[cs][SITE(n)]=bySiteDirs[cs][SITE(n)]||[]).push({dec:r.dec,inc:r.inc, samp:sampleOf(sp.name), spec:sp.name}); });
+  });
   const siteRows=[]; const lats=[], lons=[];
-  Object.keys(bySiteDirs).sort().forEach(site=>{
-    const ds=bySiteDirs[site], fm=fisherMean(ds);
+  [['geo',0],['tc',100]].forEach(([cs,tiltCorr])=> Object.keys(bySiteDirs[cs]).sort().forEach(site=>{
+    const ds=bySiteDirs[cs][site], fm=fisherMean(ds);
     const ll=siteLatLon[site]||{};
-    if(ll.lat!==undefined){ lats.push(ll.lat); lons.push(ll.lon); }
+    if(ll.lat!==undefined && tiltCorr===0){ lats.push(ll.lat); lons.push(ll.lon); }
     const samples=[...new Set(ds.map(d=>d.samp))];
     siteRows.push({
       site, location:LOC, samples:samples.join(':'), specimens:ds.map(d=>d.spec).join(':'),
@@ -2346,16 +2426,16 @@ function exportMagic(){
       dir_k:fm&&fm.k<9999?fm.k.toFixed(1):'', dir_alpha95:fm&&isFinite(fm.a95)?fm.a95.toFixed(1):'',
       dir_n_samples:samples.length, dir_n_specimens:ds.length, dir_n_specimens_lines:ds.length,
       dir_n_specimens_planes:0, dir_polarity:fm?((fm.inc<0)?'r':'n'):'', dir_r:fm?(fm.n-(fm.k>0?(fm.n-1)/fm.k:0)).toFixed(3):'',
-      dir_tilt_correction:0, lat:ll.lat!==undefined?ll.lat:'', lon:ll.lon!==undefined?ll.lon:'',
-      result_quality:'g', method_codes:'LP-DC:DE-FM', citations:CIT, software_packages:SW,
+      dir_tilt_correction:tiltCorr, lat:ll.lat!==undefined?ll.lat:'', lon:ll.lon!==undefined?ll.lon:'',
+      result_quality:'g', method_codes:'LP-DC:DE-FM:'+(tiltCorr?'DA-DIR-TILT':'DA-DIR-GEO'), citations:CIT, software_packages:SW,
     });
-  });
+  }));
   // ── locations table: one row bounding all sites ──
   const locRows=[{ location:LOC, location_type:'outcrop', citations:CIT, software_packages:SW,
     lat_s:lats.length?Math.min(...lats):'', lat_n:lats.length?Math.max(...lats):'',
     lon_w:lons.length?Math.min(...lons):'', lon_e:lons.length?Math.max(...lons):'' }];
   const measCols=['measurement','experiment','specimen','dir_csd','dir_dec','dir_inc','treat_ac_field','treat_dc_field','treat_dc_field_phi','treat_dc_field_theta','treat_step_num','treat_temp','citations','instrument_codes','method_codes','quality','sequence','standard','meas_n_orient','meas_temp','analysts','description','software_packages','magn_moment','magn_x_sigma','magn_y_sigma','magn_z_sigma','sample','site','location'];
-  const sampCols=['sample','site','specimens','dir_alpha95','dir_comp_name','dir_dec','dir_inc','dir_k','dir_n_specimens','dir_n_specimens_lines','dir_n_specimens_planes','dir_r','dir_tilt_correction','height','geologic_classes','geologic_types','lithologies','analysts','software_packages','azimuth','azimuth_dec_correction','bed_dip','bed_dip_direction','dip','citations','method_codes','result_quality','location','tilt_correction'];
+  const sampCols=['sample','site','specimens','description','dir_alpha95','dir_comp_name','dir_dec','dir_inc','dir_k','dir_n_specimens','dir_n_specimens_lines','dir_n_specimens_planes','dir_r','dir_tilt_correction','height','geologic_classes','geologic_types','lithologies','analysts','software_packages','azimuth','azimuth_dec_correction','bed_dip','bed_dip_direction','dip','citations','method_codes','result_quality','location','tilt_correction'];
   const specCols=['specimen','experiments','sample','description','dir_alpha95','dir_comp','dir_dec','dir_inc','dir_n_comps','dir_n_measurements','dir_tilt_correction','dir_dang','dir_mad_free','meas_step_max','meas_step_min','meas_step_unit','analysts','instrument_codes','software_packages','int_corr','citations','method_codes','result_quality','volume','weight','location','site'];
   const siteCols=['site','location','samples','specimens','dir_alpha95','dir_comp_name','dir_dec','dir_inc','dir_k','dir_n_samples','dir_n_specimens','dir_n_specimens_lines','dir_n_specimens_planes','dir_polarity','dir_r','dir_tilt_correction','lat','lon','analysts','criteria','software_packages','citations','method_codes','result_quality'];
   const locCols=['location','location_type','lat_s','lat_n','lon_w','lon_e','citations','software_packages'];
@@ -2392,6 +2472,7 @@ document.querySelectorAll('.coord-btn').forEach(b=>{
     document.querySelectorAll('.coord-btn').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     S.cs=b.dataset.cs;
+    try{ localStorage.setItem('fitquest:cs', S.cs); }catch(e){}
     S.zijZoom=null;        // coordinate system rotates the data → re-fit view
     renderAll();
   };
@@ -2452,6 +2533,7 @@ document.addEventListener('keydown',e=>{
   setAutoBackup(lsGet('fitquest:autobk')!=='off');   // default on
   const dsel=document.getElementById('drop-sel');
   if(dsel){ dsel.value=DROP_MODE; dsel.addEventListener('change',e=>setDropMode(e.target.value)); }
+  try{ const c=localStorage.getItem('fitquest:cs'); if(c==='spec'||c==='geo'||c==='tc'){ S.cs=c; document.querySelectorAll('.coord-btn').forEach(x=>x.classList.toggle('on', x.dataset.cs===c)); } }catch(e){}
   const nta=document.getElementById('note-ta');
   if(nta){ nta.addEventListener('input', onNoteInput); nta.addEventListener('keydown', e=>{ if(e.key==='Escape') nta.blur(); }); }
   const csel=document.getElementById('calc-sel');
