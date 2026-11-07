@@ -208,7 +208,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
       </select>
     </div>
     <div class="col-body">
-      <div id="drop-zone"><b style="color:var(--ac)">drag your repo folder here</b><br>finds the .redo inside &amp; queues all fits<br><span style="font-size:9px">(or drop a .redo, then pick the folder;<br>or drop .sam + specimen files)</span></div>
+      <div id="drop-zone"><b style="color:var(--ac)">drag your data folder here — or click to choose it</b><br>select the folder itself (don't open it); finds the .redo inside &amp; queues all fits<br><span style="font-size:9px">(or drop a .redo, then pick the folder; <a href="#" id="pick-files" style="color:var(--ac)">or choose loose files…</a>)</span></div>
       <input type="file" id="file-input" multiple style="display:none">
       <input type="file" id="dir-input" webkitdirectory style="display:none">
       <div id="root-row" style="font-size:9px;color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:5px">data root: <span id="root-name" style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span><button class="btn sm" id="root-btn" style="flex:none">pick</button></div>
@@ -311,6 +311,8 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
   +15 bonus for a usable terminal ChRM. Grades: S ≥ 95 · A ≥ 85 · B ≥ 70 · C ≥ 50 · D ≥ 30 · F. Streak counts consecutive specimens saved with a usable ChRM. Skipping &gt; 25% of a segment's points caps its grade at C — beyond that the line is wrong, not the points.</p>
   <h4>Easiest: drag the whole repo folder in</h4>
   <p>Drag the Laos repo folder (the one containing <code>Magnetometer_Data_corrected</code>) onto the drop zone. The app finds the best <code>.redo</code> inside it — preferring <code>Magnetometer_Data_corrected/demag_gui.redo</code>, the manuscript fits — loads every specimen it names, and queues them. This is one gesture and works even when the page is opened as a local <code>file://</code> (where the folder-picker button is disabled). When a specimen exists in several places it prefers paths containing <code>corrected</code> and avoids <code>_archive</code>/<code>safety</code>/old copies.</p>
+  <h4>Or click the box to choose the folder</h4>
+  <p>Clicking the box (or <b>pick</b>) opens a <b>folder</b> picker: highlight your data folder (for Caborca: <code>fitquest_corrected</code>) and press <b>Select</b>/<b>Open</b>; you do not need to open it. The app then does exactly what a drop does. If the browser refuses a folder, click again and it switches to its other folder picker, or just drag the folder in. <i>or choose loose files…</i> in the box is the old multi-file picker.</p>
   <h4>Or drop a .redo on its own</h4>
   <p>Drop a <code>.redo</code> file and the app asks for your data root once (remembered in Chrome when served over http/https), then resolves its specimens. If it reports <b>0 found</b>, you pointed it at a folder without the specimen files — drag the repo folder in instead. <code>.sam</code> files beside the matched specimens set the site grouping and queue order. A name written as <code>HT:REV</code> pins the fit to that slot and keeps the label (this is how ⭳ .redo exports labelled fits). Fit names map <code>lt</code> → LT, <code>lt2</code> → MT, <code>mt</code> (the ChRM) → HT, and keep their original names and colors on export. Dropping a folder with no redo inside loads all its <code>.sam</code> sites.</p>
   <h4>Output</h4>
@@ -578,8 +580,8 @@ async function idbGet(k){ try{ const db=await idb(); return await new Promise((r
 async function idbSet(k,v){ try{ const db=await idb(); await new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k); t.onsuccess=res; t.onerror=()=>rej(t.error); }); }catch(e){} }
 async function scanHandle(h, path, out){
   for await (const [name,child] of h.entries()){
-    if(SKIP_DIR.test(name)) continue;
-    if(child.kind==='directory') await scanHandle(child, path+name+'/', out);
+    if(SKIP_DIR.test(name) || name.startsWith('.')) continue;
+    if(child.kind==='directory'){ try{ await scanHandle(child, path+name+'/', out); }catch(e){} }  // one unreadable subfolder must not abort the scan
     else if(!JUNK_EXT.test(name)) out.push({name, path:path+name, getText:async()=>(await child.getFile()).text(), mtime:0});
   }
 }
@@ -589,21 +591,37 @@ function registerScanFromFileList(files){
   const root=entries.length&&entries[0].path.includes('/')?entries[0].path.split('/')[0]:'';
   return registerScan(entries, root);
 }
-async function pickRoot(){
-  if(window.showDirectoryPicker){
-    try{
-      const h=await showDirectoryPicker({mode:'read'});
-      await idbSet('rootHandle',h);
-      const out=[]; await scanHandle(h,'',out);
-      registerScan(out, h.name);
-      return S.scan.byName.size>0;
-    }catch(e){ if(e&&e.name==='AbortError') return false; }
-  }
+// folder picker. MUST be called straight from a click (browsers require a user gesture).
+// Chrome/Edge: native folder dialog — select the folder and press "Select"/"Open"; you do not
+// have to open it. If the browser refuses a folder (e.g. it calls it a system folder), we switch
+// to the plain <input webkitdirectory> picker on the next click, which accepts any folder.
+let PICK_FALLBACK=false;
+function pickViaInput(){
   return new Promise(res=>{
     const di=document.getElementById('dir-input');
-    di.onchange=()=>{ registerScanFromFileList(di.files); res(S.scan.byName.size>0); di.value=''; };
+    di.onchange=()=>{ const n=registerScanFromFileList(di.files); di.value='';
+      if(!n) toast('no data files found in that folder'); res(n>0); };
     di.click();
   });
+}
+async function pickRoot(){
+  if(window.showDirectoryPicker && !PICK_FALLBACK){
+    let h;
+    try{ h=await showDirectoryPicker({id:'fitquest-root', mode:'read'}); }
+    catch(e){
+      if(e && e.name==='AbortError') return false;          // user cancelled
+      PICK_FALLBACK=true;
+      toast('the browser would not open that folder ('+((e&&e.name)||'error')+'). Click again to use the other folder picker, or drag the folder onto the box.', 7000);
+      return false;
+    }
+    toast('scanning '+h.name+' …', 2000);
+    const out=[]; try{ await scanHandle(h,'',out); }catch(e){}
+    registerScan(out, h.name);
+    try{ await idbSet('rootHandle',h); }catch(e){}
+    if(!out.length){ toast('no data files found in '+h.name); return false; }
+    return true;
+  }
+  return pickViaInput();
 }
 async function ensureRoot(){
   if(S.scan.byName.size) return true;
@@ -615,8 +633,7 @@ async function ensureRoot(){
       if(p==='granted'){ const out=[]; await scanHandle(h,'',out); registerScan(out,h.name); if(S.scan.byName.size) return true; }
     }
   }catch(e){}
-  toast('pick your data root folder (e.g. the Laos repo)…');
-  return pickRoot();
+  return false;   // caller asks the user to click "pick" / the drop box (a picker needs a click)
 }
 async function loadSamEntry(en){
   if(S.sites[en.path]) return;
@@ -662,7 +679,7 @@ async function resolveNeeded(){
   const needed=redoSpecimenNames().filter(n=>!S.specs[n]);
   let msg='', loaded=0;
   if(needed.length){
-    if(!(await ensureRoot())){ toast('no data folder yet — drag your repo folder onto the app, or use "pick"'); renderQueue(); renderAll(); return; }
+    if(!(await ensureRoot())){ toast('now choose the data folder: click "pick" (or the box), or drag the folder onto the box', 6000); renderQueue(); renderAll(); return; }
     const res=await resolveFromScan(needed); loaded=res.loaded; const missing=res.missing;
     if(loaded===0){
       // diagnostics: did the scan even contain specimen files?
@@ -700,14 +717,33 @@ async function autoloadFromScan(){
 }
 
 /* ═════════════════════════ file loading ═════════════════════════ */
+// after any folder scan (drop, box click, pick): use a waiting redo, else the best redo inside, else all .sam sites
+async function afterFolderScan(){
+  if(S.pendingRedo.length || redoSpecimenNames().length){ await resolveNeeded(); return; }
+  const redos=findRedosInScan();
+  if(redos.length){
+    try{
+      const txt=await redos[0].getText();
+      txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
+      toast('using '+redos[0].path.split('/').slice(-2).join('/')+' — loading its specimens…');
+      await resolveNeeded();
+      return;
+    }catch(err){}
+  }
+  await autoloadFromScan();
+}
 const dz=document.getElementById('drop-zone'), fi=document.getElementById('file-input');
-dz.onclick=()=>fi.click();
+dz.onclick=async e=>{
+  if(e.target && e.target.id==='pick-files'){ e.preventDefault(); fi.click(); return; }
+  S.scan={byName:new Map(), byDir:new Map(), root:''};
+  if(await pickRoot()) await afterFolderScan();
+};
 dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
 dz.ondragleave=()=>dz.classList.remove('over');
 fi.onchange=()=>{ loadFiles(fi.files); fi.value=''; };
 document.getElementById('root-btn').onclick=async()=>{
   S.scan={byName:new Map(), byDir:new Map(), root:''};
-  if(await pickRoot()){ if(S.pendingRedo.length) await resolveNeeded(); else toast('root set — now drop a .redo'); }
+  if(await pickRoot()) await afterFolderScan();
 };
 document.body.addEventListener('dragover',e=>e.preventDefault());
 document.body.addEventListener('drop',e=>e.preventDefault());
@@ -743,21 +779,7 @@ dz.ondrop=async e=>{
   }
   if(plain.length){ await loadFiles(plain); return; }
   if(!scanned) return;
-  // folder dropped. If a redo is already waiting, resolve against this scan.
-  if(S.pendingRedo.length || redoSpecimenNames().length){ await resolveNeeded(); return; }
-  // otherwise auto-find the best redo INSIDE the dropped folder and apply it.
-  const redos=findRedosInScan();
-  if(redos.length){
-    try{
-      const txt=await redos[0].getText();
-      txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
-      toast('using '+redos[0].path.split('/').slice(-2).join('/')+' — loading its specimens…');
-      await resolveNeeded();
-      return;
-    }catch(err){}
-  }
-  // no redo in the folder: just load every .sam site
-  await autoloadFromScan();
+  await afterFolderScan();
 };
 
 async function loadFiles(fileList){
