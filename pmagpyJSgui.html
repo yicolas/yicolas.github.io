@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v15 — pyRockmag fitting arcade</title>
+<title>FITQUEST v16 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -162,13 +162,21 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v15 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v16 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
   <div class="stat-pill"><span class="lbl">best</span><b id="hud-best">0</b></div>
   <button class="btn sm" id="redo-btn" title="Export all fits as a demag_gui-compatible .redo">⭳ .redo</button>
   <button class="btn sm" id="magic-btn" title="Export fits + measurements + sample data as a MagIC 3.0 contribution">⭳ MagIC</button>
+  <select id="drop-sel" class="btn sm" title="which pre-demag steps are left out of every fit">
+    <option value="all">drop: NRM+LN+LN2</option>
+    <option value="nrm">drop: NRM</option>
+    <option value="ln">drop: LN</option>
+    <option value="ln2">drop: LN2</option>
+    <option value="ln+ln2">drop: LN+LN2</option>
+    <option value="none">drop: none</option>
+  </select>
   <button class="btn sm" id="autobk-btn" title="Auto-download a fresh backup .redo to your Downloads after each save">⤓ auto</button>
   <button class="btn sm" id="help-btn">? help</button>
   <button class="btn sm" id="theme-btn">◐</button>
@@ -285,9 +293,10 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>dropdowns</kbd></td><td>the from/to selects in each slot set a contiguous range in one go — then click points to drop or add any</td></tr>
     <tr><td><kbd>right-click</kbd></td><td>skip / unskip a point everywhere (the point skipper — excluded from all fits)</td></tr>
     <tr><td><kbd>copy / paste</kbd></td><td>at the bottom of the console: pick a scope (all / LT / MT / HT), <b>copy</b> this specimen's fits, then move to another specimen and <b>paste</b> — the windows transfer by matching temperature/field, so they land on the right steps even if the step list differs. The clipboard survives reloads.</td></tr>
-    <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps; earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
+    <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>drop</kbd></td><td>which pre-demag steps are left out of <b>every</b> fit: the NRM, the first liquid-nitrogen cycle (<b>LN</b>, the first 77&nbsp;K step) and any later cycle (<b>LN2</b>, or a step labelled LN2). Default drops all three. Changing it re-applies to all loaded specimens, including ones you have saved; other skips (reruns, csd, right-clicks) are untouched. Remembered between sessions.</td></tr>
     <tr><td><kbd>⤓ auto</kbd></td><td>when lit, a fresh backup <code>fitquest_&lt;site&gt;_autosave.redo</code> is downloaded to your Downloads shortly after each save (debounced). A local <code>file://</code> page can't overwrite a file in your repo, so this is a download — your browser may append (1),(2)… Keep the newest; it's always current. Toggle off if the Downloads clutter bothers you. Your fits also persist in the browser regardless.</td></tr>
     <tr><td><kbd>eq-area menus</kbd></td><td><b>site</b> picks which site (split by name prefix — NWFA, NWFC, PKSF…; "current" follows the selected specimen), <b>boulder</b> drills into one sub-sample within that site (e.g. NWFC-3), <b>level</b> aggregates at specimen / sample / site / all, <b>component</b> filters LT / MT / HT. Sample &amp; site views add a Fisher mean (diamond) with α95 ring; clicking a star opens that specimen.</td></tr>
     <tr><td><kbd>⬡ cong</kbd></td><td>conglomerate-test overlay: one Fisher mean per boulder across the active site (each a labeled, colored diamond with its specimens faint behind), plus a Watson (1956) randomness verdict on the clast means — <b>R &lt; Ro → RANDOM</b>, passes (pre-depositional); <b>R ≥ Ro → CLUSTERED</b>, fails (likely remagnetized). Uses the ChRM/terminal component unless you set a specific one.</td></tr>
@@ -420,6 +429,14 @@ function parseSpecimenFile(fname, text){
       skipped:false, raw:ln
     });
   }
+  // liquid-nitrogen steps: the first 77 K cycle is LN, any later one (or a step labelled LN2) is LN2
+  let nLN=0;
+  steps.forEach(s=>{
+    if(s.treat.type!=='LN2') return;
+    nLN++;
+    const kind = (/^LN2/i.test(s.raw.trim()) || nLN>1) ? 'LN2' : 'LN';
+    s.treat = Object.assign({}, s.treat, {label:kind, ln:kind});
+  });
   // duplicate-treatment labels: TT360, TT360·2 …
   const seen={};
   steps.forEach(s=>{
@@ -427,8 +444,8 @@ function parseSpecimenFile(fname, text){
     s.label = seen[s.treat.label]>1 ? s.treat.label+'·'+seen[s.treat.label] : s.treat.label;
   });
   // ── auto-skip defaults (fresh specimens only; saved skip sets override in restoreSpec) ──
-  // NRM and liquid-nitrogen (LN/LN2) steps are not part of the demag component fit
-  steps.forEach(s=>{ if(s.treat.type==='NRM' || s.treat.type==='LN2'){ s.skipped=true; s.autoskip='NRM/LN step'; } });
+  // NRM and liquid-nitrogen (LN/LN2) steps: dropped from fits per the "drop" menu (default: all three)
+  applyDropMode(steps);
   // reruns: steps sharing a base treatment (e.g. the four TT360 lines) are repeats —
   // keep only the LAST occurrence, skip the earlier runs
   const groups={};
@@ -458,6 +475,37 @@ function parseSam(text){
 
 /* ═════════════════════════ state ═════════════════════════ */
 const CSD_SKIP=12;   // auto-skip measurements with circular standard deviation ≥ this (degrees)
+// which pre-demag steps are dropped from fits: NRM, the first liquid-N2 cycle (LN), later cycles (LN2)
+const DROP_MODES={ all:['NRM','LN','LN2'], nrm:['NRM'], ln:['LN'], ln2:['LN2'], 'ln+ln2':['LN','LN2'], none:[] };
+let DROP_MODE=(()=>{ try{ const m=localStorage.getItem('fitquest:drop'); return DROP_MODES[m]?m:'all'; }catch(e){ return 'all'; } })();
+function dropKind(s){ return s.treat.type==='NRM' ? 'NRM' : (s.treat.type==='LN2' ? (s.treat.ln||'LN2') : null); }
+// set skipped on NRM/LN/LN2 steps to match the current drop mode; other steps untouched
+function applyDropMode(steps){
+  const drop=DROP_MODES[DROP_MODE]||DROP_MODES.all;
+  steps.forEach(s=>{
+    const k=dropKind(s); if(!k) return;
+    const on=drop.includes(k);
+    s.skipped=on;
+    s.autoskip = on ? 'dropped: '+k+' (drop menu)' : '';
+  });
+}
+function setDropMode(mode){
+  if(!DROP_MODES[mode]) return;
+  DROP_MODE=mode;
+  try{ localStorage.setItem('fitquest:drop', mode); }catch(e){}
+  const sel=document.getElementById('drop-sel'); if(sel) sel.value=mode;
+  // re-apply to every loaded specimen (also ones you have worked: this menu is global for NRM/LN/LN2)
+  Object.values(S.specs||{}).forEach(sp=>{
+    applyDropMode(sp.steps);
+    if(sp._hadLocal){
+      try{ const raw=localStorage.getItem(specKey(sp)); const d=raw?JSON.parse(raw):{};
+        d.skips=sp.steps.filter(s=>s.skipped).map(s=>s.idx);
+        localStorage.setItem(specKey(sp), JSON.stringify(d)); }catch(e){}
+    }
+  });
+  if(typeof renderAll==='function') renderAll();
+  if(typeof toast==='function') toast('drop: '+(DROP_MODES[mode].join(' + ')||'nothing')+' — fits recomputed');
+}
 const SLOTS=['LT','MT','HT'];
 const SLOTC={LT:getComputedStyle(document.documentElement).getPropertyValue('--lt').trim()||'#3a9d5d',
              MT:getComputedStyle(document.documentElement).getPropertyValue('--mt').trim()||'#2a6f97',
@@ -822,7 +870,7 @@ function treatKey(s){
   const t=s.treat;
   if(t.type==='TT') return 'TT:'+t.C;
   if(t.type==='AF') return 'AF:'+t.G;
-  if(t.type==='LN2') return 'LN2';
+  if(t.type==='LN2') return t.ln||'LN2';
   if(t.type==='NRM') return 'NRM';
   return 'OTH:'+t.label;
 }
@@ -1938,6 +1986,8 @@ document.addEventListener('keydown',e=>{
   const clip=lsGet('fitquest:clip');
   if(clip){ try{ S.fitClip=JSON.parse(clip); }catch(e){} }
   setAutoBackup(lsGet('fitquest:autobk')!=='off');   // default on
+  const dsel=document.getElementById('drop-sel');
+  if(dsel){ dsel.value=DROP_MODE; dsel.addEventListener('change',e=>setDropMode(e.target.value)); }
   renderAll(); renderClipInfo();
 })();
 window.addEventListener('resize',()=>{['zij','eq','dec'].forEach(id=>{const el=document.getElementById(id); if(el&&el.data)Plotly.Plots.resize(el);});});
