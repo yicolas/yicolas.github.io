@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v18 — pyRockmag fitting arcade</title>
+<title>FITQUEST v19 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -53,6 +53,12 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 /* ── queue (left) ── */
 #drop-zone{border:2px dashed var(--bdr2);padding:14px 8px;border-radius:var(--r);text-align:center;color:var(--tx3);cursor:pointer;margin-bottom:8px;font-size:10.5px;transition:all .2s}
 #drop-zone:hover,#drop-zone.over{border-color:var(--ac);color:var(--ac);background:var(--ac3)}
+#sources{font-size:9px;color:var(--tx3);margin-bottom:6px;border:1px solid var(--bdr);border-radius:var(--r);padding:4px 5px}
+.src-row{display:flex;align-items:center;gap:4px;min-height:20px}
+.src-lbl{flex:none;width:46px;text-transform:uppercase;letter-spacing:.06em}
+.src-name{color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-row .btn.sm{flex:none;padding:1px 6px;font-size:9px}
+.src-row .btn.arm{border-color:var(--amb);color:var(--amb)}
 #progress-wrap{margin-bottom:8px}
 #progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--bdr)}
 #progress-fill{height:100%;background:var(--ac);width:0%;transition:width .4s}
@@ -162,7 +168,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v18 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v19 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -217,7 +223,12 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
       <div id="drop-zone"><b style="color:var(--ac)">drag your data folder here — or click to choose it</b><br>select the folder itself (don't open it); finds the .redo inside &amp; queues all fits<br><span style="font-size:9px">(or drop a .redo, then pick the folder; <a href="#" id="pick-files" style="color:var(--ac)">or choose loose files…</a>)</span></div>
       <input type="file" id="file-input" multiple style="display:none">
       <input type="file" id="dir-input" webkitdirectory style="display:none">
-      <div id="root-row" style="font-size:9px;color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:5px">data root: <span id="root-name" style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span><button class="btn sm" id="root-btn" style="flex:none">pick</button></div>
+      <input type="file" id="redo-input" accept=".redo,.txt" style="display:none">
+      <div id="sources">
+        <div class="src-row"><span class="src-lbl">data root</span><span id="root-name" class="src-name">—</span><button class="btn sm" id="root-btn" title="choose a different data folder">change</button><button class="btn sm" id="root-x" title="forget this data folder (loaded specimens stay)">✕</button></div>
+        <div id="redo-rows"></div>
+        <div class="src-row"><span class="src-lbl">redo</span><span class="src-name" id="redo-none" style="color:var(--tx3)">none loaded</span><button class="btn sm" id="redo-add" title="load another .redo (fits for specimens you have not edited)">+ redo</button></div>
+      </div>
       <div id="progress-wrap" style="display:none">
         <div id="progress-bar"><div id="progress-fill"></div></div>
         <div id="progress-txt"></div>
@@ -303,6 +314,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
     <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
+    <tr><td><kbd>sources</kbd></td><td>box above the queue. <b>data root</b>: <i>change</i> picks another folder; <i>✕</i> (twice) forgets it — loaded specimens stay. <b>redo</b>: one row per loaded .redo with its fit count; <i>change</i> swaps in another .redo, <i>✕</i> (twice) removes it — its fits are cleared and the specimens only it brought in are unloaded, <b>except specimens you edited or saved</b>, which are kept as they are. <i>+ redo</i> loads another.</td></tr>
     <tr><td><kbd>reopen</kbd></td><td>the page reopens with the data, fits, skips and grades you last had loaded (kept in this browser). <b>⟲ new</b> (click twice) closes that session and starts empty; fits you saved still come back if you load the same specimens again.</td></tr>
     <tr><td><kbd>fit</kbd></td><td>line fit type for every fit: <b>DE-BFL</b> free, <b>DE-BFL-A</b> anchored, <b>DE-BFL-O</b> origin as a point (PmagPy names; written to exports). dang always comes from the free line.</td></tr>
     <tr><td><kbd>drop</kbd></td><td>which pre-demag steps are left out of <b>every</b> fit: the NRM, the first liquid-nitrogen cycle (<b>LN</b>, the first 77&nbsp;K step) and any later cycle (<b>LN2</b>, or a step labelled LN2). Default drops all three. Changing it re-applies to all loaded specimens, including ones you have saved; other skips (reruns, csd, right-clicks) are untouched. Remembered between sessions.</td></tr>
@@ -596,8 +608,7 @@ function registerScan(entries, rootName){
     n++;
   });
   if(rootName) S.scan.root=rootName;
-  const rn=document.getElementById('root-name');
-  if(rn) rn.textContent=(S.scan.root||'(folder)')+' · '+S.scan.byName.size+' files';
+  if(typeof renderSources==='function') renderSources();
   return n;
 }
 function scorePath(p){
@@ -694,6 +705,69 @@ async function resolveFromScan(names){
   }
   return {loaded, missing};
 }
+// ── loaded redo files: each line is tagged "\t@<id>" so fits and specimens remember their redo ──
+S.redoFiles=[];   // [{id, name, lines:[raw lines]}]
+function redoTag(line){ const m=/\t@(r[\w.-]+)$/.exec(line); return m?m[1]:null; }
+function registerRedo(name, txt){
+  const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const lines=txt.split(/\r?\n/).map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim() && l.split('\t').length>=5);
+  S.redoFiles.push({id, name, lines});
+  lines.forEach(l=>S.pendingRedo.push(l+'\t@'+id));
+  return id;
+}
+function worked(sp){ return !!(sp && (sp.saved || sp._edited)); }
+function redoFitCount(id){
+  let n=0; Object.values(S.specs).forEach(sp=>SLOTS.forEach(k=>{ if(sp.fits[k] && sp.fits[k].src===id) n++; })); return n;
+}
+function removeRedo(id, quiet){
+  const rf=S.redoFiles.find(r=>r.id===id); if(!rf) return;
+  S.redoFiles=S.redoFiles.filter(r=>r.id!==id);
+  S.pendingRedo=S.pendingRedo.filter(l=>redoTag(l)!==id);
+  let cleared=0, unloaded=0, kept=0;
+  Object.values(S.specs).forEach(sp=>{
+    const listed=(sp.inRedos||[]).includes(id);
+    sp.inRedos=(sp.inRedos||[]).filter(x=>x!==id);
+    if(worked(sp)){ if(listed) kept++; return; }        // your edited / saved specimens are left alone
+    SLOTS.forEach(k=>{ if(sp.fits[k] && sp.fits[k].src===id){ sp.fits[k]=null; cleared++; } });
+    if(listed && sp.fromRedo && !sp.inRedos.length){ delete S.specs[sp.name]; unloaded++; }
+  });
+  S.order=S.order.filter(n=>S.specs[n]);
+  if(S.cur && !S.specs[S.cur]) S.cur=null;
+  if(!S.cur){ const first=S.order.find(n=>S.specs[n].steps.length>0); if(first) S.cur=first; }
+  renderQueue(); renderAll();
+  if(!quiet) toast('removed '+rf.name+': '+cleared+' fits cleared, '+unloaded+' specimens unloaded'+(kept?', '+kept+' you worked on kept':''), 4000);
+}
+async function loadRedoFile(file, replaceId){
+  const txt=await file.text();
+  if(replaceId) removeRedo(replaceId, true);
+  registerRedo(file.name, txt);
+  toast('redo '+file.name+' loaded — finding its specimens…');
+  await resolveNeeded();
+}
+function armConfirm(btn, fn){   // two clicks within 3 s, no browser dialog
+  if(btn._arm){ clearTimeout(btn._arm); btn._arm=null; btn.classList.remove('arm'); btn.textContent=btn._txt; fn(); return; }
+  btn._txt=btn.textContent; btn.textContent='sure?'; btn.classList.add('arm');
+  btn._arm=setTimeout(()=>{ btn._arm=null; btn.classList.remove('arm'); btn.textContent=btn._txt; },3000);
+}
+function renderSources(){
+  const rn=document.getElementById('root-name'); if(!rn) return;
+  if(S.scan.byName.size) rn.textContent=(S.scan.root||'(folder)')+' · '+S.scan.byName.size+' files';
+  else rn.textContent = S.scan.root ? S.scan.root+' · restored (pick again to load new specimens)' : '—';
+  document.getElementById('root-btn').textContent = (S.scan.byName.size||S.scan.root) ? 'change' : 'pick';
+  document.getElementById('root-x').style.display = (S.scan.byName.size||S.scan.root) ? '' : 'none';
+  const box=document.getElementById('redo-rows'); box.innerHTML='';
+  document.getElementById('redo-none').style.display = S.redoFiles.length ? 'none' : '';
+  S.redoFiles.forEach(r=>{
+    const row=document.createElement('div'); row.className='src-row';
+    const nSp=Object.values(S.specs).filter(sp=>(sp.inRedos||[]).includes(r.id)).length;
+    row.innerHTML='<span class="src-lbl">redo</span><span class="src-name" title="'+r.name+'">'+r.name+' · '+redoFitCount(r.id)+' fits / '+nSp+' spec</span>';
+    const ch=document.createElement('button'); ch.className='btn sm'; ch.textContent='change'; ch.title='replace with another .redo (your edited/saved specimens are kept)';
+    ch.onclick=()=>{ const ri=document.getElementById('redo-input'); ri.onchange=async()=>{ const f=ri.files[0]; ri.value=''; if(f) await loadRedoFile(f, r.id); }; ri.click(); };
+    const x=document.createElement('button'); x.className='btn sm'; x.textContent='✕'; x.title='remove this redo: clears its fits and unloads the specimens it brought in, except ones you edited or saved';
+    x.onclick=()=>armConfirm(x, ()=>removeRedo(r.id));
+    row.appendChild(ch); row.appendChild(x); box.appendChild(row);
+  });
+}
 function redoSpecimenNames(){
   return [...new Set(S.pendingRedo.map(l=>{ let n=l.split('\t')[0]; return n.startsWith('current_')?n.slice(8):n; }))];
 }
@@ -718,6 +792,7 @@ async function resolveNeeded(){
   if(needed.length){
     if(!(await ensureRoot())){ toast('now choose the data folder: click "pick" (or the box), or drag the folder onto the box', 6000); renderQueue(); renderAll(); return; }
     const res=await resolveFromScan(needed); loaded=res.loaded; const missing=res.missing;
+    needed.forEach(n=>{ if(S.specs[n]) S.specs[n].fromRedo=true; });
     if(loaded===0){
       // diagnostics: did the scan even contain specimen files?
       const seen=specimenLikeCount();
@@ -756,12 +831,13 @@ async function autoloadFromScan(){
 /* ═════════════════════════ file loading ═════════════════════════ */
 // after any folder scan (drop, box click, pick): use a waiting redo, else the best redo inside, else all .sam sites
 async function afterFolderScan(){
-  if(S.pendingRedo.length || redoSpecimenNames().length){ await resolveNeeded(); return; }
+  // a redo is already loaded (or waiting): the new folder only supplies specimen files
+  if(S.pendingRedo.length || S.redoFiles.length){ await resolveNeeded(); return; }
   const redos=findRedosInScan();
   if(redos.length){
     try{
       const txt=await redos[0].getText();
-      txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
+      registerRedo(redos[0].path.split('/').slice(-2).join('/'), txt);
       toast('using '+redos[0].path.split('/').slice(-2).join('/')+' — loading its specimens…');
       await resolveNeeded();
       return;
@@ -778,6 +854,17 @@ dz.onclick=async e=>{
 dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
 dz.ondragleave=()=>dz.classList.remove('over');
 fi.onchange=()=>{ loadFiles(fi.files); fi.value=''; };
+document.getElementById('root-x').onclick=e=>armConfirm(e.currentTarget, async()=>{
+  S.scan={byName:new Map(), byDir:new Map(), root:''};
+  try{ const db=await idb(); await new Promise(r=>{ const t=db.transaction('kv','readwrite').objectStore('kv').delete('rootHandle'); t.onsuccess=r; t.onerror=r; }); }catch(err){}
+  renderSources(); scheduleSessionSave();
+  toast('data folder forgotten — loaded specimens stay; pick a folder to load new ones');
+});
+document.getElementById('redo-add').onclick=()=>{
+  const ri=document.getElementById('redo-input');
+  ri.onchange=async()=>{ const f=ri.files[0]; ri.value=''; if(f) await loadRedoFile(f); };
+  ri.click();
+};
 document.getElementById('root-btn').onclick=async()=>{
   S.scan={byName:new Map(), byDir:new Map(), root:''};
   if(await pickRoot()) await afterFolderScan();
@@ -838,10 +925,7 @@ async function loadFiles(fileList){
     const sp=parseSpecimenFile(f.name, await f.text());
     if(sp && !(sp.name in S.specs)){ S.specs[sp.name]=sp; restoreSpec(sp); nLoaded++; }
   }
-  for(const f of redos){
-    const txt=await f.text();
-    txt.split(/\r?\n/).forEach(l=>{ if(l.trim()) S.pendingRedo.push(l); });
-  }
+  for(const f of redos){ registerRedo(f.name, await f.text()); }
   if(redos.length){
     toast('redo loaded — finding its specimens…');
     await resolveNeeded();
@@ -896,11 +980,13 @@ function applyPendingRedo(){
     let name=f[0]; if(name.startsWith('current_')) name=name.slice(8);
     const sp=S.specs[name];
     if(!sp || f.length<5){ if(f.length>=5) rest.push(line); return; }
-    if(sp._hadLocal) return;   // you've worked this specimen — your saved state wins, don't revert to redo
+    const src=redoTag(line);
+    if(src){ sp.inRedos=sp.inRedos||[]; if(!sp.inRedos.includes(src)) sp.inRedos.push(src); }
+    if(worked(sp)) return;   // you've edited or saved this specimen — your state wins, don't revert to redo
     const slot=slotForRedoName(sp, f[4]);
     if(!slot) return;
     const i0=boundToIdx(sp,f[2],false), i1=boundToIdx(sp,f[3],true);
-    if(i0!==null && i1!==null && i1>i0) sp.fits[slot]={i0,i1,name:splitSlotName(f[4]).name,color:f[5]||SLOTC[slot]};
+    if(i0!==null && i1!==null && i1>i0) sp.fits[slot]={i0,i1,name:splitSlotName(f[4]).name,color:(f[5]&&f[5][0]==='#')?f[5]:SLOTC[slot],src};
   });
   S.pendingRedo=rest;
 }
@@ -918,6 +1004,7 @@ function restoreSpec(sp){
     if(d.lastGrade) sp.lastGrade=d.lastGrade;
     if(d.lastPts) sp.lastPts=d.lastPts;
     sp._hadLocal = true;
+    if(d.touched) sp._edited = true;
   }catch(e){}
 }
 function persistSpec(sp){
@@ -940,10 +1027,12 @@ function scheduleSessionSave(){
 async function saveSession(){
   const specs=Object.values(S.specs).filter(sp=>sp.text);
   if(!specs.length) return;
-  const snap={ v:1, ts:Date.now(), root:S.scan.root||'', cur:S.cur, order:S.order.slice(), sites:S.sites,
+  const snap={ v:2, ts:Date.now(), root:S.scan.root||'', cur:S.cur, order:S.order.slice(), sites:S.sites,
+    redoFiles:S.redoFiles,
     specs:specs.map(sp=>({ name:sp.name, text:sp.text, fits:sp.fits,
       skips:sp.steps.filter(x=>x.skipped).map(x=>x.idx), saved:!!sp.saved,
-      lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0 })) };
+      lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0,
+      inRedos:sp.inRedos||[], fromRedo:!!sp.fromRedo, edited:!!sp._edited })) };
   try{ await idbSet('session', JSON.parse(JSON.stringify(snap))); }catch(e){}
 }
 async function restoreSession(){
@@ -959,14 +1048,16 @@ async function restoreSession(){
       (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
       SLOTS.forEach(k=>{ sp.fits[k]=(d.fits&&d.fits[k])||null; });
       sp.saved=!!d.saved; if(d.lastGrade) sp.lastGrade=d.lastGrade; sp.lastPts=d.lastPts||0;
-      sp._hadLocal=true;
+      sp.inRedos=d.inRedos||[]; sp.fromRedo=!!d.fromRedo; sp._edited=!!d.edited;
+      if(snap.v<2) sp._edited=true;   // older snapshot: no edit flag, keep everything as yours
       S.specs[sp.name]=sp;
     });
     S.order=(snap.order||[]).filter(n=>S.specs[n]);
     Object.keys(S.specs).forEach(n=>{ if(!S.order.includes(n)) S.order.push(n); });
     S.scan.root=snap.root||'';
-    const rn=document.getElementById('root-name');
-    if(rn) rn.textContent=(snap.root||'last session')+' · restored';
+    S.redoFiles=snap.redoFiles||[];
+    // lines whose specimens are not loaded yet stay pending (resolved once a data root is picked)
+    S.pendingRedo=[]; S.redoFiles.forEach(r=>r.lines.forEach(l=>{ const n=l.split('\t')[0].replace(/^current_/,''); if(!S.specs[n]) S.pendingRedo.push(l+'\t@'+r.id); }));
     const cur=(snap.cur&&S.specs[snap.cur])?snap.cur:S.order.find(n=>S.specs[n].steps.length>0);
     S.cur=null; if(cur) selectSpec(cur); else { renderQueue(); renderAll(); }
   } finally { S._restoring=false; }
@@ -976,9 +1067,8 @@ async function restoreSession(){
 }
 async function clearSession(){
   try{ const db=await idb(); await new Promise(r=>{ const t=db.transaction('kv','readwrite').objectStore('kv').delete('session'); t.onsuccess=r; t.onerror=r; }); }catch(e){}
-  S.specs={}; S.sites={}; S.order=[]; S.cur=null; S.pendingRedo=[];
+  S.specs={}; S.sites={}; S.order=[]; S.cur=null; S.pendingRedo=[]; S.redoFiles=[];
   S.scan={byName:new Map(), byDir:new Map(), root:''};
-  const rn=document.getElementById('root-name'); if(rn) rn.textContent='—';
   renderQueue(); renderAll();
   toast('cleared — drop or pick a folder to start. Your saved fits come back if you load the same data.', 4000);
 }
@@ -1004,6 +1094,7 @@ function pushUndo(label, sp){
   if(UNDO_APPLYING) return;
   if(sp===undefined) sp=S.cur?S.specs[S.cur]:null;
   if(!sp) return;
+  sp._edited=true;
   UNDO.push({kind:'spec', label, spec:specState(sp), hud:hudState()});
   if(UNDO.length>UNDO_MAX) UNDO.shift();
   REDO.length=0;
@@ -1256,6 +1347,7 @@ function sortKey(sp, m, orderIdx){
   }
 }
 function renderQueue(){
+  renderSources();
   const list=document.getElementById('spec-list');
   list.innerHTML='';
   if(S.order.length===0) return;
