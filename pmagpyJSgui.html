@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v20 — pyRockmag fitting arcade</title>
+<title>FITQUEST v21 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -125,6 +125,8 @@ body{display:grid;grid-template-rows:auto 1fr auto;height:100vh}
 .save-row{display:flex;gap:5px;margin-top:6px}
 .save-row .btn{flex:1;padding:8px 4px;font-size:11px;font-weight:700;letter-spacing:.06em}
 .save-row .btn:disabled{opacity:.3;cursor:default}
+.save-row #clear-btn{flex:0 0 auto;padding:8px 9px;font-weight:600}
+.save-row #clear-btn:not(:disabled):hover{border-color:var(--red,#c1121f);color:var(--red,#c1121f)}
 .coord-row{display:flex;gap:4px;margin-bottom:8px}
 .coord-btn{flex:1;text-align:center;padding:3px 0;font-size:9px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;color:var(--tx3);letter-spacing:.05em}
 .coord-btn.on{border-color:var(--ac);color:var(--ac);background:var(--ac3)}
@@ -169,7 +171,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v20 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v21 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -293,6 +295,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
         <span id="sum-fits">0 fits</span><span id="sum-chrm"></span>
       </div>
       <div class="save-row">
+        <button class="btn" id="clear-btn" disabled title="clear all fits (LT, MT, HT) on this specimen — skipped points are kept; un-saves it if it was saved · ⌘Z undoes">CLEAR</button>
         <button class="btn pri" id="save-next-btn" disabled title="save, then go to the next specimen in the queue as shown (follows the current sort and filter) · key N">SAVE ▸ NEXT</button>
         <button class="btn pri" id="save-btn" disabled title="save, then jump to the next specimen you have not saved yet (no ✓) · key S">SAVE ▸ NEXT UNFIT</button>
       </div>
@@ -319,6 +322,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
     <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
     <tr><td><kbd>save buttons</kbd></td><td><b>SAVE ▸ NEXT</b> (key <kbd>N</kbd>) saves and goes to the next specimen in the queue as shown — it follows the current sort and filter. <b>SAVE ▸ NEXT UNFIT</b> (key <kbd>S</kbd>) saves and jumps to the next specimen you have not saved yet (no ✓). Both are undoable with ⌘Z.</td></tr>
+    <tr><td><kbd>CLEAR</kbd></td><td>left of the save buttons: removes all fits (LT, MT, HT) on this specimen; skipped points stay. If it was saved, it becomes unsaved and its points come off the score. ⌘Z undoes.</td></tr>
     <tr><td><kbd>sources</kbd></td><td>box above the queue. <b>data root</b>: <i>change</i> picks another folder; <i>✕</i> (twice) forgets it — loaded specimens stay. <b>redo</b>: one row per loaded .redo with its fit count; <i>change</i> swaps in another .redo, <i>✕</i> (twice) removes it — its fits are cleared and the specimens only it brought in are unloaded, <b>except specimens you edited or saved</b>, which are kept as they are. <i>+ redo</i> loads another.</td></tr>
     <tr><td><kbd>reopen</kbd></td><td>the page reopens with the data, fits, skips and grades you last had loaded (kept in this browser). <b>⟲ new</b> (click twice) closes that session and starts empty; fits you saved still come back if you load the same specimens again.</td></tr>
     <tr><td><kbd>fit</kbd></td><td>line fit type for every fit: <b>DE-BFL</b> free, <b>DE-BFL-A</b> anchored, <b>DE-BFL-O</b> origin as a point (PmagPy names; written to exports). dang always comes from the free line.</td></tr>
@@ -1844,6 +1848,7 @@ function renderSlots(sp){
   document.getElementById('sum-chrm').innerHTML=anyUsable?'<span style="color:var(--amb)">★ ChRM</span>':'';
   document.getElementById('save-btn').disabled=!(sp&&nFits>0);
   document.getElementById('save-next-btn').disabled=!(sp&&nFits>0);
+  document.getElementById('clear-btn').disabled=!(sp&&SLOTS.some(k=>sp.fits[k]));
   sp&&(sp._specTotal=specTotal)&&(sp._anyUsable=anyUsable);
   if(sp){ sp._specTotal=specTotal; sp._anyUsable=anyUsable; }
 }
@@ -1933,6 +1938,23 @@ function toggleSkip(idx){
   sp.steps[idx].skipped=!sp.steps[idx].skipped;
   persistSpec(sp);
   renderAll();
+}
+// clear every fit on the current specimen (undoable). A saved specimen becomes unsaved and its
+// points come off the score, so the grade never describes fits that no longer exist.
+function clearAllFits(){
+  const sp=S.cur?S.specs[S.cur]:null;
+  if(!sp) return;
+  const n=SLOTS.filter(k=>sp.fits[k]).length;
+  if(!n) return;
+  pushUndo('clear all fits', sp);
+  SLOTS.forEach(k=>{ sp.fits[k]=null; });
+  if(sp.saved){
+    S.score=Math.max(0, S.score-(sp.lastPts||0));
+    sp.saved=false; sp.lastGrade=null; sp.lastPts=0;
+    lsSet('fitquest:session',JSON.stringify({score:S.score,streak:S.streak,best:S.best}));
+  }
+  persistSpec(sp); renderQueue(); renderAll();
+  toast('cleared '+n+' fit'+(n===1?'':'s')+' on '+sp.name+' — ⌘Z to undo', 2200);
 }
 function clearFit(k){
   const sp=S.specs[S.cur];
@@ -2228,6 +2250,7 @@ function exportMagic(){
 /* ═════════════════════════ global wiring ═════════════════════════ */
 document.getElementById('save-btn').onclick=()=>saveSpec('unfit');
 document.getElementById('save-next-btn').onclick=()=>saveSpec('next');
+document.getElementById('clear-btn').onclick=clearAllFits;
 document.getElementById('magic-btn').onclick=exportMagic;
 document.getElementById('autobk-btn').onclick=()=>setAutoBackup(!S.autoBackup);
 document.getElementById('copy-btn').onclick=()=>copyFits(document.getElementById('clip-scope').value);
