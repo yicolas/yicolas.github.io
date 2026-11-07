@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v21 — pyRockmag fitting arcade</title>
+<title>FITQUEST v22 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -171,7 +171,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v21 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v22 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -319,8 +319,9 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
     <tr><td><kbd>copy / paste</kbd></td><td>at the bottom of the console: pick a scope (all / LT / MT / HT), <b>copy</b> this specimen's fits, then move to another specimen and <b>paste</b> — the windows transfer by matching temperature/field, so they land on the right steps even if the step list differs. The clipboard survives reloads.</td></tr>
     <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
     <tr><td><kbd>queue sort/filter</kbd></td><td>the bar atop the specimen queue sorts within each site by MAD, dang, grade, # fits, ChRM-first or name (↑/↓ toggles direction), and filters to unsaved / saved / flagged (MAD&gt;10 or dang&gt;15) / usable-ChRM / <b>fit overlap</b> (a step shared by two components — usually a mistake to fix).</td></tr>
-    <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_Laos_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
+    <tr><td><kbd>⭳ MagIC</kbd></td><td>exports a complete MagIC 3.0 contribution for <b>all loaded sites</b> — locations, sites (Fisher site means), samples (orientations), specimens (each fit in <b>both</b> geographic and tilt-corrected frames with MAD/dang), and measurements (all steps) — in one upload-ready <code>fitquest_&lt;folder&gt;_magic.txt</code>. ⭳ .redo likewise writes every fit from every site into one file.</td></tr>
     <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>undo the last change — point clicks, skips, range dropdowns, clearing or pasting fits, saving (score and grade roll back too), and the fit / drop menus. Remembers the last <b>50</b> changes; it jumps to the specimen the change was made on. <kbd>⌘⇧Z</kbd> / <kbd>Ctrl+Y</kbd> redoes. Undo history lasts until the page is reloaded.</td></tr>
+    <tr><td><kbd>skips in exports</kbd></td><td>every skipped point (your right-clicks and the automatic skips, with the reason) is written into the .redo as <code>#bad &lt;specimen&gt; &lt;treatment&gt; &lt;occurrence&gt; &lt;measurement&gt; &lt;reason&gt; b</code> lines. demag_gui ignores those lines, so the file still imports there; FITQUEST reads them back and restores the skip set. In <b>⭳ MagIC</b> the same points are <code>measurements.quality = b</code> — the way demag_gui stores a right-clicked bad point.</td></tr>
     <tr><td><kbd>save buttons</kbd></td><td><b>SAVE ▸ NEXT</b> (key <kbd>N</kbd>) saves and goes to the next specimen in the queue as shown — it follows the current sort and filter. <b>SAVE ▸ NEXT UNFIT</b> (key <kbd>S</kbd>) saves and jumps to the next specimen you have not saved yet (no ✓). Both are undoable with ⌘Z.</td></tr>
     <tr><td><kbd>CLEAR</kbd></td><td>left of the save buttons: removes all fits (LT, MT, HT) on this specimen; skipped points stay. If it was saved, it becomes unsaved and its points come off the score. ⌘Z undoes.</td></tr>
     <tr><td><kbd>sources</kbd></td><td>box above the queue. <b>data root</b>: <i>change</i> picks another folder; <i>✕</i> (twice) forgets it — loaded specimens stay. <b>redo</b>: one row per loaded .redo with its fit count; <i>change</i> swaps in another .redo, <i>✕</i> (twice) removes it — its fits are cleared and the specimens only it brought in are unloaded, <b>except specimens you edited or saved</b>, which are kept as they are. <i>+ redo</i> loads another.</td></tr>
@@ -340,7 +341,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
   <p><code>per fit: 100 − 6·MAD − 2·max(0, dang−5) + 2·(n−3) [cap +10]</code><br>
   +15 bonus for a usable terminal ChRM. Grades: S ≥ 95 · A ≥ 85 · B ≥ 70 · C ≥ 50 · D ≥ 30 · F. Streak counts consecutive specimens saved with a usable ChRM. Skipping &gt; 25% of a segment's points caps its grade at C — beyond that the line is wrong, not the points.</p>
   <h4>Easiest: drag the whole repo folder in</h4>
-  <p>Drag the Laos repo folder (the one containing <code>Magnetometer_Data_corrected</code>) onto the drop zone. The app finds the best <code>.redo</code> inside it — preferring <code>Magnetometer_Data_corrected/demag_gui.redo</code>, the manuscript fits — loads every specimen it names, and queues them. This is one gesture and works even when the page is opened as a local <code>file://</code> (where the folder-picker button is disabled). When a specimen exists in several places it prefers paths containing <code>corrected</code> and avoids <code>_archive</code>/<code>safety</code>/old copies.</p>
+  <p>Drag your data folder (for Caborca: <code>fitquest_corrected</code>) onto the drop zone. The app finds the best <code>.redo</code> inside it — preferring <code>Magnetometer_Data_corrected/demag_gui.redo</code>, the manuscript fits — loads every specimen it names, and queues them. This is one gesture and works even when the page is opened as a local <code>file://</code> (where the folder-picker button is disabled). When a specimen exists in several places it prefers paths containing <code>corrected</code> and avoids <code>_archive</code>/<code>safety</code>/old copies.</p>
   <h4>Or click the box to choose the folder</h4>
   <p>Clicking the box (or <b>pick</b>) opens a <b>folder</b> picker: highlight your data folder (for Caborca: <code>fitquest_corrected</code>) and press <b>Select</b>/<b>Open</b>; you do not need to open it. The app then does exactly what a drop does. If the browser refuses a folder, click again and it switches to its other folder picker, or just drag the folder in. <i>or choose loose files…</i> in the box is the old multi-file picker.</p>
   <h4>Or drop a .redo on its own</h4>
@@ -716,13 +717,41 @@ async function resolveFromScan(names){
 }
 // ── loaded redo files: each line is tagged "\t@<id>" so fits and specimens remember their redo ──
 S.redoFiles=[];   // [{id, name, lines:[raw lines]}]
+S.pendingBad=[];  // [{spec, bound, occ, why, src}] skip records waiting for their specimen
 function redoTag(line){ const m=/\t@(r[\w.-]+)$/.exec(line); return m?m[1]:null; }
 function registerRedo(name, txt){
   const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const lines=txt.split(/\r?\n/).map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim() && l.split('\t').length>=5);
   S.redoFiles.push({id, name, lines});
-  lines.forEach(l=>S.pendingRedo.push(l+'\t@'+id));
+  lines.forEach(l=>queueRedoLine(l, id));
   return id;
+}
+function queueRedoLine(l, id){
+  const f=l.split('\t');
+  if(f[0]==='#bad'){ S.pendingBad.push({spec:f[1].replace(/^current_/,''), bound:f[2], occ:parseInt(f[3])||1, why:f[5]||'', src:id}); return; }
+  S.pendingRedo.push(l+'\t@'+id);
+}
+// apply skip records: for each specimen the listed steps ARE its skip set (authoritative), unless
+// you have edited/saved that specimen in this browser — then your own state wins
+function applyPendingBad(){
+  const by={}, rest=[];
+  S.pendingBad.forEach(b=>{ if(S.specs[b.spec]) (by[b.spec]=by[b.spec]||[]).push(b); else rest.push(b); });
+  Object.entries(by).forEach(([name,recs])=>{
+    const sp=S.specs[name];
+    if(worked(sp)) return;
+    const occ={}, keyIdx={};
+    sp.steps.forEach((st,i)=>{ const b=boundRedoVal(st); occ[b]=(occ[b]||0)+1; keyIdx[b+'#'+occ[b]]=i; });
+    const want=new Set();
+    recs.forEach(r=>{
+      let i=keyIdx[r.bound+'#'+r.occ];
+      if(i===undefined){ const v=parseFloat(r.bound); for(const k in keyIdx){ const [bb,oo]=k.split('#'); if(Math.abs(parseFloat(bb)-v)<1e-6*Math.max(1,Math.abs(v)) && +oo===r.occ){ i=keyIdx[k]; break; } } }
+      if(i!==undefined) want.add(i);
+    });
+    sp.steps.forEach((st,i)=>{ st.skipped=want.has(i); st.userSkip=false;
+      const r=recs.find(x=>keyIdx[x.bound+'#'+x.occ]===i); if(st.skipped) st.autoskip=(r&&r.why&&r.why!=='user')?r.why:'skipped in redo'; else st.autoskip=''; });
+    sp.skipSrc=recs[0].src;
+  });
+  S.pendingBad=rest;
 }
 function worked(sp){ return !!(sp && (sp.saved || sp._edited)); }
 function redoFitCount(id){
@@ -732,12 +761,14 @@ function removeRedo(id, quiet){
   const rf=S.redoFiles.find(r=>r.id===id); if(!rf) return;
   S.redoFiles=S.redoFiles.filter(r=>r.id!==id);
   S.pendingRedo=S.pendingRedo.filter(l=>redoTag(l)!==id);
+  S.pendingBad=S.pendingBad.filter(b=>b.src!==id);
   let cleared=0, unloaded=0, kept=0;
   Object.values(S.specs).forEach(sp=>{
     const listed=(sp.inRedos||[]).includes(id);
     sp.inRedos=(sp.inRedos||[]).filter(x=>x!==id);
     if(worked(sp)){ if(listed) kept++; return; }        // your edited / saved specimens are left alone
     SLOTS.forEach(k=>{ if(sp.fits[k] && sp.fits[k].src===id){ sp.fits[k]=null; cleared++; } });
+    if(sp.skipSrc===id && sp.text){ const fresh=parseSpecimenFile(sp.name, sp.text); if(fresh) sp.steps.forEach((st,i)=>{ st.skipped=fresh.steps[i].skipped; st.autoskip=fresh.steps[i].autoskip; st.userSkip=false; }); sp.skipSrc=null; }
     if(listed && sp.fromRedo && !sp.inRedos.length){ delete S.specs[sp.name]; unloaded++; }
   });
   S.order=S.order.filter(n=>S.specs[n]);
@@ -769,7 +800,8 @@ function renderSources(){
   S.redoFiles.forEach(r=>{
     const row=document.createElement('div'); row.className='src-row';
     const nSp=Object.values(S.specs).filter(sp=>(sp.inRedos||[]).includes(r.id)).length;
-    row.innerHTML='<span class="src-lbl">redo</span><span class="src-name" title="'+r.name+'">'+r.name+' · '+redoFitCount(r.id)+' fits / '+nSp+' spec</span>';
+    const nBad=r.lines.filter(l=>l.startsWith('#bad\t')).length;
+    row.innerHTML='<span class="src-lbl">redo</span><span class="src-name" title="'+r.name+'">'+r.name+' · '+redoFitCount(r.id)+' fits / '+nSp+' spec'+(nBad?' · '+nBad+' skips':'')+'</span>';
     const ch=document.createElement('button'); ch.className='btn sm'; ch.textContent='change'; ch.title='replace with another .redo (your edited/saved specimens are kept)';
     ch.onclick=()=>{ const ri=document.getElementById('redo-input'); ri.onchange=async()=>{ const f=ri.files[0]; ri.value=''; if(f) await loadRedoFile(f, r.id); }; ri.click(); };
     const x=document.createElement('button'); x.className='btn sm'; x.textContent='✕'; x.title='remove this redo: clears its fits and unloads the specimens it brought in, except ones you edited or saved';
@@ -983,6 +1015,7 @@ function slotForRedoName(sp, nm){
   return sp.fits.LT===null?'LT':sp.fits.MT===null?'MT':sp.fits.HT===null?'HT':null;
 }
 function applyPendingRedo(){
+  applyPendingBad();
   const rest=[];
   S.pendingRedo.forEach(line=>{
     const f=line.split('\t');
@@ -1041,7 +1074,8 @@ async function saveSession(){
     specs:specs.map(sp=>({ name:sp.name, text:sp.text, fits:sp.fits,
       skips:sp.steps.filter(x=>x.skipped).map(x=>x.idx), saved:!!sp.saved,
       lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0,
-      inRedos:sp.inRedos||[], fromRedo:!!sp.fromRedo, edited:!!sp._edited })) };
+      inRedos:sp.inRedos||[], fromRedo:!!sp.fromRedo, edited:!!sp._edited, skipSrc:sp.skipSrc||null,
+      userSkips:sp.steps.filter(x=>x.userSkip).map(x=>x.idx) })) };
   try{ await idbSet('session', JSON.parse(JSON.stringify(snap))); }catch(e){}
 }
 async function restoreSession(){
@@ -1057,7 +1091,8 @@ async function restoreSession(){
       (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
       SLOTS.forEach(k=>{ sp.fits[k]=(d.fits&&d.fits[k])||null; });
       sp.saved=!!d.saved; if(d.lastGrade) sp.lastGrade=d.lastGrade; sp.lastPts=d.lastPts||0;
-      sp.inRedos=d.inRedos||[]; sp.fromRedo=!!d.fromRedo; sp._edited=!!d.edited;
+      sp.inRedos=d.inRedos||[]; sp.fromRedo=!!d.fromRedo; sp._edited=!!d.edited; sp.skipSrc=d.skipSrc||null;
+      (d.userSkips||[]).forEach(i=>{ if(sp.steps[i]){ sp.steps[i].userSkip=true; sp.steps[i].autoskip=''; } });
       if(snap.v<2) sp._edited=true;   // older snapshot: no edit flag, keep everything as yours
       S.specs[sp.name]=sp;
     });
@@ -1066,7 +1101,8 @@ async function restoreSession(){
     S.scan.root=snap.root||'';
     S.redoFiles=snap.redoFiles||[];
     // lines whose specimens are not loaded yet stay pending (resolved once a data root is picked)
-    S.pendingRedo=[]; S.redoFiles.forEach(r=>r.lines.forEach(l=>{ const n=l.split('\t')[0].replace(/^current_/,''); if(!S.specs[n]) S.pendingRedo.push(l+'\t@'+r.id); }));
+    S.pendingRedo=[]; S.pendingBad=[];
+    S.redoFiles.forEach(r=>r.lines.forEach(l=>{ const f=l.split('\t'); const n=(f[0]==='#bad'?f[1]:f[0]).replace(/^current_/,''); if(!S.specs[n]) queueRedoLine(l, r.id); }));
     const cur=(snap.cur&&S.specs[snap.cur])?snap.cur:S.order.find(n=>S.specs[n].steps.length>0);
     S.cur=null; if(cur) selectSpec(cur); else { renderQueue(); renderAll(); }
   } finally { S._restoring=false; }
@@ -1076,7 +1112,7 @@ async function restoreSession(){
 }
 async function clearSession(){
   try{ const db=await idb(); await new Promise(r=>{ const t=db.transaction('kv','readwrite').objectStore('kv').delete('session'); t.onsuccess=r; t.onerror=r; }); }catch(e){}
-  S.specs={}; S.sites={}; S.order=[]; S.cur=null; S.pendingRedo=[]; S.redoFiles=[];
+  S.specs={}; S.sites={}; S.order=[]; S.cur=null; S.pendingRedo=[]; S.redoFiles=[]; S.pendingBad=[];
   S.scan={byName:new Map(), byDir:new Map(), root:''};
   renderQueue(); renderAll();
   toast('cleared — drop or pick a folder to start. Your saved fits come back if you load the same data.', 4000);
@@ -1936,6 +1972,8 @@ function toggleSkip(idx){
   if(!sp||!sp.steps[idx]) return;
   pushUndo(sp.steps[idx].skipped?'unskip':'skip', sp);
   sp.steps[idx].skipped=!sp.steps[idx].skipped;
+  sp.steps[idx].userSkip=sp.steps[idx].skipped;
+  if(sp.steps[idx].skipped) sp.steps[idx].autoskip='';
   persistSpec(sp);
   renderAll();
 }
@@ -2106,24 +2144,48 @@ function buildRedoLines(){
   });
   return lines;
 }
+// Skipped ("bad") measurements, written into the .redo as demag_gui-safe records:
+//   #bad <specimen> <treatment> <occurrence> <MagIC measurement name> <reason> b
+// demag_gui's redo reader ignores any line whose first field is not a specimen (it needs >= 7 fields,
+// which these have), so the file still imports into demag_gui. <treatment> uses the same units as the
+// fit bounds (K thermal, T for AF, 0 NRM, 77 LN2); <occurrence> tells repeated treatments apart.
+// In MagIC the same flags travel as measurements.quality = 'b' — which is how demag_gui itself stores
+// a right-clicked bad point — so the ⭳ MagIC export carries them too.
+function buildSkipLines(){
+  const lines=[];
+  S.order.forEach(n=>{
+    const sp=S.specs[n]; if(!sp || !sp.steps.length) return;
+    const occ={};
+    sp.steps.forEach((st,i)=>{
+      const b=boundRedoVal(st); occ[b]=(occ[b]||0)+1;
+      if(!st.skipped) return;
+      const why=(st.userSkip?'user':(st.autoskip||'user')).replace(/[\t\r\n]+/g,' ').slice(0,80);
+      lines.push(['#bad', sp.name, b, String(occ[b]), sp.name+'_'+(i+1), why, 'b'].join('\t'));
+    });
+  });
+  return lines;
+}
+function exportTag(){
+  const nSites=new Set(S.order.filter(n=>S.specs[n].steps.length).map(n=>siteOf(n))).size;
+  const root=(S.scan.root||'').replace(/[^\w.-]+/g,'_').replace(/^fitquest_?/i,'');
+  const one=Object.keys(S.sites)[0];
+  return nSites>1 ? (root?root+'_allsites':'allsites') : (one?one.split('/').pop().replace(/\.sam$/i,''):(root||'export'));
+}
 function downloadRedo(suffix){
   const lines=buildRedoLines();
   if(!lines.length) return 0;
-  const blob=new Blob([lines.join('\n')+'\n'],{type:'text/plain'});
+  const skips=buildSkipLines();
+  const blob=new Blob([lines.concat(skips).join('\n')+'\n'],{type:'text/plain'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  // all sites in one redo; name generically when more than one site is loaded
-  const nSites=new Set(S.order.filter(n=>S.specs[n].steps.length).map(n=>siteOf(n))).size;
-  const one=Object.keys(S.sites)[0];
-  const tag = nSites>1 ? 'Laos_allsites' : (one?one.replace(/\.sam$/i,''):'export');
-  a.download='fitquest_'+tag+(suffix||'')+'.redo';
+  a.download='fitquest_'+exportTag()+(suffix||'')+'.redo';
   a.click();
   URL.revokeObjectURL(a.href);
   return lines.length;
 }
 function exportRedo(){
   const n=downloadRedo('');
-  toast(n ? n+' fits exported (demag_gui format)' : 'no valid fits to export yet');
+  toast(n ? n+' fits + skipped points exported (demag_gui format)' : 'no valid fits to export yet');
 }
 // auto-backup: drop a fresh .redo to Downloads shortly after each save (debounced to
 // coalesce bursts). file:// can't silently overwrite a repo file, so this is a download.
@@ -2155,7 +2217,7 @@ function magicMethodMeas(s){ const t=s.treat; return t.type==='NRM'?'LT-NO':t.ty
 function exportMagic(){
   const SITE=n=>siteLabel(siteOf(n));
   const sampleRows=[], specRows=[], measRows=[];
-  const LOC='Laos'; const CIT='This study'; const SW='FITQUEST';
+  const LOC=(S.scan.root||'FITQUEST').replace(/[\t]/g,' '); const CIT='This study'; const SW='FITQUEST';
   let nf=0;
   S.order.forEach(n=>{
     const sp=S.specs[n];
@@ -2242,7 +2304,7 @@ function exportMagic(){
             + magicTable('measurements',measCols,measRows);
   const blob=new Blob([txt],{type:'text/plain'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='fitquest_Laos_magic.txt';
+  a.download='fitquest_'+exportTag()+'_magic.txt';
   a.click(); URL.revokeObjectURL(a.href);
   toast('MagIC: '+locRows.length+' loc · '+siteRows.length+' sites · '+sampleRows.length+' samples · '+nf+' fits · '+measRows.length+' meas');
 }
