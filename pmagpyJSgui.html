@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v25 — pyRockmag fitting arcade</title>
+<title>FITQUEST v26 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -87,6 +87,9 @@ body{display:grid;grid-template-rows:auto 1fr auto auto;height:100vh}
 .plot-cell .ptitle{position:absolute;top:4px;left:8px;z-index:5;font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;pointer-events:none}
 #eq-ctl{position:absolute;top:2px;right:6px;z-index:6;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 #eq-ctl select{width:auto;font-size:9px;padding:1px 2px}
+#dec-ctl{position:absolute;top:2px;right:6px;z-index:6;display:flex;gap:4px;align-items:center;font-size:9px;color:var(--tx3)}
+#dec-ctl input{width:42px;font-size:9px;padding:1px 2px}
+#dec-ctl button{font-size:9px;padding:1px 6px}
 #eq-cong{font-size:9px;padding:1px 6px;border:1px solid var(--bdr);border-radius:3px;background:var(--bg3);color:var(--tx3);cursor:pointer;font-family:var(--mono)}
 #eq-cong.on{border-color:var(--amb);color:var(--amb);background:rgba(255,213,79,.12)}
 #eq-stats{position:absolute;left:6px;right:6px;bottom:3px;z-index:6;font-size:8.5px;line-height:1.35;color:var(--tx2);text-align:center;pointer-events:none;background:linear-gradient(to top,var(--bg) 55%,rgba(0,0,0,0));padding-top:3px}
@@ -179,7 +182,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v25 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v26 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -268,7 +271,11 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
       </div>
       <div id="eq" style="width:100%;height:100%"></div>
       <div id="eq-stats"></div></div>
-    <div class="plot-cell" id="dec-div"><span class="ptitle">intensity decay</span><div id="dec" style="width:100%;height:100%"></div></div>
+    <div class="plot-cell" id="dec-div"><span class="ptitle">intensity decay</span>
+      <div id="dec-ctl" title="skip intensity spikes: a step whose J/Jmax stands above BOTH its neighbours (the nearest unskipped steps before and after it) by more than this amount. Current specimen only · shift-click = every specimen in this site · ⌘Z undoes">
+        <span>spike &gt;</span><input id="spike-thr" type="number" min="0.02" max="1" step="0.05" value="0.15"><span>J/J<sub>max</sub></span>
+        <button class="btn" id="spike-btn">skip spikes</button>
+      </div><div id="dec" style="width:100%;height:100%"></div></div>
   </div>
 
   <!-- fit console -->
@@ -331,6 +338,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
   <table>
     <tr><td><kbd>click slot</kbd></td><td>set the mode (LT / MT / HT) — it stays on until you change it. A single click on a point (step strip or any plot) <b>selects/deselects</b> it and the window is remade <b>contiguous</b> each time: deselect an endpoint → window shrinks by one; deselect an interior point → it stays filled (to really drop it, right-click to skip); click outside the window → it extends and fills the gap. Dropdowns set exact from/to bounds.</td></tr>
     <tr><td><kbd>dropdowns</kbd></td><td>the from/to selects in each slot set a contiguous range in one go — then click points to drop or add any</td></tr>
+    <tr><td><kbd>skip spikes</kbd></td><td>top-right of the intensity plot. Skips every step whose J/J<sub>max</sub> stands above <b>both</b> neighbouring (unskipped) steps by more than the threshold — a spike up and back down. A steady rise (e.g. an antiparallel component being removed) is not touched, and the first and last steps are never flagged. Current specimen; <b>shift-click</b> does every loaded specimen in the site. Skips are written to the .redo / MagIC with the reason; right-click restores one, ⌘Z undoes.</td></tr>
     <tr><td><kbd>right-click</kbd></td><td>skip / unskip a point everywhere (the point skipper — excluded from all fits)</td></tr>
     <tr><td><kbd>copy / paste</kbd></td><td>at the bottom of the console: pick a scope (all / LT / MT / HT), <b>copy</b> this specimen's fits, then move to another specimen and <b>paste</b> — the windows transfer by matching temperature/field, so they land on the right steps even if the step list differs. The clipboard survives reloads.</td></tr>
     <tr><td><kbd>auto-skip</kbd></td><td>on load these are skipped automatically: NRM and LN/LN2 steps (set by the <b>drop</b> menu); earlier runs of a repeated treatment (only the <b>last</b> rerun kept); and any measurement with <b>csd ≥ 12°</b> (bad measurement). All are defaults — right-click any step to override, and your choices are saved.</td></tr>
@@ -1118,7 +1126,8 @@ async function saveSession(){
       skips:sp.steps.filter(x=>x.skipped).map(x=>x.idx), saved:!!sp.saved,
       lastGrade:sp.lastGrade||null, lastPts:sp.lastPts||0,
       inRedos:sp.inRedos||[], fromRedo:!!sp.fromRedo, edited:!!sp._edited, skipSrc:sp.skipSrc||null, note:sp.note||'',
-      userSkips:sp.steps.filter(x=>x.userSkip).map(x=>x.idx) })) };
+      userSkips:sp.steps.filter(x=>x.userSkip).map(x=>x.idx),
+      skipWhy:Object.fromEntries(sp.steps.filter(x=>x.skipped&&!x.userSkip&&x.autoskip).map(x=>[x.idx,x.autoskip])) })) };
   try{ await idbSet('session', JSON.parse(JSON.stringify(snap))); }catch(e){}
 }
 async function restoreSession(){
@@ -1132,6 +1141,7 @@ async function restoreSession(){
       if(!sp) return;
       sp.steps.forEach(x=>{ x.skipped=false; });
       (d.skips||[]).forEach(i=>{ if(sp.steps[i]) sp.steps[i].skipped=true; });
+      Object.entries(d.skipWhy||{}).forEach(([i,w])=>{ if(sp.steps[i]) sp.steps[i].autoskip=w; });
       SLOTS.forEach(k=>{ sp.fits[k]=(d.fits&&d.fits[k])||null; });
       sp.saved=!!d.saved; if(d.lastGrade) sp.lastGrade=d.lastGrade; sp.lastPts=d.lastPts||0;
       sp.inRedos=d.inRedos||[]; sp.fromRedo=!!d.fromRedo; sp._edited=!!d.edited; sp.skipSrc=d.skipSrc||null; sp.note=d.note||'';
@@ -2101,6 +2111,47 @@ function pointClicked(idx){
   persistSpec(sp);
   renderAll();
 }
+// Intensity spikes: a step whose J/Jmax stands above both its nearest unskipped neighbours by more
+// than thr (min of the rise from the previous step and the fall to the next). Removed one at a time,
+// largest first, so back-to-back spikes are each judged against clean neighbours. Endpoints are never
+// flagged (no neighbour on one side). Returns the step indices found; does not change anything.
+function findSpikes(sp, thr){
+  const Jmax=Math.max(...sp.steps.map(s=>s.J),1e-30);
+  const gone=new Set(), found=[];
+  for(;;){
+    const alive=sp.steps.filter(s=>!s.skipped && !gone.has(s.idx));
+    let best=null, bestH=thr;
+    for(let k=1;k<alive.length-1;k++){
+      const a=alive[k-1], b=alive[k], c=alive[k+1];
+      const h=Math.min(b.J-a.J, b.J-c.J)/Jmax;
+      if(h>bestH){ bestH=h; best=b; }
+    }
+    if(!best) break;
+    gone.add(best.idx); found.push({idx:best.idx, h:bestH});
+  }
+  return found;
+}
+function skipSpikes(allInSite){
+  const cur=S.cur?S.specs[S.cur]:null;
+  if(!cur) return;
+  let thr=parseFloat(document.getElementById('spike-thr').value);
+  if(!(thr>0)) thr=0.15;
+  try{ localStorage.setItem('fq_spike_thr', String(thr)); }catch(e){}
+  const site=cur.site||siteOf(cur.name);
+  const targets = allInSite ? S.order.map(n=>S.specs[n]).filter(sp=>sp && (sp.site||siteOf(sp.name))===site) : [cur];
+  let nStep=0, nSpec=0;
+  targets.forEach(sp=>{
+    const f=findSpikes(sp, thr);
+    if(!f.length) return;
+    pushUndo('skip '+f.length+' spike'+(f.length>1?'s':''), sp);
+    f.forEach(({idx,h})=>{ const st=sp.steps[idx]; st.skipped=true; st.userSkip=false;
+      st.autoskip='intensity spike +'+h.toFixed(2)+' J/Jmax (> '+thr+')'; });
+    persistSpec(sp); nStep+=f.length; nSpec++;
+  });
+  renderAll();
+  toast(nStep ? 'skipped '+nStep+' spike step'+(nStep>1?'s':'')+(allInSite?' in '+nSpec+' specimen'+(nSpec>1?'s':'')+' of '+site:'')+' — right-click to restore, ⌘Z to undo'
+              : 'no steps stand more than '+thr+' J/Jmax above both neighbours');
+}
 function toggleSkip(idx){
   const sp=S.specs[S.cur];
   if(!sp||!sp.steps[idx]) return;
@@ -2480,6 +2531,8 @@ document.querySelectorAll('.coord-btn').forEach(b=>{
 });
 document.getElementById('zij-conv').onchange=e=>{ S.conv=e.target.value; S.zijZoom=null; renderAll(); };
 document.getElementById('eq-level').onchange=e=>{ S.eqLevel=e.target.value; renderAll(); };
+document.getElementById('spike-btn').onclick=e=>skipSpikes(e.shiftKey);
+try{ const v=localStorage.getItem('fq_spike_thr'); if(v) document.getElementById('spike-thr').value=v; }catch(e){}
 document.getElementById('eq-comp').onchange=e=>{ S.eqComp=e.target.value; renderAll(); };
 document.getElementById('eq-site').onchange=e=>{
   S.eqSite=e.target.value; S.eqSample='all';   // changing site resets the boulder pick
