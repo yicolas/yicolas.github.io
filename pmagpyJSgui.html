@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v27 — pyRockmag fitting arcade</title>
+<title>FITQUEST v28 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -183,7 +183,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v27 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v28 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -786,7 +786,9 @@ function applyPendingBad(){
       if(i!==undefined) want.add(i);
     });
     sp.steps.forEach((st,i)=>{ st.skipped=want.has(i); st.userSkip=false;
-      const r=recs.find(x=>keyIdx[x.bound+'#'+x.occ]===i); if(st.skipped) st.autoskip=(r&&r.why&&r.why!=='user')?r.why:'skipped in redo'; else st.autoskip=''; });
+      const r=recs.find(x=>keyIdx[x.bound+'#'+x.occ]===i);
+      if(st.skipped && r && r.why==='user'){ st.userSkip=true; st.autoskip=''; }   // keep right-click skips as yours
+      else if(st.skipped) st.autoskip=(r&&r.why)?r.why:'skipped in redo'; else st.autoskip=''; });
     sp.skipSrc=recs[0].src;
   });
   S.pendingBad=rest;
@@ -849,7 +851,9 @@ function renderSources(){
   });
 }
 function redoSpecimenNames(){
-  return [...new Set(S.pendingRedo.map(l=>{ let n=l.split('\t')[0]; return n.startsWith('current_')?n.slice(8):n; }))];
+  // specimens with only skips or a note (no fit yet) are part of the redo too, so load them as well
+  return [...new Set(S.pendingRedo.map(l=>{ let n=l.split('\t')[0]; return n.startsWith('current_')?n.slice(8):n; })
+    .concat(S.pendingBad.map(r=>r.spec), S.pendingNotes.map(r=>r.spec)).filter(Boolean))];
 }
 // redo files found inside a scanned folder, best first (manuscript corrected redo wins)
 function findRedosInScan(){
@@ -1027,19 +1031,26 @@ function rebuildOrder(){
   });
   Object.keys(S.specs).sort().forEach(n=>{ if(!placed.has(n)){ S.order.push(n); placed.add(n);} });
 }
-// match a redo bound value to a step index (tmin→first ≥, tmax→last ≤)
+// match a redo bound value to a step index (tmin→first ≥, tmax→last ≤). Bounds mix units (0 = NRM,
+// 77 = LN2, tesla for AF, kelvin for thermal), so compare only against steps of the same kind:
+// an AF bound of 8.00e-3 must not land on the LN step (77 ≥ 0.008). Exact matches win.
 function boundToIdx(sp, val, isMax){
   const v=parseFloat(val);
+  if(isNaN(v)) return null;
   const keyOf=s=> s.treat.type==='AF' ? s.treat.T : (s.treat.type==='NRM'?0:s.treat.K);
-  let best=null;
-  sp.steps.forEach((s,i)=>{
-    const k=keyOf(s);
-    const ok = isMax ? k<=v+1e-9 : k>=v-1e-9;
-    if(ok && (best===null || (isMax? k>=keyOf(sp.steps[best]) : (best===null)))) {
-      if(isMax) best=i; else if(best===null) best=i;
-    }
-  });
-  return best;
+  const kindOf=s=> s.treat.type==='AF'?'AF':s.treat.type==='NRM'?'NRM':s.treat.type==='LN2'?'LN2':'TT';
+  const isExp=/e/i.test(String(val));   // FITQUEST/demag_gui write AF bounds in tesla as 8.00e-3, 0.00e+0
+  const vKind = (isExp||(v>0&&v<1))?'AF' : v===0?'NRM' : Math.abs(v-77)<1e-6?'LN2' : 'TT';
+  const idx=sp.steps.map((s,i)=>i);
+  const exact=idx.filter(i=>{ const s=sp.steps[i]; return kindOf(s)===vKind && Math.abs(parseFloat(boundRedoVal(s))-v)<=1e-6*Math.max(1,Math.abs(v)); });
+  if(exact.length) return isMax?exact[exact.length-1]:exact[0];
+  const pick=pool=>{ let best=null;
+    pool.forEach(i=>{ const k=keyOf(sp.steps[i]);
+      if(isMax){ if(k<=v+1e-9 && (best===null || k>=keyOf(sp.steps[best]))) best=i; }
+      else if(k>=v-1e-9 && best===null) best=i; });
+    return best; };
+  const same=pick(idx.filter(i=>kindOf(sp.steps[i])===vKind));
+  return same!==null ? same : pick(idx);
 }
 // redo fit names → slots: lt→LT, lt2→MT, mt→HT (mt is the ChRM / terminal), else first free
 // "HT:REV" style names pin a fit to a slot while keeping its component label
