@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FITQUEST v26 — pyRockmag fitting arcade</title>
+<title>FITQUEST v27 — pyRockmag fitting arcade</title>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -148,6 +148,7 @@ select{background:var(--bg3);border:1px solid var(--bdr);color:var(--tx2);font-f
 .chip{flex:none;padding:4px 7px;border:1px solid var(--bdr);border-radius:var(--r);cursor:pointer;font-size:10px;background:var(--bg3);color:var(--tx2);user-select:none;position:relative;transition:all .1s;text-align:center;line-height:1.3}
 .chip:hover{border-color:var(--ac)}
 .chip .j{display:block;font-size:8px;color:var(--tx3)}
+.chip .csd.hi{color:var(--red);font-weight:600}
 .chip.skipped{opacity:.45;text-decoration:line-through;border-color:var(--red);color:var(--red)}
 .chip.inLT{border-color:var(--lt);box-shadow:inset 0 -3px 0 var(--lt)}
 .chip.inMT{border-color:var(--mt);box-shadow:inset 0 -3px 0 var(--mt)}
@@ -182,7 +183,7 @@ kbd{background:var(--bg4);border:1px solid var(--bdr2);border-radius:3px;padding
 <!-- ═══ HEADER ═══ -->
 <div class="hdr">
   <span class="logo">⬡ FITQUEST</span>
-  <span class="sub">v26 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
+  <span class="sub">v27 · component fitting arcade · CIT format · drop a .redo, I'll find the data</span>
   <span class="sp"></span>
   <div class="stat-pill"><span class="lbl">score</span><b id="hud-score">0</b></div>
   <div class="stat-pill" id="streak-pill"><span class="lbl">streak</span><b id="hud-streak">0</b></div>
@@ -2039,7 +2040,8 @@ function renderStrip(sp){
   sp.steps.forEach(s=>{
     const c=document.createElement('div');
     c.className='chip'+(s.skipped?' skipped':'')+(s.warn?' warnstep':'');
-    c.innerHTML=s.label+'<span class="j">'+s.J.toExponential(1)+'</span>';
+    const csdTxt = s.csd===null||s.csd===undefined||isNaN(s.csd) ? '—' : (s.csd>=100 ? s.csd.toFixed(0) : s.csd.toFixed(1))+'°';
+    c.innerHTML=s.label+'<span class="j">'+s.J.toExponential(1)+'</span><span class="j csd'+(s.csd>=CSD_SKIP?' hi':'')+'" title="circular standard deviation of the measurement (csd ≥ '+CSD_SKIP+'° is auto-skipped)">csd '+csdTxt+'</span>';
     const mem=slotsOfStep(sp,s.idx);
     if(mem.length && !s.skipped){
       const w=100/mem.length;
