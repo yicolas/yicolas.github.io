@@ -132,11 +132,11 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
         <button id="templateBtn">Download a template</button>
         <button id="clearBtn" hidden>Remove my data</button>
       </div>
-      <div class="row"><label class="chk"><input type="checkbox" id="incRef" checked> Show Julia Tejada’s data (the example and comparison set)</label></div>
+      <div class="row"><label class="chk"><input type="checkbox" id="incRef" autocomplete="off" checked> Show Julia Tejada’s data (the example and comparison set)</label></div>
       <div class="row synrow"><span class="dim">Synthetic test data:</span>
-        <label class="chk"><input type="checkbox" data-syn="full"> Glx, Phe and Thr</label>
-        <label class="chk"><input type="checkbox" data-syn="gp"> Glx and Phe only</label>
-        <label class="chk"><input type="checkbox" data-syn="gt"> Glx and Thr only</label></div>
+        <label class="chk"><input type="checkbox" data-syn="full" autocomplete="off"> Glx, Phe and Thr</label>
+        <label class="chk"><input type="checkbox" data-syn="gp" autocomplete="off"> Glx and Phe only</label>
+        <label class="chk"><input type="checkbox" data-syn="gt" autocomplete="off"> Glx and Thr only</label></div>
       <div id="exMsg" class="msg ok">Example data loaded and plotted: <b>127 mammal specimens</b> from Tejada (2026), supplementary table S4. Every tab is already drawn from them. Add your own file to put your samples on top, or untick the box to see only yours.</div>
       <div id="synMsg" class="msg ok" hidden></div>
       <div id="readMsg" class="msg" role="status"></div>
@@ -157,8 +157,8 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
 <!-- 2 ISOTOPE SPACE -->
 <section class="view" id="v-space" role="tabpanel">
   <div class="bar"><span class="what"><b>After Fig. 1.</b> Left, the three amino acids together. Right, what Glx and Phe alone can tell you: a linear discriminant analysis predicts a diet for every sample treated as unknown, including all of yours.</span>
-    <label class="chk"><input type="checkbox" id="holdOut" checked> Hold out the paper’s seven atypical herbivore taxa</label>
-    <label class="chk"><input type="checkbox" id="trainUser"> Also train on my samples that have a diet</label></div>
+    <label class="chk"><input type="checkbox" id="holdOut" autocomplete="off" checked> Hold out the paper’s seven atypical herbivore taxa</label>
+    <label class="chk"><input type="checkbox" id="trainUser" autocomplete="off"> Also train on my samples that have a diet</label></div>
   <div class="panes">
     <div class="pane"><h3>Glx, Phe and Thr <small>drag to rotate</small></h3><div id="p3d" class="plot"></div><p class="cap">Colour is the cluster (tab 3). Shape is the cluster’s assemblage: circles predators, diamonds omnivores, squares herbivores. <span class="warn" id="n3d" hidden></span></p></div>
     <div class="pane"><h3>Glx against Phe <small>coloured by diet given</small></h3><div id="pLda" class="plot"></div><p class="cap">Black rings: herbivores the Glx–Phe model calls secondary consumers when they are treated as unknown. <span id="ldaNote"></span></p></div>
@@ -638,6 +638,16 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
   const colorKey = () => state.colorBy === 'cluster' && R.clusters
     ? [r => r.cluster.name, r => r.cluster.color, r => r.cluster.name, r => r.cluster.idx, r => r.cluster.open]
     : [r => r.diet, r => DIET_COLOR[r.diet], r => DIET_LABEL[r.diet], r => Object.keys(DIET_COLOR).indexOf(r.diet)];
+  /* samples with only one of the two plotted values are drawn as ticks on the axis they do have */
+  function rugs(rows, xOf, yOf, xName, yName) {
+    const t = theme(), out = [], both = rows.filter(r => ok(xOf(r)) && ok(yOf(r)));
+    const y0 = both.length ? Math.min(...both.map(yOf)) : 0, x0 = both.length ? Math.min(...both.map(xOf)) : 0, ys = both.length ? Math.max(...both.map(yOf)) - y0 : 10, xs = both.length ? Math.max(...both.map(xOf)) - x0 : 10;
+    const mk = (g, x, y, sym, name) => ({ type: 'scatter', mode: 'markers', x, y, text: g.map(hover), hovertemplate: '%{text}<extra></extra>', name, cliponaxis: false, marker: { symbol: sym, size: 16, color: g.map(r => DIET_COLOR[r.diet]), line: { color: g.map(r => DIET_COLOR[r.diet]), width: 3 } } });
+    const gx = rows.filter(r => r.src === 'user' && ok(xOf(r)) && !ok(yOf(r))), gy = rows.filter(r => r.src === 'user' && !ok(xOf(r)) && ok(yOf(r)));
+    if (gx.length) out.push(mk(gx, gx.map(xOf), gx.map(() => y0 - ys * 0.07), 'line-ns', 'Added, ' + xName + ' only (ticks on the axis)'));
+    if (gy.length) out.push(mk(gy, gy.map(() => x0 - xs * 0.07), gy.map(yOf), 'line-ew', 'Added, ' + yName + ' only (ticks on the axis)'));
+    return out;
+  }
   function note(id, n, text) { const el = $(id); el.textContent = n ? n + ' of the added samples ' + text + '.' : ''; el.hidden = !n; }
   let setFeats = () => { };
   function empty(id, text) { const el = $(id); if (window.Plotly) Plotly.purge(el); el.innerHTML = '<div class="empty">' + text + '</div>'; }
@@ -659,28 +669,31 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
 
   function figLDA() {
     const note = $('ldaNote');
-    if (!R.lda) { note.innerHTML = ''; return empty('pLda', 'The discriminant analysis needs a training set with at least two diet categories. Keep the reference data on, or give diets for your own samples and tick “also train on my samples”.'); }
     const t = theme(), k = [r => r.diet, r => DIET_COLOR[r.diet], r => DIET_LABEL[r.diet], r => Object.keys(DIET_COLOR).indexOf(r.diet)];
-    const L = R.rows.filter(r => r.lda), traces = scatterTraces(L, r => r.Phe, r => r.Glx, k[0], k[1], k[2], k[3]);
-    const flag = L.filter(r => !r.ldaTrain && r.diet === 'herbivore' && r.lda.label !== 'herbivore');
+    const L = R.rows.filter(r => ok(r.Phe));
+    if (!L.length && !R.rows.length) { note.innerHTML = ''; return empty('pLda', 'No data.'); }
+    const traces = scatterTraces(L, r => r.Phe, r => r.Glx, k[0], k[1], k[2], k[3]);
+    const flag = L.filter(r => r.lda && !r.ldaTrain && r.diet === 'herbivore' && r.lda.label !== 'herbivore');
     if (flag.length) traces.push({ type: 'scatter', mode: 'markers', x: flag.map(r => r.Phe), y: flag.map(r => r.Glx), hoverinfo: 'skip', name: 'Herbivore classified as a secondary consumer', marker: { symbol: 'circle-open', size: 17, color: t.ink, line: { width: 2 } } });
-    const xs = L.map(r => r.Phe), lo = Math.min(...xs) - 1, hi = Math.max(...xs) + 1;
-    traces.push({ type: 'scatter', mode: 'lines', x: [lo, hi], y: [lo + 2.5, hi + 2.5], name: 'ΔGlx–Phe = 2.5 ‰', hoverinfo: 'skip', line: { color: t.muted, width: 1.5, dash: 'dash' } });
+    if (L.length) { const xs = L.map(r => r.Phe), lo = Math.min(...xs) - 1, hi = Math.max(...xs) + 1;
+      traces.push({ type: 'scatter', mode: 'lines', x: [lo, hi], y: [lo + 2.5, hi + 2.5], name: 'ΔGlx–Phe = 2.5 ‰', hoverinfo: 'skip', line: { color: t.muted, width: 1.5, dash: 'dash' } }); }
+    rugs(R.rows, r => r.Phe, r => r.Glx, 'Phe', 'Glx').forEach(tr => traces.push(tr));
     plot('pLda', traces, layout({ xaxis: Object.assign(layout().xaxis, { title: { text: 'δ15N Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'δ15N Glx (‰)' } }) }), 'fig1B_Glx_Phe_discriminant');
-    const tested = L.filter(r => !r.ldaTrain), th = tested.filter(r => r.diet === 'herbivore'), mis = th.filter(r => r.lda.label !== 'herbivore');
-    note.innerHTML = 'Trained on <b>' + R.lda.nTrain + '</b> specimens with known diet; <b>' + tested.length + '</b> treated as unknown.' + (R.miss.phe ? ' ' + R.miss.phe + ' of the added samples have no Phe and are not shown.' : '') + (th.length ? ' Of ' + th.length + ' herbivores treated as unknown, <b>' + mis.length + '</b> were classified as secondary consumers from Glx and Phe alone' +
+    if (!R.lda) { note.innerHTML = 'No diet prediction: the discriminant analysis needs a training set with at least two diet categories. Show Julia Tejada’s data, or tick “also train on my samples”.'; return; }
+    const tested = L.filter(r => r.lda && !r.ldaTrain), th = tested.filter(r => r.diet === 'herbivore'), mis = th.filter(r => r.lda.label !== 'herbivore');
+    note.innerHTML = 'Trained on <b>' + R.lda.nTrain + '</b> specimens with known diet; <b>' + tested.length + '</b> treated as unknown.' + (R.miss.phe ? ' ' + R.miss.phe + ' of the added samples have no Phe; they are ticks on the Glx axis and get no prediction.' : '') + (th.length ? ' Of ' + th.length + ' herbivores treated as unknown, <b>' + mis.length + '</b> were classified as secondary consumers from Glx and Phe alone' +
       (R.lda.held.length ? ', including ' + R.lda.held.filter(r => r.gp > 2.5 && r.lda.label !== 'herbivore').length + ' of the ' + R.lda.held.filter(r => r.gp > 2.5).length + ' reference herbivores with ΔGlx–Phe above 2.5 ‰.' : '.') : '');
   }
 
   function figClusters() {
-    note('nClu', R.miss.cluster, 'not in this clustering (missing ' + (state.feats === 'gp' ? 'Phe' : state.feats === 'gt' ? 'Thr' : 'Phe or Thr') + '); try another “Cluster on” setting');
+    note('nClu', R.miss.cluster, state.feats === 'both' ? 'have only one offset: they are ticks on that axis and are not clustered. Use “Cluster on” to cluster them on the offset they have' : 'not in this clustering (missing ' + (state.feats === 'gp' ? 'Phe' : 'Thr') + '); try another “Cluster on” setting');
     if (!R.clusters) { empty('pClu', 'Needs at least two samples with ' + R.keys.map(k => KEYNAME[k]).join(' and ') + '.'); empty('pDen', ''); $('cluTable').innerHTML = ''; $('cluCount').textContent = ''; return; }
     const lay = layout(), k = colorKey(), one = R.keys.length === 1, showLeg = !(state.colorBy === 'cluster' && (one || R.clusters.length > 8));
     if (one) { /* single offset: one row per cluster */
       const key = R.keys[0], rnd = TJ.rng(11), jit = new Map(R.cRows.map(r => [r, (rnd() - 0.5) * 0.5]));
       plot('pClu', scatterTraces(R.cRows, r => r[key], r => r.cluster.idx + jit.get(r), k[0], k[1], k[2], k[3], k[4]), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: KEYNAME[key] + ' (‰)' } }),
         yaxis: Object.assign(layout().yaxis, { tickmode: 'array', tickvals: R.clusters.map(c => c.idx), ticktext: R.clusters.map(c => c.name), autorange: 'reversed', showgrid: false, zeroline: false }) }), 'clusters_' + (key === 'gp' ? 'dGlxPhe' : 'dGlxThr'));
-    } else plot('pClu', scatterTraces(R.cRows, r => r.gp, r => r.gt, k[0], k[1], k[2], k[3], k[4]), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: 'ΔGlx–Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'ΔGlx–Thr (‰)' } }) }), 'clusters_dGlxPhe_dGlxThr');
+    } else plot('pClu', scatterTraces(R.cRows, r => r.gp, r => r.gt, k[0], k[1], k[2], k[3], k[4]).concat(rugs(R.rows, r => r.gp, r => r.gt, 'ΔGlx–Phe', 'ΔGlx–Thr')), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: 'ΔGlx–Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'ΔGlx–Thr (‰)' } }) }), 'clusters_dGlxPhe_dGlxThr');
     $('cluTitle').textContent = one ? KEYNAME[R.keys[0]] + ' by cluster' : 'Offsets';
     /* dendrogram */
     const t = theme(), tree = R.tree, n = tree.n, order = TJ.leafOrder(tree), pos = new Array(2 * n), hgt = new Array(2 * n).fill(0), xs = [], ys = [];
@@ -713,7 +726,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
 
   function figSMA() {
     const t = theme(), traces = [], lay = layout();
-    note('nSma', R.miss.full, 'not shown here (these plots need both Phe and Thr)');
+    note('nSma', R.miss.full, 'have only one offset: they are ticks on that axis and are not in the fits');
     const others = R.rows.filter(r => !r.inFit && r.full);
     if (others.length) ['ref', 'user'].forEach(src => { const g = others.filter(r => r.src === src); if (g.length) traces.push({ type: 'scatter', mode: 'markers', x: g.map(r => r.gp), y: g.map(r => r.gt), text: g.map(hover), hovertemplate: '%{text}<extra></extra>', name: 'Not in fit' + (src === 'user' ? ' (added)' : ''),
       marker: src === 'user' ? { symbol: 'diamond-open', size: 13, color: t.ink, line: { width: 2 } } : { symbol: 'circle-open', size: 8, color: t.muted } }); });
@@ -721,6 +734,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
         marker: src === 'user' ? { symbol: 'diamond', size: 13, color: GUILD_COLOR[g.name], line: { color: t.ink, width: 2 } } : { symbol: g.name === 'Herbivore' ? 'square' : 'circle', size: 8, color: GUILD_COLOR[g.name], opacity: 0.8, line: { color: t.surface, width: 1 } } }); });
       if (g.fit) { const f = g.fit, pad = (f.xMax - f.xMin) * 0.05; let x0 = f.xMin - pad, x1 = f.xMax + pad; const clip = x => { const y = f.smaInt + f.sma * x, yl = f.yMin - 2, yh = f.yMax + 2; return y < yl ? (yl - f.smaInt) / f.sma : (y > yh ? (yh - f.smaInt) / f.sma : x); }; x0 = clip(x0); x1 = clip(x1);
         traces.push({ type: 'scatter', mode: 'lines', x: [x0, x1], y: [f.smaInt + f.sma * x0, f.smaInt + f.sma * x1], name: g.name + ' SMA, slope ' + fmt(f.sma), legendgroup: g.name, hoverinfo: 'name', line: { color: GUILD_COLOR[g.name], width: 2.5 } }); } });
+    rugs(R.rows, r => r.gp, r => r.gt, 'ΔGlx–Phe', 'ΔGlx–Thr').forEach(tr => traces.push(tr));
     plot('pSma', traces, layout({ xaxis: Object.assign(lay.xaxis, { title: { text: 'ΔGlx–Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'ΔGlx–Thr (‰)' } }) }), 'fig3A_scaling_relationships');
 
     const pub = { 'Herbivore': ['59', '−1.45', '−1.84 to −1.13', '0.15', '−0.55'], 'Secondary consumer': ['65', '2.58', '2.26 to 2.93', '0.74', '2.21'] };
@@ -832,7 +846,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     $('feats').addEventListener('change', e => setFeats(e.target.value));
     document.querySelectorAll('input[data-syn]').forEach(c => c.addEventListener('change', () => { SYN_ON[c.dataset.syn] = c.checked; const want = pickFeats(added()), sm = $('synMsg');
       if (state.feats !== want) setFeats(want, true);
-      const n = synRows().length; sm.hidden = !n; sm.innerHTML = n ? '<b>' + n + '</b> synthetic test samples added (ids start <code>SYN-</code>). They are invented values for trying the tool, not measurements.' + (want !== 'both' ? ' Clustering is set to <b>' + FEATS[want].label + '</b>.' : '') : '';
+      const n = synRows().length; sm.hidden = !n; sm.innerHTML = n ? '<b>' + n + '</b> synthetic test samples added (ids start <code>SYN-</code>). They are invented values for trying the tool, not measurements. They are the outlined diamonds on tabs 2, 3 and 5; samples with only two amino acids appear as ticks on an axis where a plot needs the third.' + (want !== 'both' ? ' Clustering is set to <b>' + FEATS[want].label + '</b>.' : '') : '';
       $('goRow').hidden = !added().length; run(); }));
     document.querySelectorAll('[data-thr]').forEach(b => b.addEventListener('click', () => setThr(b.dataset.thr)));
     document.querySelectorAll('input[name=colorBy]').forEach(r => r.addEventListener('change', () => { state.colorBy = r.value; figClusters(); }));
@@ -845,6 +859,9 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
     window.addEventListener('hashchange', () => show(location.hash.slice(1), false));
     let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderActive, 120); });
+    $('incRef').checked = true; $('holdOut').checked = true; $('trainUser').checked = false; $('feats').value = 'both'; thr.value = thrN.value = 18; ex.value = '';
+    document.querySelectorAll('input[data-syn]').forEach(c => { c.checked = false; });
+    document.querySelectorAll('input[name=colorBy]').forEach(r => { r.checked = r.value === 'diet'; });
     R = null; run(); show(location.hash.slice(1) || 'data', false);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
