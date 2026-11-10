@@ -26,6 +26,7 @@ The site uses a two-column layout with an iframe-based content loader and a fixe
 ### 3D Prints & Tools
 - **Sediment Mill** - Custom optical engineering for particle analysis
 - **Pellet Press** - 3D printable press for portable XRF analysis
+- **FieldMove / Notability Hi-Res Photo Extractor** - Pulls full-resolution photos out of Notability notes (with and without handwriting), FieldMove projects and Gaia GPS exports in the browser; `field-photo-extractor/field_photo_extract.py` is the command-line version, which also reads Apple Freeform boards
 
 ### Projects
 - **SWLLIP Undergraduate Thesis** - Paleomagnetism and Geochronology of the Southwestern Laurentia Large Igneous Province

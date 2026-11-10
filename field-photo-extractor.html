@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Photo Extractor</title>
+<meta name="description" content="Pull full-resolution photos out of Notability notes (with or without your handwriting), FieldMove projects and Gaia GPS exports, entirely in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Matches the site's other interactive tools (flume, inundation): dark field-notebook ground, ochre accent. */
+  :root {
+    --bg: #0f1416;
+    --panel: #161c1f;
+    --panel-2: #1c2327;
+    --ink: #e8e4d8;
+    --ink-dim: #9aa0a0;
+    --ink-mute: #5f6668;
+    --line: #2a3236;
+    --accent: #d8a24a;
+    --accent-2: #6fb2a8;
+    --accent-3: #c46f5a;
+    --serif: "Fraunces", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--serif); font-size: 15px; line-height: 1.5;
+    background:
+      radial-gradient(1200px 600px at 90% -10%, rgba(216,162,74,.07), transparent 60%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px max(16px, 3vw) 72px; display: flex; flex-direction: column; gap: 22px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  h1 { font-weight: 600; font-size: clamp(26px, 3.6vw, 38px); letter-spacing: -.01em; line-height: 1.05; margin: 0; }
+  h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+  .lede { color: var(--ink-dim); margin: 8px 0 0; max-width: 64ch; }
+  .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+
+  .drop { border: 1.5px dashed var(--line); border-radius: 10px; background: var(--panel); padding: 22px; display: grid; grid-template-columns: 1fr auto; gap: 14px 24px; align-items: center; transition: border-color .15s, background .15s; }
+  .drop.over { border-color: var(--accent); background: rgba(216,162,74,.06); }
+  .drop strong { font-size: 20px; font-weight: 600; display: block; }
+  .drop p { margin: 4px 0 0; color: var(--ink-dim); font-size: 14px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { font-family: var(--mono); font-size: 12.5px; font-weight: 500; border-radius: 6px; padding: 8px 13px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { border-color: var(--ink-mute); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1408; }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.sm { padding: 4px 9px; font-size: 11.5px; }
+
+  .sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .src { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 16px; min-width: 0; }
+  .src h3 { margin: 0 0 2px; font-size: 17px; font-weight: 600; }
+  .src .kind { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .src p { margin: 6px 0 0; color: var(--ink-dim); font-size: 13.5px; }
+  .src code, .note code { font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--panel-2); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+
+  .batch { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  .bhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .bhead h2 { margin: 0; font-size: 19px; font-weight: 600; flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+  .bhead h2 .kind { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+  .bstat { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); padding: 10px 16px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .bstat b { color: var(--ink); font-weight: 500; }
+  .bstat .warn { color: var(--accent-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; padding: 14px 16px 16px; }
+  .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .thumb { aspect-ratio: 4/3; max-width: 100%; width: 100%; background: #0b0f10; display: grid; place-items: center; border: 0; padding: 0; cursor: zoom-in; position: relative; }
+  .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .thumb .np { font-family: var(--mono); font-size: 11.5px; color: var(--ink-mute); padding: 12px; text-align: center; }
+  .thumb .badge { position: absolute; left: 7px; top: 7px; font-family: var(--mono); font-size: 10.5px; background: rgba(15,20,22,.82); color: var(--accent); padding: 1px 6px; border-radius: 3px; }
+  .meta { padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .dims { font-family: var(--mono); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .dims span { color: var(--ink-mute); font-weight: 400; }
+  .name { font-size: 12.5px; color: var(--ink-dim); overflow-wrap: anywhere; line-height: 1.35; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-family: var(--mono); font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-dim); }
+  .chip.ink { border-color: rgba(216,162,74,.55); color: var(--accent); }
+  .chip.geo { border-color: rgba(111,178,168,.55); color: var(--accent-2); }
+  .chip.miss { border-color: rgba(196,111,90,.55); color: var(--accent-3); }
+  .actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+
+  .note { color: var(--ink-dim); font-size: 13.5px; border-left: 2px solid var(--line); padding: 2px 0 2px 14px; max-width: 80ch; }
+  .note a, .lede a { color: var(--accent); }
+  .log { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 180px; overflow: auto; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-family: var(--mono); font-size: 12.5px; z-index: 30; max-width: calc(100% - 32px); }
+
+  dialog { border: 1px solid var(--line); padding: 0; background: #0b0f10; color: var(--ink); width: min(96vw, 1400px); height: min(92vh, 1000px); border-radius: 10px; flex-direction: column; }
+  dialog[open] { display: flex; }
+  dialog::backdrop { background: rgba(4,6,7,.8); }
+  .lbhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .lbhead .info { font-family: var(--mono); font-size: 12.5px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lbbody { flex: 1; overflow: auto; display: grid; place-items: center; }
+  .lbbody.fit img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lbbody img { display: block; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { font-family: var(--mono); font-size: 11.5px; border: 0; background: transparent; color: var(--ink-dim); padding: 5px 10px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #1a1408; }
+
+  footer { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  @media (max-width: 600px) { .lbhead .info { flex-basis: 100%; } .drop { grid-template-columns: 1fr; } .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); padding: 10px; gap: 10px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Field Photo <em>Extractor</em></h1>
+      <p class="lede">Pull full-resolution photos back out of field apps. Notability photos come out at the size they were stored, and also with your handwriting redrawn on top at that same resolution. FieldMove photos are renamed by locality and geotagged.</p>
+    </div>
+    <span class="tag">runs in your browser · nothing uploaded</span>
+  </header>
+
+  <div class="drop" id="drop">
+    <div>
+      <strong>Drop notes, project folders or exports here</strong>
+      <p>Folders, zips and several sources at once are fine. Everything is read locally.</p>
+    </div>
+    <div class="btns">
+      <button class="btn primary" id="pickFolder" type="button">Choose folder</button>
+      <button class="btn" id="pickFiles" type="button">Choose files</button>
+    </div>
+    <input type="file" id="fileIn" multiple hidden>
+    <input type="file" id="folderIn" webkitdirectory multiple hidden>
+  </div>
+
+  <section class="sources" id="howto">
+    <div class="src">
+      <span class="kind">Notability</span>
+      <h3>Photos, with and without ink</h3>
+      <p>Drop a <code>.note</code> export (Share → Note), or on a Mac the note's <code>.nbn</code> folder from <code>iCloud Drive › Notability</code>. A PDF export also works for the photos alone, but Notability may downsize them.</p>
+    </div>
+    <div class="src">
+      <span class="kind">FieldMove</span>
+      <h3>Photos named by locality</h3>
+      <p>Drop a <code>.fm</code> project folder, or a CSV export folder together with its photos. Each photo gets its locality, time and note in the filename, and its GPS position written into the file.</p>
+    </div>
+    <div class="src">
+      <span class="kind">Gaia GPS</span>
+      <h3>Waypoint photos</h3>
+      <p>Drop a <code>.kmz</code> export to unpack its photos. For <code>.geojson</code> and <code>.gpx</code>, photo links on waypoints are downloaded at full size where Gaia allows it, and listed otherwise.</p>
+    </div>
+  </section>
+
+  <div id="results" style="display:flex;flex-direction:column;gap:18px"></div>
+  <div class="log" id="log" hidden></div>
+
+  <footer>
+    <p class="note">Apple Freeform boards can't be read from a web page because Freeform keeps them inside its own app storage. The command-line version handles Freeform as well as everything above: <a href="field-photo-extractor/field_photo_extract.py" download>field_photo_extract.py</a> (Python 3; <code>python3 field_photo_extract.py --help</code>).</p>
+    <p class="note">Originals are copied byte for byte. Renders with ink are new JPEGs (PNG when the source photo was a PNG) at the photo's own pixel size.</p>
+  </footer>
+</div>
+
+<dialog id="lb">
+  <div class="lbhead">
+    <span class="info" id="lbInfo"></span>
+    <span class="seg" id="lbSeg" hidden><button type="button" data-v="ink" aria-pressed="true">With ink</button><button type="button" data-v="orig" aria-pressed="false">Original</button></span>
+    <button class="btn sm" id="lbZoom" type="button">Actual pixels</button>
+    <button class="btn sm primary" id="lbSave" type="button">Save</button>
+    <button class="btn sm" id="lbClose" type="button">Close</button>
+  </div>
+  <div class="lbbody fit" id="lbBody"><img id="lbImg" alt=""></div>
+</dialog>
+
+<script src="field-photo-extractor/vendor/jszip.min.js"></script>
+<script src="field-photo-extractor/vendor/piexif.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const VENDOR = "field-photo-extractor/vendor/";
+const IMG_RE = /\.(jpe?g|png|heic|heif|tiff?|gif|webp)$/i;
+
+/* ================= utilities ================= */
+const log = msg => { const l = $("log"); l.hidden = false; l.textContent += msg + "\n"; l.scrollTop = l.scrollHeight; };
+const toast = msg => { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); };
+const fmtBytes = n => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(0) + " KB" : (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB";
+const base = p => p.split("/").pop();
+const stemOf = p => base(p).replace(/\.[^.]+$/, "");
+const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+const safe = s => (String(s).replace(/[^\w\-. ]+/g, "_").trim().slice(0, 90)) || "untitled";
+const pad = n => String(n).padStart(2, "0");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const mimeOf = name => ({ jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", heic: "image/heic", heif: "image/heif", tif: "image/tiff", tiff: "image/tiff", gif: "image/gif", webp: "image/webp" })[(name.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
+function saveBlob(name, blob) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+}
+const csvCell = v => { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+function toCSV(rows) {
+  if (!rows.length) return "";
+  const keys = [...new Set(rows.flatMap(r => Object.keys(r)))];
+  return [keys.join(","), ...rows.map(r => keys.map(k => csvCell(r[k])).join(","))].join("\n") + "\n";
+}
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"' && f.trim() === "") { q = true; f = ""; }
+    else if (c === ",") { row.push(f.trim()); f = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f.trim()); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f.length || row.length) { row.push(f.trim()); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ""])));
+}
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("could not load " + src)); document.head.appendChild(s); });
+}
+async function thumbFrom(source, w, h, max = 420) {
+  const k = Math.min(1, max / Math.max(w, h)); const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(source, 0, 0, c.width, c.height);
+  const b = await new Promise(r => c.toBlob(r, "image/jpeg", .82)); return b ? URL.createObjectURL(b) : null;
+}
+async function decode(blob) {
+  try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); } catch (e) { return null; }
+}
+
+/* ================= intake: files, folders, zips ================= */
+// Each entry: { path, size, blob() }
+function fileEntry(path, file) { return { path, size: file.size, blob: async () => file }; }
+async function walkEntry(entry, prefix, out) {
+  if (entry.isFile) { const f = await new Promise((res, rej) => entry.file(res, rej)); out.push(fileEntry(prefix + entry.name, f)); return; }
+  if (entry.isDirectory) {
+    const rd = entry.createReader(); let batch;
+    do { batch = await new Promise((res, rej) => rd.readEntries(res, rej)); for (const e of batch) await walkEntry(e, prefix + entry.name + "/", out); } while (batch.length);
+  }
+}
+async function expandZips(entries) {
+  const out = [];
+  for (const e of entries) {
+    if (/\.(note|zip|kmz)$/i.test(e.path)) {
+      try {
+        const zip = await JSZip.loadAsync(await e.blob());
+        out.push({ ...e, zipped: true });
+        for (const z of Object.values(zip.files)) {
+          if (z.dir || /(^|\/)(__MACOSX\/|\._)/.test(z.name)) continue;
+          const inner = e.path + "/" + z.name;
+          out.push({ path: inner, size: z._data ? z._data.uncompressedSize : 0, fromZip: e.path, blob: async () => new Blob([await z.async("uint8array")], { type: mimeOf(z.name) }) });
+        }
+        continue;
+      } catch (err) { log(base(e.path) + ": could not open as an archive (" + err.message + ")"); }
+    }
+    out.push(e);
+  }
+  return out;
+}
+
+/* ================= binary plist (NSKeyedArchiver) ================= */
+function parseBplist(u8) {
+  if (String.fromCharCode(...u8.subarray(0, 6)) !== "bplist") throw new Error("not a binary plist");
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), t = u8.length - 32;
+  const offSize = u8[t + 6], refSize = u8[t + 7];
+  const numObj = Number(dv.getBigUint64(t + 8)), top = Number(dv.getBigUint64(t + 16)), offTab = Number(dv.getBigUint64(t + 24));
+  const uint = (p, n) => { let v = 0; for (let i = 0; i < n; i++) v = v * 256 + u8[p + i]; return v; };
+  const offsets = new Array(numObj); for (let i = 0; i < numObj; i++) offsets[i] = uint(offTab + i * offSize, offSize);
+  const cache = new Array(numObj);
+  const lenAt = (p, lo) => { if (lo !== 15) return [lo, p + 1]; const sz = 1 << (u8[p + 1] & 15); return [uint(p + 2, sz), p + 2 + sz]; };
+  const latin = new TextDecoder("latin1"), utf16 = new TextDecoder("utf-16be");
+  function obj(i) {
+    if (cache[i] !== undefined) return cache[i];
+    const p = offsets[i], m = u8[p], hi = m >> 4, lo = m & 15; let v;
+    switch (hi) {
+      case 0: v = lo === 8 ? false : lo === 9 ? true : null; break;
+      case 1: { const sz = 1 << lo; v = sz === 8 ? Number(dv.getBigInt64(p + 1)) : sz === 16 ? Number(dv.getBigInt64(p + 9)) : uint(p + 1, sz); break; }
+      case 2: v = lo === 2 ? dv.getFloat32(p + 1) : dv.getFloat64(p + 1); break;
+      case 3: v = new Date((dv.getFloat64(p + 1) + 978307200) * 1000); break;
+      case 4: { const [l, q] = lenAt(p, lo); v = u8.subarray(q, q + l); break; }
+      case 5: { const [l, q] = lenAt(p, lo); v = latin.decode(u8.subarray(q, q + l)); break; }
+      case 6: { const [l, q] = lenAt(p, lo); v = utf16.decode(u8.subarray(q, q + 2 * l)); break; }
+      case 8: v = { UID: uint(p + 1, lo + 1) }; break;
+      case 10: case 12: { const [l, q] = lenAt(p, lo); v = []; cache[i] = v; for (let k = 0; k < l; k++) v.push(obj(uint(q + k * refSize, refSize))); break; }
+      case 13: { const [l, q] = lenAt(p, lo); v = {}; cache[i] = v; for (let k = 0; k < l; k++) v[obj(uint(q + k * refSize, refSize))] = obj(uint(q + (l + k) * refSize, refSize)); break; }
+      default: v = null;
+    }
+    cache[i] = v; return v;
+  }
+  return obj(top);
+}
+
+/* ================= Notability ================= */
+async function notability(sessionEntry, all) {
+  const root = dirOf(sessionEntry.path);
+  const title = (root.split("/").pop() || "Notability note").replace(/\.(nbn|note)$/i, "");
+  const B = makeBatch("Notability", title);
+  const p = parseBplist(new Uint8Array(await (await sessionEntry.blob()).arrayBuffer()));
+  const O = p.$objects;
+  const R = x => (x && typeof x === "object" && "UID" in x) ? O[x.UID] : x;
+  const BY = x => { x = R(x); return x && x["NS.bytes"] ? x["NS.bytes"] : x; };
+  const nums = s => (String(R(s)).match(/-?[\d.]+(?:[eE][-+]?\d+)?/g) || []).map(Number);
+  const f32 = u => new Float32Array(u.slice().buffer), i32 = u => new Int32Array(u.slice().buffer);
+
+  // ink
+  const ovs = O.filter(o => o && typeof o === "object" && "curvespoints" in o);
+  const ov = ovs.sort((a, b) => R(b.numcurves) - R(a.numcurves))[0];
+  let ink = null;
+  if (ov && R(ov.numcurves)) {
+    const npts = i32(BY(ov.curvesnumpoints)), pts = f32(BY(ov.curvespoints)), wid = f32(BY(ov.curveswidth));
+    const col = BY(ov.curvescolors), fw = f32(BY(ov.curvesfractionalwidths));
+    const n = npts.length, starts = new Int32Array(n), fst = new Int32Array(n), bb = new Float64Array(n * 4);
+    for (let i = 0, s = 0, f = 0; i < n; i++) {
+      starts[i] = s; fst[i] = f;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let j = s; j < s + npts[i]; j++) { const x = pts[2 * j], y = pts[2 * j + 1]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      bb.set([x0, y0, x1, y1], i * 4); s += npts[i]; f += ((npts[i] - 1) / 3 | 0) + 1;
+    }
+    ink = { n, npts, pts, wid, col, fw, starts, fst, bb };
+  }
+
+  // photos on pages
+  const placed = [];
+  for (const o of O) {
+    if (!(o && typeof o === "object" && "figure" in o)) continue;
+    const fig = R(o.figure), bg = R(fig.FigureBackgroundObjectKey), snap = bg && R(bg.kImageObjectSnapshotKey);
+    if (!snap || !snap.relativePath) continue;
+    placed.push({ rel: R(snap.relativePath), org: nums(o.documentOrigin), size: nums(o.unscaledContentSize), crop: nums(fig.FigureCropRectKey), rot: +R(o.rotationDegrees) || 0 });
+  }
+  placed.sort((a, b) => a.org[1] - b.org[1] || a.org[0] - b.org[0]);
+
+  // image files: prefer <root>/Images/, else match by name anywhere in the drop
+  const imgs = all.filter(e => IMG_RE.test(e.path) && dirOf(e.path) === root + (root ? "/" : "") + "Images");
+  const byName = new Map(imgs.map(e => [base(e.path), e]));
+  const findImg = rel => byName.get(base(rel)) || all.find(e => base(e.path) === base(rel) && IMG_RE.test(e.path));
+
+  const used = new Set();
+  B.total = placed.length; B.update();
+  let inked = 0;
+  for (const pl of placed) {
+    const ent = findImg(pl.rel);
+    if (!ent) { B.addMissing(base(pl.rel)); continue; }
+    used.add(ent.path);
+    const blob = await ent.blob();
+    const item = { name: base(ent.path), original: blob, origName: base(ent.path) };
+    const bmp = await decode(blob);
+    if (!bmp) { item.note = "browser can't decode this format; original saves intact"; B.add(item); continue; }
+    const r = renderNotability(bmp, pl, ink);
+    item.w = r.w; item.h = r.h; item.strokes = r.strokes;
+    if (r.strokes) inked++;
+    item.thumb = await thumbFrom(r.canvas, r.w, r.h);
+    const png = /\.png$/i.test(ent.path);
+    let st = stemOf(ent.path).replace(/ /g, "_"); if (st === "Image_") st = "Image_0";
+    item.inkName = st + (png ? ".png" : ".jpg");
+    item.ink = await new Promise(res => r.canvas.toBlob(res, png ? "image/png" : "image/jpeg", .95));
+    r.canvas.width = r.canvas.height = 0; bmp.close && bmp.close();
+    item.rot = Math.round(pl.rot * 180 / Math.PI);
+    B.add(item); B.done++; B.update();
+    await new Promise(r => setTimeout(r, 0));
+  }
+  // stored but not on any page
+  for (const e of imgs) if (!used.has(e.path)) {
+    const blob = await e.blob(); const bmp = await decode(blob);
+    const it = { name: base(e.path), original: blob, origName: base(e.path), offPage: true };
+    if (bmp) { it.w = bmp.width; it.h = bmp.height; it.thumb = await thumbFrom(bmp, bmp.width, bmp.height); bmp.close && bmp.close(); }
+    B.add(it);
+  }
+  B.summary = `${B.items.length} photos · ${inked} with handwriting` + (B.items.some(i => i.offPage) ? ` · ${B.items.filter(i => i.offPage).length} stored but not on any page` : "");
+  B.rows = B.items.map(i => ({ file: i.origName, with_ink: i.inkName || "", width: i.w || "", height: i.h || "", ink_strokes: i.strokes ?? "", rotated_deg: i.rot ?? "", on_page: !i.offPage }));
+  B.finish();
+}
+
+function renderNotability(bmp, pl, ink) {
+  const [ox, oy] = pl.org, [dw, dh] = pl.size, [cx, cy, cw, ch] = pl.crop, a = pl.rot;
+  const sx = Math.round(cx), sy = Math.round(cy), W = Math.round(cx + cw) - sx, H = Math.round(cy + ch) - sy;
+  const s = W / dw, ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
+  const OW = Math.round(W * ca + H * sa), OH = Math.round(W * sa + H * ca);
+  const cxd = ox + dw / 2, cyd = oy + dh / 2;
+  const cv = document.createElement("canvas"); cv.width = OW; cv.height = OH;
+  const g = cv.getContext("2d");
+  const base = (c) => { c.setTransform(1, 0, 0, 1, 0, 0); c.translate(OW / 2, OH / 2); };
+  const clipAndMap = (c) => {
+    c.save(); c.rotate(a); c.beginPath(); c.rect(-W / 2, -H / 2, W, H); c.restore(); c.clip();
+    c.scale(s, s); c.translate(-cxd, -cyd); c.lineCap = "round"; c.lineJoin = "round";
+  };
+  base(g); g.save(); g.rotate(a); g.imageSmoothingQuality = "high"; g.drawImage(bmp, sx, sy, W, H, -W / 2, -H / 2, W, H); g.restore();
+  if (!ink) return { canvas: cv, w: OW, h: OH, strokes: 0 };
+  g.save(); clipAndMap(g);
+  const rr = Math.hypot(dw, dh) / 2, sel = [];
+  const { npts, pts, wid, col, fw, starts, fst, bb } = ink;
+  for (let i = 0; i < ink.n; i++) {
+    if (bb[i*4+2] >= cxd - rr && bb[i*4] <= cxd + rr && bb[i*4+3] >= cyd - rr && bb[i*4+1] <= cyd + rr) sel.push(i);
+  }
+  let onPhoto = 0;
+  for (const i of sel) { const mx = (bb[i*4] + bb[i*4+2]) / 2, my = (bb[i*4+1] + bb[i*4+3]) / 2; if (Math.hypot(mx - cxd, my - cyd) <= rr && mx >= ox && mx <= ox + dw && my >= oy && my <= oy + dh) onPhoto++; }
+  const pathOf = (c, i) => {
+    const s0 = starts[i], n = npts[i]; c.beginPath(); c.moveTo(pts[2*s0], pts[2*s0+1]);
+    for (let j = 1; j < n - 2; j += 3) { const q = 2 * (s0 + j); c.bezierCurveTo(pts[q], pts[q+1], pts[q+2], pts[q+3], pts[q+4], pts[q+5]); }
+  };
+  const meanF = i => { const m = ((npts[i] - 1) / 3 | 0) + 1; let t = 0; for (let k = 0; k < m; k++) t += fw[fst[i] + k]; return m ? t / m : 1; };
+  const rgba = i => [col[4*i], col[4*i+1], col[4*i+2], col[4*i+3]];
+  // highlighter strokes (translucent) go underneath the pen, multiplied, one layer per colour
+  const groups = new Map();
+  for (const i of sel) { const c = rgba(i); if (c[3] < 255) { const k = c.join(","); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); } }
+  if (groups.size) {
+    const L = document.createElement("canvas"); L.width = OW; L.height = OH; const lg = L.getContext("2d");
+    for (const [k, list] of groups) {
+      const [r, gg, b, al] = k.split(",").map(Number);
+      lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, OW, OH); lg.save(); base(lg); clipAndMap(lg);
+      lg.strokeStyle = lg.fillStyle = `rgb(${r},${gg},${b})`;
+      for (const i of list) { if (npts[i] < 4) { lg.beginPath(); lg.arc(pts[2*starts[i]], pts[2*starts[i]+1], wid[i] / 2, 0, 2 * Math.PI); lg.fill(); } else { lg.lineWidth = wid[i] * meanF(i); pathOf(lg, i); lg.stroke(); } }
+      lg.restore();
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "multiply"; g.globalAlpha = al / 255; g.drawImage(L, 0, 0); g.restore();
+    }
+    L.width = L.height = 0;
+  }
+  for (const i of sel) {
+    const [r, gg, b, al] = rgba(i); if (al < 255) continue;
+    g.strokeStyle = g.fillStyle = `rgb(${r},${gg},${b})`;
+    const n = npts[i];
+    if (n < 4) { g.beginPath(); g.arc(pts[2*starts[i]], pts[2*starts[i]+1], wid[i] / 2, 0, 2 * Math.PI); g.fill(); continue; }
+    const m = ((n - 1) / 3 | 0) + 1; let lo = Infinity, hi = -Infinity;
+    for (let k = 0; k < m; k++) { const v = fw[fst[i] + k]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (hi - lo < .05) { g.lineWidth = wid[i] * meanF(i); pathOf(g, i); g.stroke(); }
+    else {
+      const s0 = starts[i];
+      for (let j = 0; j + 3 < n; j += 3) {
+        const q = 2 * (s0 + j); g.lineWidth = wid[i] * (fw[fst[i] + j / 3] + fw[fst[i] + j / 3 + 1]) / 2;
+        g.beginPath(); g.moveTo(pts[q], pts[q+1]); g.bezierCurveTo(pts[q+2], pts[q+3], pts[q+4], pts[q+5], pts[q+6], pts[q+7]); g.stroke();
+      }
+    }
+  }
+  g.restore();
+  return { canvas: cv, w: OW, h: OH, strokes: onPhoto };
+}
+
+/* ================= FieldMove ================= */
+function pb(b) { // minimal protobuf reader: field -> first value
+  const o = {}; let i = 0; const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const vi = () => { let r = 0, s = 0, x; do { x = b[i++]; r += (x & 127) * 2 ** s; s += 7; } while (x >= 128); return r; };
+  while (i < b.length) {
+    const k = vi(), f = Math.floor(k / 8), t = k & 7; let v;
+    if (t === 0) v = vi(); else if (t === 1) { v = dv.getFloat64(i, true); i += 8; } else if (t === 5) { v = dv.getFloat32(i, true); i += 4; }
+    else if (t === 2) { const n = vi(); v = b.subarray(i, i + n); i += n; } else throw new Error("wire type " + t);
+    if (!(f in o)) o[f] = v;
+  }
+  return o;
+}
+const txt = v => v instanceof Uint8Array ? new TextDecoder().decode(v).trim() : "";
+let sqlPromise = null;
+function sqlJs() {
+  if (!sqlPromise) sqlPromise = loadScript(VENDOR + "sql-wasm.js").then(() => initSqlJs({ locateFile: f => VENDOR + f }));
+  return sqlPromise;
+}
+function findPhoto(name, all, preferDir) {
+  const hits = all.filter(e => base(e.path) === name);
+  return hits.find(e => preferDir && e.path.startsWith(preferDir)) || hits[0];
+}
+function stampOf(d) { return d ? `${d.Y}${pad(d.M)}${pad(d.D)}-${pad(d.h)}${pad(d.m)}${pad(d.s)}` : ""; }
+function utcParts(sec) { const d = new Date(sec * 1000); return { Y: d.getUTCFullYear(), M: d.getUTCMonth() + 1, D: d.getUTCDate(), h: d.getUTCHours(), m: d.getUTCMinutes(), s: d.getUTCSeconds(), utc: true }; }
+function ctimeParts(s) { // "Wed Apr  2 16:52:27 2025"
+  const m = /(\w{3})\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d{4})/.exec(s || ""); if (!m) return null;
+  const M = "JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(m[1]) / 3 + 1;
+  return { Y: +m[6], M, D: +m[2], h: +m[3], m: +m[4], s: +m[5] };
+}
+
+async function fieldmoveProject(dbEntry, all) {
+  const root = dirOf(dbEntry.path);
+  const B = makeBatch("FieldMove project", base(root) || "FieldMove project");
+  let SQL; try { SQL = await sqlJs(); } catch (e) { B.fail("Couldn't load the database reader (" + e.message + ")."); return; }
+  const db = new SQL.Database(new Uint8Array(await (await dbEntry.blob()).arrayBuffer()));
+  const q = s => { try { const r = db.exec(s); return r.length ? r[0].values : []; } catch (e) { return []; } };
+  const locs = new Map();
+  for (const [lid, m] of q("select localityId, message from localities")) { let o = {}; try { o = pb(m); } catch (e) {} locs.set(lid, { name: txt(o[3]) || String(lid).slice(0, 8), note: txt(o[4]) }); }
+  const recs = [];
+  for (const [did, lid, m] of q("select dataId, localityId, message from data")) {
+    let o; try { o = pb(m); } catch (e) { continue; }
+    const name = txt(o[21]); if (!name) continue;
+    const gpos = o[6] instanceof Uint8Array ? pb(o[6]) : {};
+    const L = locs.get(lid) || { name: String(lid).slice(0, 8), note: "" };
+    recs.push({ image: name, locality: L.name, notes: L.note, lat: gpos[1], lon: gpos[2], alt: gpos[3], heading: o[8], t: o[12] ? utcParts(o[12]) : null });
+  }
+  db.close();
+  await fieldmoveSave(B, recs, all, root + "/images/");
+}
+
+async function fieldmoveCSV(csvEntry, all) {
+  const B = makeBatch("FieldMove export", base(dirOf(csvEntry.path)) || base(csvEntry.path));
+  const rows = parseCSV(await (await csvEntry.blob()).text());
+  const recs = rows.map(r => ({ image: r["image name"], locality: r.localityName, notes: r.notes, lat: parseFloat(r.latitude), lon: parseFloat(r.longitude), alt: parseFloat(r.altitude), heading: parseFloat(r.heading), t: ctimeParts(r.timedate) })).filter(r => r.image);
+  await fieldmoveSave(B, recs, all, dirOf(csvEntry.path));
+}
+
+async function fieldmoveSave(B, recs, all, preferDir) {
+  B.total = recs.length; B.update();
+  for (const r of recs) {
+    const ent = findPhoto(r.image, all, preferDir);
+    const row = { image: r.image, locality: r.locality, time: r.t ? `${r.t.Y}-${pad(r.t.M)}-${pad(r.t.D)} ${pad(r.t.h)}:${pad(r.t.m)}:${pad(r.t.s)}${r.t.utc ? " UTC" : ""}` : "", latitude: r.lat ?? "", longitude: r.lon ?? "", altitude_m: r.alt ?? "", heading: r.heading ?? "", notes: r.notes || "" };
+    if (!ent) { B.addMissing(r.image); row.saved_as = "MISSING"; B.rows.push(row); continue; }
+    let blob = await ent.blob();
+    const ext = (r.image.split(".").pop() || "jpg").toLowerCase();
+    const nm = safe([r.locality, stampOf(r.t), stemOf(r.image), (r.notes || "").slice(0, 40)].filter(Boolean).join("_")) + "." + ext;
+    let geo = false;
+    if (/^jpe?g$/.test(ext) && Number.isFinite(r.lat) && Number.isFinite(r.lon)) {
+      try { blob = await withGPS(blob, r); geo = true; } catch (e) { log(r.image + ": couldn't write GPS (" + e.message + ")"); }
+    }
+    const bmp = await decode(blob);
+    const it = { name: nm, original: blob, origName: nm, geo, sub: r.notes || r.locality };
+    if (bmp) { it.w = bmp.width; it.h = bmp.height; it.thumb = await thumbFrom(bmp, bmp.width, bmp.height); bmp.close && bmp.close(); }
+    row.saved_as = nm; row.pixels = it.w ? `${it.w}x${it.h}` : ""; row.gps_in_file = geo;
+    B.rows.push(row); B.add(it); B.done++; B.update();
+  }
+  B.summary = `${B.items.length} of ${recs.length} photos found` + (B.items.some(i => i.geo) ? " · GPS written into each JPEG" : "");
+  if (B.missing.length) B.hint = "Photos listed in the data but not in what you dropped. Drop the FieldMove photo folder alongside the export.";
+  B.finish();
+}
+
+async function withGPS(blob, r) {
+  const u8 = new Uint8Array(await blob.arrayBuffer()); let bin = "";
+  for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  let ex; try { ex = piexif.load(bin); } catch (e) { ex = { "0th": {}, Exif: {}, GPS: {}, "1st": {}, thumbnail: null }; }
+  const dms = x => { x = Math.abs(x); const d = Math.floor(x), mf = (x - d) * 60, m = Math.floor(mf), s = (mf - m) * 60; return [[d, 1], [m, 1], [Math.round(s * 10000), 10000]]; };
+  const G = piexif.GPSIFD;
+  ex.GPS = { [G.GPSLatitudeRef]: r.lat >= 0 ? "N" : "S", [G.GPSLatitude]: dms(r.lat), [G.GPSLongitudeRef]: r.lon >= 0 ? "E" : "W", [G.GPSLongitude]: dms(r.lon) };
+  if (Number.isFinite(r.alt)) { ex.GPS[G.GPSAltitudeRef] = r.alt >= 0 ? 0 : 1; ex.GPS[G.GPSAltitude] = [Math.round(Math.abs(r.alt) * 100), 100]; }
+  if (Number.isFinite(r.heading) && r.heading >= 0) { ex.GPS[G.GPSImgDirectionRef] = "T"; ex.GPS[G.GPSImgDirection] = [Math.round(r.heading * 100), 100]; }
+  if (r.t && !r.t.utc) ex.Exif[piexif.ExifIFD.DateTimeOriginal] = `${r.t.Y}:${pad(r.t.M)}:${pad(r.t.D)} ${pad(r.t.h)}:${pad(r.t.m)}:${pad(r.t.s)}`;
+  if (r.t && r.t.utc) { ex.GPS[G.GPSDateStamp] = `${r.t.Y}:${pad(r.t.M)}:${pad(r.t.D)}`; ex.GPS[G.GPSTimeStamp] = [[r.t.h, 1], [r.t.m, 1], [r.t.s, 1]]; }
+  if (ex.thumbnail && ex.thumbnail.length > 60000) ex.thumbnail = null;
+  const out = piexif.insert(piexif.dump(ex), bin);
+  const o = new Uint8Array(out.length); for (let i = 0; i < out.length; i++) o[i] = out.charCodeAt(i);
+  return new Blob([o], { type: "image/jpeg" });
+}
+
+/* ================= Gaia GPS ================= */
+async function gaiaKMZ(zipEntry, all) {
+  const B = makeBatch("Gaia GPS · KMZ", base(zipEntry.path));
+  const inner = all.filter(e => e.fromZip === zipEntry.path && IMG_RE.test(e.path) && !/\/(assets|files\/icons|icons)\//i.test(e.path));
+  for (const e of inner) {
+    const blob = await e.blob(); if (blob.size < 20000) continue; // map icons
+    const bmp = await decode(blob); const nm = safe(e.path.slice(zipEntry.path.length + 1).replace(/\//g, "_"));
+    const it = { name: nm, original: blob, origName: nm };
+    if (bmp) { it.w = bmp.width; it.h = bmp.height; it.thumb = await thumbFrom(bmp, bmp.width, bmp.height); bmp.close && bmp.close(); }
+    B.add(it); B.rows.push({ file: nm, source: e.path.slice(zipEntry.path.length + 1), pixels: it.w ? `${it.w}x${it.h}` : "" });
+  }
+  B.summary = B.items.length ? `${B.items.length} photos embedded in the KMZ` : "No photos in this KMZ. In Gaia, export the folder as KMZ with photos included.";
+  B.finish();
+}
+async function gaiaLinks(entry) {
+  const B = makeBatch("Gaia GPS", base(entry.path)); const text = await (await entry.blob()).text();
+  const links = [];
+  if (/\.gpx$/i.test(entry.path)) {
+    for (const u of new Set(text.match(/https?:\/\/[^"<\s]+\.(?:jpe?g|png|heic)/gi) || [])) links.push({ url: u, title: base(u) });
+  } else {
+    let g; try { g = JSON.parse(text); } catch (e) { B.fail("Not valid GeoJSON."); return; }
+    for (const f of g.features || []) {
+      const pr = f.properties || {};
+      (pr.photos || []).forEach((ph, k) => {
+        let url = typeof ph === "string" ? ph : null;
+        if (ph && typeof ph === "object") { const c = Object.entries(ph).filter(([, v]) => typeof v === "string" && /^https?:/.test(v)); url = (c.find(([k]) => /full|orig|large/i.test(k)) || c[0] || [])[1] || null; }
+        if (url) links.push({ url, title: `${pr.title || "waypoint"}_${k + 1}`, lat: pr.latitude, lon: pr.longitude, alt: pr.elevation });
+      });
+    }
+    B.featureCount = (g.features || []).length;
+  }
+  for (const L of links) {
+    const row = { waypoint: L.title, url: L.url, latitude: L.lat ?? "", longitude: L.lon ?? "" };
+    try {
+      const res = await fetch(L.url); if (!res.ok) throw new Error("HTTP " + res.status);
+      let blob = await res.blob(); const nm = safe(L.title) + ".jpg";
+      if (Number.isFinite(L.lat) && /jpe?g/.test(blob.type)) { try { blob = await withGPS(blob, { lat: L.lat, lon: L.lon, alt: L.alt }); } catch (e) {} }
+      const bmp = await decode(blob); const it = { name: nm, original: blob, origName: nm, geo: Number.isFinite(L.lat) };
+      if (bmp) { it.w = bmp.width; it.h = bmp.height; it.thumb = await thumbFrom(bmp, bmp.width, bmp.height); bmp.close && bmp.close(); }
+      B.add(it); row.file = nm;
+    } catch (e) { row.file = "not downloaded (" + e.message + ")"; B.links.push(L); }
+    B.rows.push(row);
+  }
+  B.summary = links.length ? `${B.items.length} of ${links.length} linked photos downloaded` : `${B.featureCount ?? "No"} features, but no photos attached to any waypoint in this export.`;
+  if (B.links.length) B.hint = "Gaia blocked direct download for some photos. Open the links below while signed in to Gaia, or export as KMZ.";
+  B.finish();
+}
+
+/* ================= PDF (embedded JPEGs, byte for byte) ================= */
+async function pdfImages(entry) {
+  const B = makeBatch("PDF", base(entry.path));
+  const bytes = new Uint8Array(await (await entry.blob()).arrayBuffer()); const s = new TextDecoder("latin1").decode(bytes);
+  const re = /\/Subtype\s*\/Image\b/g; let m, k = 0; const seen = new Set();
+  while ((m = re.exec(s))) {
+    const objAt = s.lastIndexOf(" obj", m.index); if (objAt < 0 || seen.has(objAt)) continue; seen.add(objAt);
+    const st = s.indexOf("stream", m.index); if (st < 0) continue;
+    const dict = s.slice(objAt, st);
+    if (!/\/(DCTDecode|JPXDecode)/.test(dict) || /\/FlateDecode/.test(dict)) continue;
+    let a = st + 6; if (s[a] === "\r") a++; if (s[a] === "\n") a++;
+    const L = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict); let e = L ? a + +L[1] : -1;
+    if (e < 0 || !/^\s*endstream/.test(s.slice(e, e + 20))) { e = s.indexOf("endstream", a); while (e > a && /[\r\n]/.test(s[e - 1])) e--; }
+    const jpx = /JPXDecode/.test(dict), blob = new Blob([bytes.slice(a, e)], { type: jpx ? "image/jp2" : "image/jpeg" });
+    k++; const nm = `${safe(stemOf(entry.path))}_${pad(k)}.${jpx ? "jp2" : "jpg"}`;
+    const bmp = await decode(blob); const it = { name: nm, original: blob, origName: nm };
+    if (bmp) { it.w = bmp.width; it.h = bmp.height; if (Math.max(it.w, it.h) < 200) { bmp.close && bmp.close(); k--; continue; } it.thumb = await thumbFrom(bmp, it.w, it.h); bmp.close && bmp.close(); }
+    B.add(it); B.rows.push({ file: nm, pixels: it.w ? `${it.w}x${it.h}` : "" });
+  }
+  B.summary = B.items.length ? `${B.items.length} embedded JPEG photos, copied out untouched` : "No embedded JPEG photos found in this PDF.";
+  B.finish();
+}
+
+/* ================= results UI ================= */
+const batches = [];
+function makeBatch(kind, title) {
+  const sec = el("section", "batch"), head = el("div", "bhead"), h2 = el("h2"); h2.append(el("span", "kind", kind), document.createTextNode(title));
+  const btns = el("div", "btns"); head.append(h2, btns);
+  const stat = el("div", "bstat", "Reading…"), grid = el("div", "grid");
+  sec.append(head, stat, grid); $("results").append(sec);
+  const B = { kind, title, items: [], rows: [], missing: [], links: [], done: 0, total: 0, summary: "", hint: "",
+    add(it) { this.items.push(it); grid.appendChild(card(it, this)); },
+    addMissing(n) { this.missing.push(n); },
+    update() { stat.textContent = this.total ? `Working… ${this.done} / ${this.total}` : "Working…"; },
+    fail(msg) { stat.innerHTML = ""; stat.append(el("span", "warn", msg)); },
+    finish() {
+      stat.innerHTML = ""; const b = el("b", null, this.summary); stat.append(b);
+      if (this.missing.length) stat.append(el("span", "warn", ` · not found: ${this.missing.slice(0, 6).join(", ")}${this.missing.length > 6 ? " …" : ""}`));
+      if (this.hint) stat.append(el("div", null, this.hint));
+      for (const L of this.links.slice(0, 40)) { const a = el("a", null, L.title); a.href = L.url; a.target = "_blank"; a.rel = "noopener"; a.style.cssText = "color:var(--accent);margin-right:10px"; stat.append(a); }
+      btns.innerHTML = "";
+      const orig = this.items.filter(i => i.original), inked = this.items.filter(i => i.ink);
+      if (orig.length) btns.append(button(`Originals .zip (${orig.length})`, true, () => zipUp(this, "originals")));
+      if (inked.length) btns.append(button(`With ink .zip (${inked.length})`, true, () => zipUp(this, "with_ink")));
+      if (this.rows.length) btns.append(button("photos.csv", false, () => saveBlob(safe(this.title) + "_photos.csv", new Blob([toCSV(this.rows)], { type: "text/csv" }))));
+      if (!this.items.length) grid.hidden = true;
+    } };
+  batches.push(B); return B;
+}
+function button(label, primary, fn) { const b = el("button", "btn sm" + (primary ? " primary" : ""), label); b.type = "button"; b.onclick = fn; return b; }
+function card(it, B) {
+  const c = el("article", "card"), th = el("button", "thumb"); th.type = "button"; th.setAttribute("aria-label", "View " + it.name);
+  if (it.thumb) { const im = el("img"); im.src = it.thumb; im.alt = ""; im.loading = "lazy"; th.append(im); }
+  else th.append(el("div", "np", (it.name.split(".").pop() || "").toUpperCase() + " · preview not supported in this browser, saves intact"));
+  if (it.strokes) th.append(el("span", "badge", "ink"));
+  th.onclick = () => openLB(it);
+  const meta = el("div", "meta");
+  const d = el("div", "dims", it.w ? `${it.w} × ${it.h} ` : "size unknown "); if (it.w) d.append(el("span", null, (it.w * it.h / 1e6).toFixed(1) + " MP")); meta.append(d);
+  const chips = el("div", "chips");
+  chips.append(el("span", "chip", fmtBytes(it.original.size)));
+  if (it.strokes) chips.append(el("span", "chip ink", it.strokes + " ink strokes"));
+  if (it.geo) chips.append(el("span", "chip geo", "GPS in file"));
+  if (it.offPage) chips.append(el("span", "chip miss", "not on a page"));
+  if (it.rot) chips.append(el("span", "chip", "rotated " + it.rot + "°"));
+  meta.append(chips, el("div", "name", it.sub ? `${it.name} — ${it.sub}` : it.name));
+  if (it.note) meta.append(el("div", "name", it.note));
+  const act = el("div", "actions");
+  act.append(button("Original", false, () => saveBlob(it.origName, it.original)));
+  if (it.ink) act.append(button("With ink", true, () => saveBlob(it.inkName, it.ink)));
+  meta.append(act); c.append(th, meta); return c;
+}
+async function zipUp(B, which) {
+  const z = new JSZip(), folder = safe(B.title) + "/" + (which === "with_ink" ? "with_annotations" : "originals") + "/";
+  for (const it of B.items) {
+    if (which === "with_ink" && it.ink) z.file(folder + it.inkName, it.ink, { binary: true });
+    if (which === "originals" && it.original) z.file(folder + it.origName, it.original, { binary: true });
+  }
+  if (B.rows.length) z.file(safe(B.title) + "/photos.csv", toCSV(B.rows));
+  toast("Packing zip…");
+  const blob = await z.generateAsync({ type: "blob", compression: "STORE" });
+  saveBlob(`${safe(B.title)}_${which === "with_ink" ? "with_annotations" : "originals"}.zip`, blob);
+}
+
+/* lightbox */
+let lbItem = null, lbView = "ink", lbURL = null;
+function showLB() {
+  const it = lbItem, useInk = lbView === "ink" && it.ink, blob = useInk ? it.ink : it.original;
+  if (lbURL) URL.revokeObjectURL(lbURL); lbURL = URL.createObjectURL(blob); $("lbImg").src = lbURL;
+  $("lbInfo").textContent = `${useInk ? it.inkName : it.origName} · ${it.w ? it.w + "×" + it.h + " · " : ""}${fmtBytes(blob.size)}`;
+  $("lbSeg").hidden = !it.ink; for (const b of $("lbSeg").children) b.setAttribute("aria-pressed", String(b.dataset.v === (useInk ? "ink" : "orig")));
+}
+function openLB(it) { lbItem = it; lbView = "ink"; $("lbBody").className = "lbbody fit"; $("lbZoom").textContent = "Actual pixels"; showLB(); $("lb").showModal(); }
+$("lbSeg").addEventListener("click", e => { if (e.target.dataset.v) { lbView = e.target.dataset.v; showLB(); } });
+$("lbZoom").onclick = () => { const b = $("lbBody"), fit = b.classList.contains("fit"); b.className = "lbbody " + (fit ? "full" : "fit"); $("lbZoom").textContent = fit ? "Fit to window" : "Actual pixels"; };
+$("lbSave").onclick = () => { const it = lbItem, ink = lbView === "ink" && it.ink; saveBlob(ink ? it.inkName : it.origName, ink ? it.ink : it.original); };
+$("lbClose").onclick = () => $("lb").close();
+$("lb").addEventListener("click", e => { if (e.target === $("lb")) $("lb").close(); });
+$("lb").addEventListener("close", () => { if (lbURL) { URL.revokeObjectURL(lbURL); lbURL = null; } $("lbImg").removeAttribute("src"); });
+
+/* ================= dispatch ================= */
+async function handle(entries) {
+  if (!entries.length) return;
+  $("howto").hidden = true;
+  const all = await expandZips(entries);
+  const claimed = new Set(); let found = 0;
+  const jobs = [];
+  for (const e of all.filter(e => base(e.path) === "Session.plist")) { jobs.push(() => notability(e, all)); found++; }
+  for (const e of all.filter(e => base(e.path) === "main.db" && (/\.fm$/i.test(dirOf(e.path)) || all.some(x => dirOf(x.path) === dirOf(e.path) + "/images")))) { jobs.push(() => fieldmoveProject(e, all)); found++; }
+  for (const e of all.filter(e => /^image( \d+)?\.csv$/i.test(base(e.path)))) { jobs.push(() => fieldmoveCSV(e, all)); found++; }
+  for (const e of all.filter(e => e.zipped && /\.kmz$/i.test(e.path))) { jobs.push(() => gaiaKMZ(e, all)); found++; }
+  for (const e of all.filter(e => /\.(geojson|gpx)$/i.test(e.path))) { jobs.push(() => gaiaLinks(e)); found++; }
+  const inNote = p => all.some(s => base(s.path) === "Session.plist" && p.startsWith(dirOf(s.path) + "/"));
+  for (const e of all.filter(e => /\.pdf$/i.test(e.path) && !inNote(e.path) && !e.fromZip)) { jobs.push(() => pdfImages(e)); found++; }
+  if (!found) { log("Nothing recognised. Drop a Notability .note/.nbn, a FieldMove .fm folder or export with image.csv, a Gaia .kmz/.geojson/.gpx, or a PDF."); $("howto").hidden = false; return; }
+  for (const j of jobs) { try { await j(); } catch (err) { console.error(err); log("Error: " + err.message); } }
+}
+window.__fpeHandle = handle; window.__fpeBatches = batches; // used by the self-test
+
+const drop = $("drop");
+$("pickFiles").onclick = () => $("fileIn").click();
+$("pickFolder").onclick = () => $("folderIn").click();
+$("fileIn").onchange = e => { handle([...e.target.files].map(f => fileEntry(f.webkitRelativePath || f.name, f))); e.target.value = ""; };
+$("folderIn").onchange = e => { handle([...e.target.files].map(f => fileEntry(f.webkitRelativePath || f.name, f))); e.target.value = ""; };
+["dragenter", "dragover"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+document.addEventListener("dragleave", e => { if (!e.relatedTarget) drop.classList.remove("over"); });
+document.addEventListener("drop", async e => {
+  e.preventDefault(); drop.classList.remove("over");
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  const out = [];
+  if (items.length) { for (const it of items) await walkEntry(it, "", out); }
+  else for (const f of e.dataTransfer.files) out.push(fileEntry(f.name, f));
+  handle(out);
+});
+})();
+</script>
+</body>
+</html>
