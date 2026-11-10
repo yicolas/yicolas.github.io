@@ -22,6 +22,7 @@ The site uses a two-column layout with an iframe-based content loader and a fixe
 - **pyRockmag** - Rock magnetic analysis tool
 - **Pliocene Sea Level Inundation Model** - Evaluating marine incursion hypotheses
 - **Half-Channel Flume Erosion Model** - Sediment transport simulation
+- **Amino Acid δ15N Explorer (Glx–Phe–Thr)** - Drop in amino acid nitrogen isotope data and compare it with the mammal dataset of Tejada (2026): clustering, discriminant analysis and scaling relationships
 
 ### 3D Prints & Tools
 - **Sediment Mill** - Custom optical engineering for particle analysis
@@ -68,6 +69,7 @@ The site uses a two-column layout with an iframe-based content loader and a fixe
 ├── pyrockmag.html          # pyRockmag tool wrapper
 ├── flume.html              # Flume model wrapper
 ├── inundation.html         # Inundation model wrapper
+├── isotope-explorer.html   # Amino acid δ15N explorer (self-contained, Plotly bundled)
 ├── sediment-mill.html      # Sediment mill project page
 ├── sediment-press.html     # Pellet press 3D viewer
 ├── swllip-thesis.html      # Undergraduate thesis
