@@ -195,12 +195,13 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     <label for="thr">Threshold</label><input type="range" id="thr" min="2" max="60" step="0.5" value="18"><input type="number" id="thrN" min="0.5" max="200" step="0.5" value="18" aria-label="Distance threshold value">
     
     <b id="cluCount"></b>
+    <label class="chk"><input type="checkbox" id="split" autocomplete="off"> Split by group</label>
     <span>Colour by <label class="chk"><input type="radio" name="colorBy" value="diet" checked> diet</label> <label class="chk"><input type="radio" name="colorBy" value="cluster"> cluster</label></span></div>
   <div class="panes">
-    <div class="pane"><h3 id="cluTitle">Offsets</h3><div id="pClu" class="plot"></div><p class="cap warn" id="nClu" hidden></p></div>
+    <div class="pane"><h3 id="cluTitle">Offsets</h3><div id="pClu" class="plot"></div><p class="cap">Shape and colour both mark the category. Added samples are the same shape, larger, with a dark outline.</p><p class="cap warn" id="nClu" hidden></p></div>
     <div class="pane"><h3>Dendrogram <small>dashed line is the cut</small></h3><div id="pDen" class="plot"></div></div>
   </div>
-  <div class="pane scroll under"><div id="cluTable"></div><p class="cap">Clusters are named by the diet of most members and numbered from highest to lowest ΔGlx–Thr. ◆ marks your samples. Hover the diet bar for counts.</p></div>
+  <div class="pane scroll under"><div id="cluTable"></div><p class="cap">Clusters are named by the diet of most members and numbered from highest to lowest offset. ◆ marks added samples. Hover the diet bar for counts.</p></div>
 </section>
 
 <!-- 4 COEFFICIENTS -->
@@ -537,11 +538,14 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
   const DIET_COLOR = { herbivore: '#008300', omnivore: '#eda100', insectivore: '#6250d6', carnivore: '#eb6834', piscivore: '#1baf7a', marine: '#2a78d6', sanguivore: '#e87ba4', unknown: '#898781' };
   const DIET_LABEL = { unknown: 'Diet not given' }; TJ.DIETS.forEach(d => DIET_LABEL[d.key] = d.label);
   const SLOTS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+  /* shape carries the category as well as colour; added samples are the same shape, larger, with a dark outline */
+  const DIET_SHAPE = { herbivore: 'circle', omnivore: 'square', insectivore: 'triangle-up', carnivore: 'diamond', piscivore: 'triangle-down', marine: 'star', sanguivore: 'cross', unknown: 'x' };
+  const CSHAPE = ['circle', 'square', 'diamond', 'triangle-up', 'triangle-down', 'star', 'cross', 'x'];
   const GUILD_COLOR = { 'Herbivore': '#008300', 'Secondary consumer': '#6250d6' };
 
   const REF = window.TEJADA_REF.map(r => ({ id: r.id, species: r.species, dietRaw: r.diet, family: r.family, Glx: r.Glx, Phe: r.Phe, Thr: r.Thr, src: 'ref',
     atypical: ATYPICAL.some(a => r.species.indexOf(a) >= 0), smaSkip: /Pecari/.test(r.species) }));
-  const state = { user: [], includeRef: true, threshold: 18, holdOut: true, trainOnUser: false, exclude: '', colorBy: 'diet', note: '', feats: 'both' };
+  const state = { user: [], includeRef: true, threshold: 18, holdOut: true, trainOnUser: false, exclude: '', colorBy: 'diet', note: '', feats: 'both', split: false };
   const FEATS = { both: { label: 'ΔGlx–Phe and ΔGlx–Thr', keys: ['gp', 'gt'], thr: 18 }, gp: { label: 'ΔGlx–Phe only', keys: ['gp'], thr: 8 }, gt: { label: 'ΔGlx–Thr only', keys: ['gt'], thr: 8 } };
   const KEYNAME = { gp: 'ΔGlx–Phe', gt: 'ΔGlx–Thr' }, ok = isFinite;
   const SYN = window.TEJADA_SYN, SYN_ON = { campbell: false, full: false, gp: false, gt: false };
@@ -650,17 +654,17 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
   const cfg = name => ({ responsive: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d'], toImageButtonOptions: { format: 'svg', filename: name, scale: 2 } });
   const hover = r => '<b>' + esc(r.id) + '</b>' + (r.species ? '<br><i>' + esc(r.species) + '</i>' : '') + '<br>' + DIET_LABEL[r.diet] + (r.cluster ? ' · cluster ' + r.cluster.name : '') +
     '<br>Glx ' + fmt(r.Glx, 1) + ' · Phe ' + fmt(r.Phe, 1) + ' · Thr ' + fmt(r.Thr, 1) + ' ‰<br>ΔGlx–Phe ' + fmt(r.gp, 1) + ' · ΔGlx–Thr ' + fmt(r.gt, 1) + ' ‰' + (r.full ? '' : '<br>' + (ok(r.Thr) ? 'no Phe measured' : 'no Thr measured')) + (r.src === 'user' ? '<br><b>' + (r.set === 'campbell' ? 'Campbell et al. 2017' : r.syn ? 'synthetic test sample' : 'your sample') + '</b>' : '');
-  /* one trace per colour key and source; your samples are larger outlined diamonds */
-  function scatterTraces(rows, xf, yf, keyOf, colorOf, nameOf, orderOf, openOf) {
+  /* one trace per colour key and source; added samples are the same shape, larger, with a dark outline */
+  function scatterTraces(rows, xf, yf, keyOf, colorOf, nameOf, orderOf, openOf, symOf) {
     const t = theme(), groups = new Map();
     rows.forEach(r => { const k = keyOf(r) + '|' + r.src; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
     const keys = [...groups.keys()].sort((a, b) => orderOf(groups.get(a)[0]) - orderOf(groups.get(b)[0]) || (a.endsWith('ref') ? -1 : 1));
-    return keys.map(k => { const g = groups.get(k), user = g[0].src === 'user', c = colorOf(g[0]);
+    return keys.map(k => { const g = groups.get(k), user = g[0].src === 'user', c = colorOf(g[0]), sym = symOf ? symOf(g[0]) : DIET_SHAPE[g[0].diet], big = /star|cross|x|triangle/.test(sym) ? 1.5 : 0;
       return { type: 'scatter', mode: 'markers', x: g.map(xf), y: g.map(yf), text: g.map(hover), hovertemplate: '%{text}<extra></extra>', name: nameOf(g[0]) + (user ? ' (added)' : ''), legendgroup: keyOf(g[0]),
-        marker: user ? { symbol: 'diamond', size: 13, color: c, line: { color: t.ink, width: 2 } } : (openOf && openOf(g[0]) ? { symbol: 'circle-open', size: 8, color: c, line: { width: 2 } } : { symbol: 'circle', size: 8, color: c, opacity: 0.85, line: { color: t.surface, width: 1 } }) }; });
+        marker: user ? { symbol: sym, size: 14 + big, color: c, line: { color: t.ink, width: 2 } } : (openOf && openOf(g[0]) ? { symbol: sym + '-open', size: 9 + big, color: c, line: { width: 2 } } : { symbol: sym, size: 9 + big, color: c, opacity: 0.9, line: { color: t.surface, width: 1 } }) }; });
   }
   const colorKey = () => state.colorBy === 'cluster' && R.clusters
-    ? [r => r.cluster.name, r => r.cluster.color, r => r.cluster.name, r => r.cluster.idx, r => r.cluster.open]
+    ? [r => r.cluster.name, r => r.cluster.color, r => r.cluster.name, r => r.cluster.idx, r => r.cluster.open, r => CSHAPE[r.cluster.idx % CSHAPE.length]]
     : [r => r.diet, r => DIET_COLOR[r.diet], r => DIET_LABEL[r.diet], r => Object.keys(DIET_COLOR).indexOf(r.diet)];
   /* samples with only one of the two plotted values are drawn as ticks on the axis they do have */
   function rugs(rows, xOf, yOf, xName, yName) {
@@ -712,13 +716,31 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
   function figClusters() {
     note('nClu', R.miss.cluster, state.feats === 'both' ? 'have only one offset: they are ticks on that axis and are not clustered. Use “Cluster on” to cluster them on the offset they have' : 'not in this clustering (missing ' + (state.feats === 'gp' ? 'Phe' : 'Thr') + '); try another “Cluster on” setting');
     if (!R.clusters) { empty('pClu', 'Needs at least two samples with ' + R.keys.map(k => KEYNAME[k]).join(' and ') + '.'); empty('pDen', ''); $('cluTable').innerHTML = ''; $('cluCount').textContent = ''; return; }
-    const lay = layout(), k = colorKey(), one = R.keys.length === 1, showLeg = !(state.colorBy === 'cluster' && (one || R.clusters.length > 8));
-    if (one) { /* single offset: one row per cluster */
-      const key = R.keys[0], rnd = TJ.rng(11), jit = new Map(R.cRows.map(r => [r, (rnd() - 0.5) * 0.5]));
-      plot('pClu', scatterTraces(R.cRows, r => r[key], r => r.cluster.idx + jit.get(r), k[0], k[1], k[2], k[3], k[4]), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: KEYNAME[key] + ' (‰)' } }),
-        yaxis: Object.assign(layout().yaxis, { tickmode: 'array', tickvals: R.clusters.map(c => c.idx), ticktext: R.clusters.map(c => c.name), autorange: 'reversed', showgrid: false, zeroline: false }) }), 'clusters_' + (key === 'gp' ? 'dGlxPhe' : 'dGlxThr'));
-    } else plot('pClu', scatterTraces(R.cRows, r => r.gp, r => r.gt, k[0], k[1], k[2], k[3], k[4]).concat(rugs(R.rows, r => r.gp, r => r.gt, 'ΔGlx–Phe', 'ΔGlx–Thr')), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: 'ΔGlx–Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'ΔGlx–Thr (‰)' } }) }), 'clusters_dGlxPhe_dGlxThr');
-    $('cluTitle').textContent = one ? KEYNAME[R.keys[0]] + ' by cluster' : 'Offsets';
+    const lay = layout(), k = colorKey(), one = R.keys.length === 1, showLeg = !(state.colorBy === 'cluster' && R.clusters.length > 8);
+    const GROUPS = ['Predator', 'Omnivore', 'Herbivore', 'Unassigned'].filter(G => R.clusters.some(c => c.group === G)), key = R.keys[0];
+    const rnd = TJ.rng(11), jit = new Map(R.cRows.map(r => [r, (rnd() - 0.5) * 0.5]));
+    const fname = 'clusters_' + (one ? (key === 'gp' ? 'dGlxPhe' : 'dGlxThr') : 'dGlxPhe_dGlxThr');
+    $('split').closest('label').hidden = GROUPS.length < 2;
+    if (state.split && GROUPS.length > 1) { /* one panel per assemblage, each with its own axis range */
+      const traces = [], seen = new Set(), L = layout({ showlegend: showLeg, annotations: [] }), base = () => Object.assign({}, layout().xaxis), gap = one ? 0.16 : 0.07;
+      const w = GROUPS.map(G => one ? R.clusters.filter(c => c.group === G).length + 0.6 : 1), tot = w.reduce((a, b) => a + b, 0), span = 1 - gap * (GROUPS.length - 1); let at = one ? 1 : 0;
+      GROUPS.forEach((G, gi) => {
+        const cl = R.clusters.filter(c => c.group === G), pos = new Map(cl.map((c, ci) => [c, ci])), sfx = gi ? String(gi + 1) : '', size = span * w[gi] / tot;
+        const dom = one ? [at - size, at] : [at, at + size]; at += one ? -(size + gap) : size + gap;
+        scatterTraces(R.cRows.filter(r => r.cluster.group === G), one ? r => r[key] : r => r.gp, one ? r => pos.get(r.cluster) + jit.get(r) : r => r.gt, k[0], k[1], k[2], k[3], k[4], k[5]).forEach(tr => {
+          tr.xaxis = 'x' + sfx; tr.yaxis = 'y' + sfx; if (seen.has(tr.name)) tr.showlegend = false; seen.add(tr.name); traces.push(tr); });
+        const last = gi === GROUPS.length - 1;
+        L['xaxis' + sfx] = Object.assign(base(), { anchor: 'y' + sfx, domain: one ? [0, 1] : dom, title: { text: (one ? KEYNAME[key] : 'ΔGlx–Phe') + ' (‰)', font: { size: 12 } } }, one && !last ? { title: { text: '' } } : {});
+        L['yaxis' + sfx] = Object.assign(base(), { anchor: 'x' + sfx, domain: one ? dom : [0, 1] }, one ? { tickmode: 'array', tickvals: cl.map((c, ci) => ci), ticktext: cl.map(c => c.name), range: [cl.length - 0.5, -0.5], showgrid: false, zeroline: false } : (gi ? {} : { title: { text: 'ΔGlx–Thr (‰)' } }));
+        L.annotations.push({ xref: 'x' + sfx + ' domain', yref: 'y' + sfx + ' domain', x: 0, xanchor: 'left', y: 1, yanchor: 'bottom', showarrow: false, text: '<b>' + G + (G === 'Unassigned' ? '' : 's') + '</b>', font: { size: 12, color: theme().ink2 } });
+      });
+      L.margin = Object.assign({}, L.margin, { t: 24 });
+      plot('pClu', traces, L, fname + '_by_group');
+    } else if (one) { /* single offset: one row per cluster */
+      plot('pClu', scatterTraces(R.cRows, r => r[key], r => r.cluster.idx + jit.get(r), k[0], k[1], k[2], k[3], k[4], k[5]), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: KEYNAME[key] + ' (‰)' } }),
+        yaxis: Object.assign(layout().yaxis, { tickmode: 'array', tickvals: R.clusters.map(c => c.idx), ticktext: R.clusters.map(c => c.name), autorange: 'reversed', showgrid: false, zeroline: false }) }), fname);
+    } else plot('pClu', scatterTraces(R.cRows, r => r.gp, r => r.gt, k[0], k[1], k[2], k[3], k[4], k[5]).concat(rugs(R.rows, r => r.gp, r => r.gt, 'ΔGlx–Phe', 'ΔGlx–Thr')), layout({ showlegend: showLeg, xaxis: Object.assign(lay.xaxis, { title: { text: 'ΔGlx–Phe (‰)' } }), yaxis: Object.assign(layout().yaxis, { title: { text: 'ΔGlx–Thr (‰)' } }) }), fname);
+    $('cluTitle').textContent = (one ? KEYNAME[R.keys[0]] + ' by cluster' : 'Offsets') + (state.split && GROUPS.length > 1 ? ', split by group' : '');
     /* dendrogram */
     const t = theme(), tree = R.tree, n = tree.n, order = TJ.leafOrder(tree), pos = new Array(2 * n), hgt = new Array(2 * n).fill(0), xs = [], ys = [];
     order.forEach((leaf, i) => pos[leaf] = i);
@@ -727,7 +749,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     const top = Math.max(state.threshold * 1.6, Math.min(tree.merges[tree.merges.length - 1].h, state.threshold * 4));
     plot('pDen', [{ type: 'scatter', mode: 'lines', x: xs, y: ys, hoverinfo: 'skip', line: { color: t.muted, width: 1 }, showlegend: false },
       { type: 'scatter', mode: 'markers', x: leaves.map((_, i) => i), y: leaves.map(() => 0), text: leaves.map(hover), hovertemplate: '%{text}<extra></extra>', showlegend: false, cliponaxis: false,
-        marker: { size: leaves.map(r => r.src === 'user' ? 11 : 6), symbol: leaves.map(r => r.src === 'user' ? 'diamond' : 'circle'), color: leaves.map(r => r.cluster.color), line: { color: leaves.map(r => r.src === 'user' ? t.ink : t.surface), width: leaves.map(r => r.src === 'user' ? 1.5 : 0.5) } } }],
+        marker: { size: leaves.map(r => r.src === 'user' ? 12 : 7), symbol: leaves.map(r => state.colorBy === 'cluster' ? CSHAPE[r.cluster.idx % CSHAPE.length] : DIET_SHAPE[r.diet]), color: leaves.map(r => r.cluster.color), line: { color: leaves.map(r => r.src === 'user' ? t.ink : t.surface), width: leaves.map(r => r.src === 'user' ? 1.5 : 0.5) } } }],
       layout({ margin: { l: 60, r: 20, t: 10, b: 20 }, xaxis: { visible: false, range: [-1, n] }, yaxis: Object.assign(layout().yaxis, { title: { text: 'Ward linkage distance' }, range: [-top * 0.03, top] }),
         shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: state.threshold, y1: state.threshold, line: { color: t.ink, width: 1.5, dash: 'dash' } }],
         annotations: [{ xref: 'paper', x: 1, y: state.threshold, yanchor: 'bottom', xanchor: 'right', showarrow: false, text: 'threshold ' + state.threshold, font: { color: t.ink2, size: 12 } }] }), 'ward_dendrogram');
@@ -753,9 +775,9 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     note('nSma', R.miss.full, 'have only one offset: they are ticks on that axis and are not in the fits');
     const others = R.rows.filter(r => !r.inFit && r.full);
     if (others.length) ['ref', 'user'].forEach(src => { const g = others.filter(r => r.src === src); if (g.length) traces.push({ type: 'scatter', mode: 'markers', x: g.map(r => r.gp), y: g.map(r => r.gt), text: g.map(hover), hovertemplate: '%{text}<extra></extra>', name: 'Not in fit' + (src === 'user' ? ' (added)' : ''),
-      marker: src === 'user' ? { symbol: 'diamond-open', size: 13, color: t.ink, line: { width: 2 } } : { symbol: 'circle-open', size: 8, color: t.muted } }); });
+      marker: src === 'user' ? { symbol: 'circle-open', size: 14, color: t.ink, line: { width: 2 } } : { symbol: 'circle-open', size: 8, color: t.muted } }); });
     R.groups.forEach(g => { ['ref', 'user'].forEach(src => { const p = g.pts.filter(r => r.src === src); if (p.length) traces.push({ type: 'scatter', mode: 'markers', x: p.map(r => r.gp), y: p.map(r => r.gt), text: p.map(hover), hovertemplate: '%{text}<extra></extra>', name: g.name + (src === 'user' ? ' (added)' : ''), legendgroup: g.name,
-        marker: src === 'user' ? { symbol: 'diamond', size: 13, color: GUILD_COLOR[g.name], line: { color: t.ink, width: 2 } } : { symbol: g.name === 'Herbivore' ? 'square' : 'circle', size: 8, color: GUILD_COLOR[g.name], opacity: 0.8, line: { color: t.surface, width: 1 } } }); });
+        marker: src === 'user' ? { symbol: g.name === 'Herbivore' ? 'square' : 'circle', size: 14, color: GUILD_COLOR[g.name], line: { color: t.ink, width: 2 } } : { symbol: g.name === 'Herbivore' ? 'square' : 'circle', size: 8, color: GUILD_COLOR[g.name], opacity: 0.8, line: { color: t.surface, width: 1 } } }); });
       if (g.fit) { const f = g.fit, pad = (f.xMax - f.xMin) * 0.05; let x0 = f.xMin - pad, x1 = f.xMax + pad; const clip = x => { const y = f.smaInt + f.sma * x, yl = f.yMin - 2, yh = f.yMax + 2; return y < yl ? (yl - f.smaInt) / f.sma : (y > yh ? (yh - f.smaInt) / f.sma : x); }; x0 = clip(x0); x1 = clip(x1);
         traces.push({ type: 'scatter', mode: 'lines', x: [x0, x1], y: [f.smaInt + f.sma * x0, f.smaInt + f.sma * x1], name: g.name + ' SMA, slope ' + fmt(f.sma), legendgroup: g.name, hoverinfo: 'name', line: { color: GUILD_COLOR[g.name], width: 2.5 } }); } });
     rugs(R.rows, r => r.gp, r => r.gt, 'ΔGlx–Phe', 'ΔGlx–Thr').forEach(tr => traces.push(tr));
@@ -853,7 +875,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     R = analyse();
     const txt = '<b>' + R.nRef + '</b> Tejada' + (R.nCamp ? ' + <b>' + R.nCamp + '</b> Campbell' : '') + (R.nSyn ? ' + <b>' + R.nSyn + '</b> synthetic' : '') + (R.nUser ? ' + <b>' + R.nUser + '</b> yours' : '');
     $('status').innerHTML = '<span>' + (R.n ? txt : 'no data') + '</span>';
-    $('summary').innerHTML = '<b>' + R.n + '</b> specimens in the analysis: ' + R.nRef + ' from Tejada (2026)' + (R.nCamp ? ' + <b>' + R.nCamp + ' from Campbell et al. (2017)</b>' : '') + (R.nSyn ? ' + <b>' + R.nSyn + ' synthetic</b>' : '') + (R.nUser ? ' + <b>' + R.nUser + ' of yours</b>' : '') + (R.nAdd ? '. Added samples are drawn as outlined diamonds in every plot' : '') + '.';
+    $('summary').innerHTML = '<b>' + R.n + '</b> specimens in the analysis: ' + R.nRef + ' from Tejada (2026)' + (R.nCamp ? ' + <b>' + R.nCamp + ' from Campbell et al. (2017)</b>' : '') + (R.nSyn ? ' + <b>' + R.nSyn + ' synthetic</b>' : '') + (R.nUser ? ' + <b>' + R.nUser + ' of yours</b>' : '') + (R.nAdd ? '. Added samples are drawn larger, with a dark outline, in every plot' : '') + '.';
     Object.keys(TABS).forEach(t => dirty.add(t));
     if (!R.n) { PLOTS.forEach(id => empty(id, 'No data. Load a file on the Data tab or switch Julia Tejada’s data back on.')); $('cluTable').innerHTML = $('smaTable').innerHTML = $('ldaNote').innerHTML = ''; $('cluCount').textContent = ''; }
     renderActive();
@@ -924,6 +946,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
       $('goRow').hidden = !added().length; renderViewer(c.checked ? c.dataset.syn : undefined); run(); }));
     document.querySelectorAll('[data-thr]').forEach(b => b.addEventListener('click', () => setThr(b.dataset.thr)));
     document.querySelectorAll('input[name=colorBy]').forEach(r => r.addEventListener('change', () => { state.colorBy = r.value; figClusters(); }));
+    $('split').addEventListener('change', e => { state.split = e.target.checked; figClusters(); requestAnimationFrame(renderActive); });
     const ex = $('exclude'); ex.addEventListener('change', () => { state.exclude = ex.value; run(); });
     document.querySelectorAll('[data-ex]').forEach(b => b.addEventListener('click', () => { ex.value = b.dataset.ex; state.exclude = ex.value; run(); }));
     $('dlRes').addEventListener('click', () => { const t = resultRows(); download('amino_acid_d15N_results.csv', csv(t.head, t.body)); });
@@ -934,7 +957,7 @@ code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#efeee9;pa
     window.addEventListener('hashchange', () => show(location.hash.slice(1), false));
     let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderActive, 120); });
     $('incRef').checked = true; $('holdOut').checked = true; $('trainUser').checked = false; $('feats').value = 'both'; thr.value = thrN.value = 18; ex.value = '';
-    document.querySelectorAll('input[data-syn]').forEach(c => { c.checked = false; });
+    document.querySelectorAll('input[data-syn]').forEach(c => { c.checked = false; }); $('split').checked = false;
     document.querySelectorAll('input[name=colorBy]').forEach(r => { r.checked = r.value === 'diet'; });
     initSplitters();
     $('viewSel').addEventListener('change', e => renderViewer(e.target.value)); renderViewer('ref');
