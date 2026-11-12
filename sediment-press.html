@@ -42,6 +42,12 @@
             color: rgba(255,255,255,0.45);
             pointer-events: none;
         }
+        .model-colors { position: absolute; left: 8px; bottom: 26px; display: flex; gap: 6px; align-items: center; }
+        .model-colors span { font: 10px 'Helvetica Neue', Helvetica, Arial, sans-serif; color: rgba(255,255,255,.6); margin-right: 2px; }
+        .swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; background: var(--c); }
+        .swatch:hover { border-color: rgba(255,255,255,.7); }
+        .swatch[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+        .swatch:focus-visible { outline: 2px solid #7f9cff; outline-offset: 2px; }
         .model-tools { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; align-items: center; }
         .model-tools .spacer { flex: 1; }
         .model-tools button {
@@ -204,6 +210,16 @@
                             <button type="button" id="spin-btn" aria-pressed="true">Spin</button>
                             <button type="button" id="reset-btn">Reset view</button>
                         </div>
+                        <div class="model-colors" role="group" aria-label="Model colour">
+                            <span>Colour</span>
+                            <button type="button" class="swatch" style="--c:#e53935" data-c="#e53935" aria-label="Red" aria-pressed="false"></button>
+                            <button type="button" class="swatch" style="--c:#fb8c00" data-c="#fb8c00" aria-label="Orange" aria-pressed="true"></button>
+                            <button type="button" class="swatch" style="--c:#fdd835" data-c="#fdd835" aria-label="Yellow" aria-pressed="false"></button>
+                            <button type="button" class="swatch" style="--c:#43a047" data-c="#43a047" aria-label="Green" aria-pressed="false"></button>
+                            <button type="button" class="swatch" style="--c:#1e88e5" data-c="#1e88e5" aria-label="Blue" aria-pressed="false"></button>
+                            <button type="button" class="swatch" style="--c:#3949ab" data-c="#3949ab" aria-label="Indigo" aria-pressed="false"></button>
+                            <button type="button" class="swatch" style="--c:#8e24aa" data-c="#8e24aa" aria-label="Violet" aria-pressed="false"></button>
+                        </div>
                         <div class="model-hint">Drag to rotate · scroll to zoom · right-drag to pan</div>
                     </div>
                     <div class="download-card">
@@ -295,6 +311,20 @@
         mv.fieldOfView = '24deg';
         if (mv.jumpCameraToGoal) mv.jumpCameraToGoal();
     }
+    var colour = '#fb8c00';
+    function paint() {
+        if (!mv.model) return;
+        var h = colour.replace('#', ''), rgb = [0, 2, 4].map(function (i) { return Math.pow(parseInt(h.substr(i, 2), 16) / 255, 2.2); });
+        mv.model.materials.forEach(function (m) { m.pbrMetallicRoughness.setBaseColorFactor([rgb[0], rgb[1], rgb[2], 1]); });
+    }
+    document.querySelectorAll('.swatch').forEach(function (b) {
+        b.addEventListener('click', function () {
+            colour = b.dataset.c;
+            document.querySelectorAll('.swatch').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+            paint();
+        });
+    });
+    mv.addEventListener('load', paint);
     mv.addEventListener('load', resetView);
     document.getElementById('reset-btn').addEventListener('click', resetView);
     var spin = document.getElementById('spin-btn');

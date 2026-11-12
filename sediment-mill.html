@@ -6,252 +6,149 @@
     <title>Sediment Mill — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { overflow: hidden; }
-        .mill-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            padding: 0.75rem 1.5rem;
-            height: calc(100vh - 50px);
-            overflow: hidden;
-        }
-        .project-detail-header {
-            padding: 0.5rem 1.5rem;
-            border-bottom: 1px solid #000;
-            margin-bottom: 0;
-        }
-        .project-detail-header h1 { font-size: 1.1em; }
-        
-        /* Gallery */
-        .gallery-col { display: flex; flex-direction: column; }
-        .featured-image {
-            flex: 1;
-            min-height: 0;
-            background: #f0f0f0;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-        }
-        .featured-image img { width: 100%; height: 100%; object-fit: cover; }
-        .zoom-hint {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            font-size: 9px;
-            padding: 3px 6px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .featured-image:hover .zoom-hint { opacity: 1; }
-        .thumb-row {
-            display: flex;
-            gap: 4px;
-            margin-top: 6px;
-            flex-shrink: 0;
-        }
-        .thumb {
-            width: 36px;
-            height: 36px;
-            background: #f0f0f0;
-            cursor: pointer;
-            border: 2px solid transparent;
-            overflow: hidden;
-        }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .thumb.active { border-color: #0000EE; }
-        
-        /* Info column */
-        .info-col {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            overflow-y: auto;
-            font-size: 11px;
-        }
-        .specs-panel {
-            background: #f8f8f8;
-            padding: 0.6rem 0.8rem;
-        }
-        .specs-title {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: rgba(0,0,0,0.5);
-            margin-bottom: 0.4rem;
-            padding-bottom: 0.3rem;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-        .spec-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.2rem 0;
-            font-size: 10px;
-        }
+        body { overflow-y: auto; background: #fff; }
+        .project-detail-header { padding: 0.5rem 1.5rem; border-bottom: 1px solid #000; }
+        .project-detail-header h1 { font-size: 1.1em; font-weight: normal; }
+
+        .mill { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 2rem; padding: 1.25rem 1.5rem 3rem; }
+
+        /* info column */
+        .info { position: sticky; top: 1rem; align-self: start; display: flex; flex-direction: column; gap: 1rem; font-size: 11px; }
+        .specs { background: #f6f7f6; padding: 0.7rem 0.85rem; }
+        .specs h2 { font-size: 11px; font-weight: 600; margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(0,0,0,.1); }
+        .spec-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.2rem 0; font-size: 10.5px; }
         .spec-label { color: rgba(0,0,0,0.6); }
-        .spec-value { font-weight: 500; }
-        
-        .desc-block h4 {
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
+        .spec-value { font-weight: 500; text-align: right; }
+        .desc h3 { font-size: 12px; font-weight: 600; margin-bottom: 0.25rem; }
+        .desc p { line-height: 1.45; color: rgba(0,0,0,0.78); }
+        .resources { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .resource-btn { font-size: 10px; padding: 0.3rem 0.6rem; border: 1px solid #000; color: #000; text-decoration: none; }
+        .resource-btn:hover { background: #000; color: #fff; text-transform: none; }
+
+        /* photo groups */
+        .group + .group { margin-top: 1.75rem; }
+        .group h2 { font-size: 13px; font-weight: 600; margin-bottom: 0.6rem; }
+        .shots { display: grid; gap: 0.75rem; }
+        .shots.mill-shots { grid-template-columns: 2.2fr 1fr 1fr; grid-template-areas: "sch fin port" "sch cam cam"; align-items: start; }
+        .sch { grid-area: sch; } .fin { grid-area: fin; } .port { grid-area: port; } .cam { grid-area: cam; }
+        .shots.build { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        figure { margin: 0; }
+        figure button { display: block; width: 100%; padding: 0; border: 1px solid rgba(0,0,0,.12); background: #f2f2f2; cursor: zoom-in; }
+        figure button:hover { border-color: #0000EE; }
+        figure button:focus-visible { outline: 2px solid #0000EE; outline-offset: 2px; }
+        figure img { display: block; width: 100%; height: auto; }
+        figure.svg img { background: #fff; }
+        figcaption { font-size: 10.5px; color: rgba(0,0,0,.6); margin-top: 0.3rem; line-height: 1.3; }
+
+        @media (max-width: 860px) {
+            .mill { grid-template-columns: 1fr; }
+            .info { position: static; }
+            .shots.mill-shots { grid-template-columns: 1fr 1fr; grid-template-areas: "sch sch" "fin port" "cam cam"; }
+            .shots.build { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        .desc-block p {
-            line-height: 1.4;
-            color: rgba(0,0,0,0.75);
-            margin-bottom: 0.5rem;
-        }
-        .resources-row {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.25rem;
-        }
-        .resource-btn {
-            font-size: 10px;
-            padding: 0.3rem 0.6rem;
-            border: 1px solid #000;
-            color: #000;
-            text-decoration: none;
-        }
-        .resource-btn:hover {
-            background: #000;
-            color: #fff;
-            text-transform: none;
-        }
-        
-        /* Lightbox */
-        .lightbox {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.92);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s;
-        }
-        .lightbox.active { opacity: 1; visibility: visible; }
-        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
-        .lightbox-close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: white;
-            font-size: 20px;
-            padding: 20px 12px;
-            cursor: pointer;
-        }
-        .lightbox-nav.prev { left: 15px; }
-        .lightbox-nav.next { right: 15px; }
+
+        /* lightbox */
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s linear .2s; }
+        .lightbox.active { opacity: 1; visibility: visible; transition: opacity .2s; }
+        .lightbox img { max-width: 92%; max-height: 84vh; object-fit: contain; background: #fff; }
+        .lightbox .lb-cap { color: rgba(255,255,255,.8); font-size: 12px; }
+        .lightbox button { position: absolute; background: rgba(255,255,255,0.1); border: none; color: #fff; cursor: pointer; }
+        .lb-close { top: 12px; right: 16px; font-size: 26px; padding: 2px 10px; }
+        .lb-nav { top: 50%; transform: translateY(-50%); font-size: 22px; padding: 20px 12px; }
+        .lb-prev { left: 12px; } .lb-next { right: 12px; }
+        @media (prefers-reduced-motion: reduce) { .lightbox, .lightbox.active { transition: none; } }
     </style>
 </head>
 <body>
-    <div class="site-container">
-        <main class="main-content" style="margin-right: 0; max-width: 100%;">
-            <div class="project-detail-header">
-                <h1>SEDIMENT MILL</h1>
-            </div>
-
-            <div class="mill-container">
-                <div class="gallery-col">
-                    <div class="featured-image" onclick="openLightbox(currentIndex)">
-                        <img id="featured-img" src="IMG_0819.JPG" alt="Sediment mill">
-                        <span class="zoom-hint">Click to zoom</span>
-                    </div>
-                    <div class="thumb-row">
-                        <div class="thumb active" onclick="setImage(0)"><img src="IMG_0819.JPG"></div>
-                        <div class="thumb" onclick="setImage(1)"><img src="IMG_0822.JPG"></div>
-                        <div class="thumb" onclick="setImage(2)"><img src="IMG_0823.JPG"></div>
-                        <div class="thumb" onclick="setImage(3)"><img src="IMG_9366.JPG"></div>
-                        <div class="thumb" onclick="setImage(4)"><img src="IMG_9553.JPG"></div>
-                        <div class="thumb" onclick="setImage(5)"><img src="IMG_9569.JPG"></div>
-                        <div class="thumb" onclick="setImage(6)"><img src="IMG_9584.JPG"></div>
-                        <div class="thumb" onclick="setImage(7)"><img src="IMG_9600.JPG"></div>
-                        <div class="thumb" onclick="setImage(8)"><img src="kim_floc_outline_labels.svg"></div>
-                    </div>
-                </div>
-
-                <div class="info-col">
-                    <div class="specs-panel">
-                        <div class="specs-title">Specifications</div>
-                        <div class="spec-row"><span class="spec-label">Camera</span><span class="spec-value">Nikon D750</span></div>
-                        <div class="spec-row"><span class="spec-label">Magnification</span><span class="spec-value">5x – 40x</span></div>
-                        <div class="spec-row"><span class="spec-label">Particle range</span><span class="spec-value">10µm – 2mm</span></div>
-                        <div class="spec-row"><span class="spec-label">Resolution</span><span class="spec-value">6016 × 4016 px</span></div>
-                        <div class="spec-row"><span class="spec-label">Lens design</span><span class="spec-value">Ted Kinsman (RIT)</span></div>
-                    </div>
-                    
-                    <div class="desc-block">
-                        <h4>Overview</h4>
-                        <p>Custom-built sediment mill system for high-resolution microscopy and particle analysis. Enables detailed characterization of sediment particles and flocs through precision optical engineering in the Earth Surface Dynamics Laboratory at Caltech.</p>
-                    </div>
-                    
-                    <div class="desc-block">
-                        <h4>Camera Build</h4>
-                        <p>Standard Nikon D750 with custom lens build from Ted Kinsman (RIT). Enables macro photography at extreme magnifications for sediment particle analysis.</p>
-                        <div class="resources-row">
-                            <a href="lens_build.pdf" download class="resource-btn">Parts list (PDF)</a>
-                            <a href="https://youtu.be/ue3mB6ektW8" target="_blank" class="resource-btn">Video ↗</a>
-                        </div>
-                    </div>
-                    
-                    <div class="desc-block">
-                        <h4>Mill Design</h4>
-                        <p>Precision grinding mechanism paired with optical system for integrated sample preparation and imaging. Useful for analyzing flocculation behavior and particle size distributions.</p>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <div class="project-detail-header">
+        <h1>SEDIMENT MILL</h1>
     </div>
 
-    <div class="lightbox" id="lightbox">
-        <button class="lightbox-close" onclick="closeLightbox()">×</button>
-        <button class="lightbox-nav prev" onclick="prevImage()">‹</button>
-        <img id="lightbox-img" src="">
-        <button class="lightbox-nav next" onclick="nextImage()">›</button>
+    <div class="mill">
+        <aside class="info">
+            <div class="specs">
+                <h2>Specifications</h2>
+                <div class="spec-row"><span class="spec-label">Camera</span><span class="spec-value">Nikon D750</span></div>
+                <div class="spec-row"><span class="spec-label">Magnification</span><span class="spec-value">5x – 40x</span></div>
+                <div class="spec-row"><span class="spec-label">Particle range</span><span class="spec-value">10µm – 2mm</span></div>
+                <div class="spec-row"><span class="spec-label">Resolution</span><span class="spec-value">6016 × 4016 px</span></div>
+                <div class="spec-row"><span class="spec-label">Lens design</span><span class="spec-value">Ted Kinsman (RIT)</span></div>
+            </div>
+            <div class="desc">
+                <h3>Overview</h3>
+                <p>Custom-built sediment mill system for high-resolution microscopy and particle analysis. Enables detailed characterization of sediment particles and flocs through precision optical engineering in the Earth Surface Dynamics Laboratory at Caltech.</p>
+            </div>
+            <div class="desc">
+                <h3>Camera Build</h3>
+                <p>Standard Nikon D750 with custom lens build from Ted Kinsman (RIT). Enables macro photography at extreme magnifications for sediment particle analysis.</p>
+                <div class="resources">
+                    <a href="lens_build.pdf" download class="resource-btn">Parts list (PDF)</a>
+                    <a href="https://youtu.be/ue3mB6ektW8" target="_blank" class="resource-btn">Video ↗</a>
+                </div>
+            </div>
+            <div class="desc">
+                <h3>Mill Design</h3>
+                <p>Precision grinding mechanism paired with optical system for integrated sample preparation and imaging. Useful for analyzing flocculation behavior and particle size distributions.</p>
+            </div>
+        </aside>
+
+        <div class="gallery">
+            <section class="group">
+                <h2>The mill</h2>
+                <div class="shots mill-shots">
+                    <figure class="svg sch"><button type="button" data-i="0"><img src="kim_floc_outline_labels.svg" alt="Labelled schematic of the mill: shearing paddle, LED light strip, HOBO light sensor, sampling ports S1 to S5, microscope objective and camera" width="612" height="792"></button><figcaption>Design schematic: 56 cm column, 20 cm across, filled to 40 cm; ports S1–S5 between 31.1 and 3 cm; shearing paddle, LED strip, HOBO light sensor, objective and camera</figcaption></figure>
+                    <figure class="fin"><button type="button" data-i="1"><img src="sediment-mill/img_0822-sm.jpg" alt="The finished mill, lit from inside" width="540" height="720"></button><figcaption>Finished mill, lit</figcaption></figure>
+                    <figure class="port"><button type="button" data-i="2"><img src="sediment-mill/img_0823-sm.jpg" alt="The mill's viewing ports, lit" width="540" height="720"></button><figcaption>Viewing ports</figcaption></figure>
+                    <figure class="cam"><button type="button" data-i="3"><img src="sediment-mill/img_0819-sm.jpg" alt="Nikon D750 with the macro lens build on its rail" width="720" height="540"></button><figcaption>Camera and macro lens on the rail</figcaption></figure>
+                </div>
+            </section>
+
+            <section class="group">
+                <h2>Build</h2>
+                <div class="shots build">
+                    <figure><button type="button" data-i="4"><img src="sediment-mill/img_9366-sm.jpg" alt="Design sketch with caliper and parts" width="540" height="720" loading="lazy"></button><figcaption>Design sketch</figcaption></figure>
+                    <figure><button type="button" data-i="5"><img src="sediment-mill/img_9553-sm.jpg" alt="Cutting ports in the PVC column on a drill press" width="540" height="720" loading="lazy"></button><figcaption>Cutting the ports</figcaption></figure>
+                    <figure><button type="button" data-i="6"><img src="sediment-mill/img_9569-sm.jpg" alt="Column standing on its wheeled base" width="540" height="720" loading="lazy"></button><figcaption>Column on its base</figcaption></figure>
+                    <figure><button type="button" data-i="7"><img src="sediment-mill/img_9584-sm.jpg" alt="Column clamped in a wooden frame" width="540" height="720" loading="lazy"></button><figcaption>Clamped for assembly</figcaption></figure>
+                    <figure><button type="button" data-i="8"><img src="sediment-mill/img_9600-sm.jpg" alt="Looking inside the column" width="540" height="720" loading="lazy"></button><figcaption>Inside the column</figcaption></figure>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+        <button type="button" class="lb-close" aria-label="Close">×</button>
+        <button type="button" class="lb-nav lb-prev" aria-label="Previous photo">‹</button>
+        <img id="lb-img" src="" alt="">
+        <div class="lb-cap" id="lb-cap"></div>
+        <button type="button" class="lb-nav lb-next" aria-label="Next photo">›</button>
     </div>
 
     <script>
-        const images = ['IMG_0819.JPG','IMG_0822.JPG','IMG_0823.JPG','IMG_9366.JPG','IMG_9553.JPG','IMG_9569.JPG','IMG_9584.JPG','IMG_9600.JPG','kim_floc_outline_labels.svg'];
-        let currentIndex = 0;
-        
-        function setImage(i) {
-            currentIndex = i;
-            document.getElementById('featured-img').src = images[i];
-            document.querySelectorAll('.thumb').forEach((t,j) => t.classList.toggle('active', i===j));
+        const full = ['kim_floc_outline_labels.svg','sediment-mill/img_0822.jpg','sediment-mill/img_0823.jpg','sediment-mill/img_0819.jpg',
+                      'sediment-mill/img_9366.jpg','sediment-mill/img_9553.jpg','sediment-mill/img_9569.jpg',
+                      'sediment-mill/img_9584.jpg','sediment-mill/img_9600.jpg'];
+        const figs = [...document.querySelectorAll('.gallery figure')];
+        const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lb-img'), lbCap = document.getElementById('lb-cap');
+        let cur = 0, opener = null;
+        function show(i) {
+            cur = (i + full.length) % full.length;
+            const f = figs[cur];
+            lbImg.src = full[cur]; lbImg.alt = f.querySelector('img').alt; lbCap.textContent = f.querySelector('figcaption').textContent;
         }
-        function openLightbox(i) {
-            currentIndex = i;
-            document.getElementById('lightbox-img').src = images[i];
-            document.getElementById('lightbox').classList.add('active');
-        }
-        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
-        function nextImage() { currentIndex = (currentIndex+1) % images.length; document.getElementById('lightbox-img').src = images[currentIndex]; }
-        function prevImage() { currentIndex = (currentIndex-1+images.length) % images.length; document.getElementById('lightbox-img').src = images[currentIndex]; }
-        
+        function open(i, btn) { opener = btn; show(i); lb.classList.add('active'); lb.querySelector('.lb-close').focus(); }
+        function close() { lb.classList.remove('active'); if (opener) opener.focus(); }
+        figs.forEach(f => { const b = f.querySelector('button'); b.addEventListener('click', () => open(+b.dataset.i, b)); });
+        lb.querySelector('.lb-close').addEventListener('click', close);
+        lb.querySelector('.lb-prev').addEventListener('click', () => show(cur - 1));
+        lb.querySelector('.lb-next').addEventListener('click', () => show(cur + 1));
+        lb.addEventListener('click', e => { if (e.target === lb) close(); });
         document.addEventListener('keydown', e => {
-            if (document.getElementById('lightbox').classList.contains('active')) {
-                if (e.key === 'Escape') closeLightbox();
-                if (e.key === 'ArrowRight') nextImage();
-                if (e.key === 'ArrowLeft') prevImage();
-            }
+            if (!lb.classList.contains('active')) return;
+            if (e.key === 'Escape') close();
+            if (e.key === 'ArrowRight') show(cur + 1);
+            if (e.key === 'ArrowLeft') show(cur - 1);
         });
-        document.getElementById('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
     </script>
 </body>
 </html>

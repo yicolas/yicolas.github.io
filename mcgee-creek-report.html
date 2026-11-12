@@ -16,41 +16,48 @@
     --fault: #c0352a;      /* fault red, as on the map */
     --rule: rgba(30,43,47,.16);
   }
-  .poster { padding: 44px 46px 36px; display: grid;
-    grid-template-columns: 500px 1fr 500px; grid-template-rows: auto 1fr auto;
-    column-gap: 44px; row-gap: 26px; }
+  .poster { height: 1240px; padding: 40px 44px 30px; display: grid;
+    grid-template-columns: 860px 1fr 1fr; grid-template-rows: auto 1fr auto;
+    column-gap: 36px; row-gap: 22px; }
 
   header { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; align-items: end;
-    border-bottom: 3px solid var(--ink); padding-bottom: 18px; }
-  .title { font-size: 76px; line-height: .9; font-weight: 780; font-stretch: 118%; letter-spacing: -0.02em; }
-  .subtitle { margin-top: 14px; font-family: "Source Serif 4", serif; font-size: 23px; font-style: italic; color: var(--muted); }
-  .byline { text-align: right; font-size: 15px; line-height: 1.45; font-stretch: 95%; }
-  .byline b { font-size: 19px; font-weight: 680; display: block; }
+    border-bottom: 2px solid var(--ink); padding-bottom: 16px; }
+  .title { font-family: "Source Serif 4", Georgia, serif; font-size: 62px; line-height: 1; font-weight: 620; letter-spacing: -0.012em; }
+  .subtitle { margin-top: 10px; font-size: 20px; font-stretch: 100%; color: var(--muted); }
+  .byline { text-align: right; font-size: 14px; line-height: 1.45; font-stretch: 95%; }
+  .byline b { font-size: 18px; font-weight: 680; display: block; }
 
-  .col { display: flex; flex-direction: column; gap: 15px; min-height: 0; }
-  .col svg { flex-shrink: 0; display: block; }
+  .col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .col svg { display: block; width: 100%; height: auto; flex-shrink: 0; }
   figure img { width: 100%; display: block; border: 1px solid var(--rule); }
-  figcaption { margin-top: 6px; }
+  figcaption { margin-top: 5px; }
+  .poster p, .poster li { font-size: 14px; line-height: 1.48; }
+  .poster h2 { font-size: 20px; margin-bottom: 6px; }
+
+  .maps-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 
   .key { display: inline-block; width: 11px; height: 11px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
   .k-tioga { background: var(--tioga); } .k-tahoe { background: var(--tahoe); }
 
-  .hero h2 { font-size: 40px; line-height: 1.02; font-weight: 760; font-stretch: 112%; letter-spacing: -0.015em; margin-bottom: 4px; }
-  .hero .rate { font-size: 22px; font-stretch: 100%; color: var(--muted); }
+  .hero h2.lead { font-size: 27px; line-height: 1.1; font-weight: 700; letter-spacing: -0.008em; margin-bottom: 4px; }
+  .hero .rate { font-size: 16px; color: var(--muted); }
   .hero .rate b { color: var(--fault); font-weight: 720; }
+  .age h2.lead { font-size: 22px; line-height: 1.15; }
 
-  .chart-title { font-size: 15px; font-weight: 640; margin-bottom: 2px; }
-  .evidence { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-  .evidence li { padding-left: 16px; position: relative; font-size: 15.5px; line-height: 1.42; }
-  .evidence li::before { content: ""; position: absolute; left: 0; top: .55em; width: 7px; height: 7px; background: var(--ink); border-radius: 50%; }
-  .evidence b { font-family: "Archivo", sans-serif; font-weight: 650; font-size: 15px; }
-  .kdes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-title { font-size: 13.5px; font-weight: 640; margin-bottom: 2px; }
+  .evidence { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .evidence li { padding-left: 14px; position: relative; font-size: 13.5px; line-height: 1.42; }
+  .evidence li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; background: var(--ink); border-radius: 50%; }
+  .evidence b { font-family: "Archivo", sans-serif; font-weight: 650; font-size: 13.5px; }
+  .kdes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .conclusion { border-top: 2px solid var(--ink); padding-top: 10px; }
+  .conclusion p { font-size: 14.5px; }
 
-  footer { grid-column: 1 / -1; display: grid; grid-template-columns: 1.15fr 1fr; gap: 44px;
-    border-top: 1px solid var(--rule); padding-top: 14px; }
-  .conclusion p { font-size: 17px; }
-  .refs { font-size: 11.5px; line-height: 1.38; color: var(--muted); font-stretch: 90%; columns: 2; column-gap: 22px; }
-  .refs div { break-inside: avoid; margin-bottom: 4px; }
+  footer { grid-column: 1 / -1; border-top: 1px solid var(--rule); padding-top: 10px;
+    font-size: 11px; line-height: 1.38; color: var(--muted); font-stretch: 90%;
+    display: flex; flex-wrap: wrap; gap: 4px 26px; }
+  @page { size: 1800px 1240px; margin: 0; }
+  @media print { .stage-inner { height: 1240px !important; } }
 </style>
 </head>
 <body>
@@ -71,70 +78,76 @@
     <div class="byline"><b>Nick Anderson</b>EPS 118 field report<br>June 2022</div>
   </header>
 
-  <!-- column 1: map, setting, methods -->
+  <!-- column 1: maps and profiles -->
   <section class="col">
     <figure>
       <img src="posters/mcgee/map.jpg" alt="Surficial deposit map of McGee Creek showing Tioga and Tahoe moraines cut by the Hilton Creek Fault">
-      <figcaption>Surficial deposits mapped in the field. <span class="key k-tioga"></span>Tioga moraines (yellows) sit inside the older <span class="key k-tahoe"></span>Tahoe moraines (greens); red lines are faults. Inset: slope-survey site.</figcaption>
+      <figcaption>Surficial deposits mapped in the field. <span class="key k-tioga"></span>Tioga moraines (yellows, 18.8 ± 1.9 ka) sit inside the older <span class="key k-tahoe"></span>Tahoe moraines (greens, 144 ± 14 ka) Also mapped: Cretaceous granodiorite, Ordovician metasedimentary rock, talus and alluvium. Red lines are faults; inset shows the slope-survey site.</figcaption>
     </figure>
-    <div>
-      <h2>Setting</h2>
-      <p>McGee Creek is a U-shaped glacial valley on the eastern Sierra front, just south of Long Valley Caldera. The Hilton Creek Fault, a 22 km range-front fault of the Walker Lane system, cuts moraines of two glaciations: Tahoe (MIS 4–6) and Tioga (MIS 2, the last glacial maximum). Moraines offset by the fault record how far, which way and how fast it has moved.</p>
-    </div>
-    <div>
-      <h2>Methods</h2>
-      <p>Faults, slickensides and deposit contacts mapped in FieldMove Clino. A 200 m slope survey across the scarp with sighting level, Brunton, tape and stadia rod, checked against a LiDAR DEM. Clast counts on both moraines for lithology, size, oxidation, burial and xenolith protrusion. Fault-plane fit, offsets and slip computed in QGIS (Qprof) and Python.</p>
+    <div class="maps-row2">
+      <figure>
+        <img src="posters/mcgee/relief.jpg" alt="Hillshade relief map with mapped faults, the A to A prime profile line and the slope-survey location">
+        <figcaption>Relief map: faults, the A–A′ profile line and the measured slope profile across the Hilton Creek scarp.</figcaption>
+      </figure>
+      <div>
+        <div class="chart-title">A–A′ topographic profile across both moraines</div>
+        <svg id="profile" role="img" aria-label="A to A prime topographic profile with Tioga crests near 700 and 1300 metres and Tahoe hills near 275 and 1450 metres"></svg>
+        <div class="cap">Small rounded Tahoe hills at ~275 and ~1450 m; large angular Tioga crests at ~700 and ~1300 m. Slopes reach ±40° on the Tioga crests and ±20° on the Tahoe hills.</div>
+      </div>
     </div>
   </section>
 
-  <!-- column 2: slip result -->
+  <!-- column 2: setting, methods, slip -->
   <section class="col hero">
     <div>
-      <h2>33.7 m of oblique slip since the last glacial maximum</h2>
+      <h2 class="lead">33.7 m of oblique slip since the last glacial maximum</h2>
       <div class="rate">Slip rate through the Tioga moraine: <b>≈ 1.77 mm/yr</b> over ~19 kyr</div>
     </div>
     <svg id="slip" role="img" aria-label="Slip decomposition: 22.5 m dip slip and 25 m right-lateral slip combine to 33.7 m net slip on a fault dipping 47.9 degrees"></svg>
     <div>
       <div class="chart-title">Scarp profile: field survey against LiDAR</div>
       <svg id="survey" role="img" aria-label="Elevation across the fault scarp from the hand slope survey and the LiDAR DEM"></svg>
-      <div class="cap">The hand survey and the LiDAR DEM agree along 200 m across the scarp. The eroded scarp face slopes 25.2° today; fitting the fault plane to the DEM gives a dip of 47.9° toward 068°, the angle used for dip slip.</div>
+      <div class="cap">The hand survey and the LiDAR DEM agree along 200 m across the scarp. Across the Tioga moraine the scarp records 9.6 m of vertical offset; its eroded face slopes 25.2° today. Fitting the fault plane to the DEM (Qprof) gives a dip of 47.9° toward 068°; combined with the elevation change along the scarp, that gives 22.5 m of dip slip. LiDAR shows ~25 m of lateral offset.</div>
     </div>
     <div>
-      <div class="chart-title">A–A′ topographic profile across both moraines</div>
-      <svg id="profile" role="img" aria-label="A to A prime topographic profile with Tioga crests near 700 and 1300 metres and Tahoe hills near 275 and 1450 metres"></svg>
+      <h2>Setting</h2>
+      <p>McGee Creek is a U-shaped glacial valley on the eastern Sierra front, south of Long Valley Caldera. Cretaceous Round Valley Peak granodiorite intruded Ordovician sediments, baking them to hornfels, marble and slate; Tahoe (MIS 4–6) and Tioga (MIS 2) glaciers then carved the valley and left moraines of till. The 22 km Hilton Creek Fault, an oblique normal range-front fault of the Walker Lane system, cuts those moraines. Earlier work proposed 7–9 events of 3–4 m in the last 20–25 kyr and ~1.1 mm/yr over the last 16 kyr.</p>
+    </div>
+    <div>
+      <h2>Methods</h2>
+      <p>Faults, slickensides and deposit contacts mapped in FieldMove Clino. A 200 m slope survey across the scarp with sighting level, Brunton, tape and stadia rod, checked against a LiDAR DEM. Clast counts on both moraines for lithology, size, oxidation, burial and xenolith protrusion using a hand lens, meter stick and dilute HCl. Fault-plane fit, offsets and slip computed in QGIS (Qprof) and Python.</p>
     </div>
   </section>
 
   <!-- column 3: relative age -->
-  <section class="col">
+  <section class="col age">
     <div>
-      <h2>Tioga moraines are younger than the Tahoe moraines, even without exposure dates</h2>
+      <h2 class="lead">Tioga moraines are younger than the Tahoe moraines, even without exposure dates</h2>
       <svg id="ages" role="img" aria-label="Exposure ages: Tioga 18.8 plus or minus 1.9 thousand years, Tahoe 144 plus or minus 14 thousand years"></svg>
     </div>
     <ul class="evidence">
       <li><b>Crosscutting.</b> Sharp Tioga crests cut across the eroded Tahoe moraines on the map.</li>
       <li><b>Crest shape.</b> Tioga crests slope up to ±40°; the rounded Tahoe hills only ±20°.</li>
-      <li><b>Clast size.</b> Tioga clasts reach 250 cm² and more. Tahoe clasts average ~6.25 cm² and top out near 175 cm²; most Tahoe metasedimentary clasts are under 2.5 cm long and heavily oxidized.</li>
+      <li><b>Clast size.</b> Tioga clasts reach 250 cm² and more. Tahoe clasts average ~6.25 cm² and top out near 175 cm². Tahoe igneous clasts reach ~225 cm long but mostly stay under 30 cm; most Tahoe metasedimentary clasts are under 2.5 cm and heavily oxidized.</li>
       <li><b>Weathering and burial.</b> Diorite xenoliths stand out of Tioga granodiorite boulders by less than 5 cm, but more often by over 5 cm on Tahoe boulders. Tioga boulders expose more of their short (z) axis, ~8 cm against ~5 cm, so Tahoe boulders are more deeply buried.</li>
     </ul>
     <div class="kdes">
       <div><div class="chart-title">Xenolith protrusion</div><svg id="kde-prot" role="img" aria-label="Density of diorite xenolith protrusion depth, younger against older moraine"></svg></div>
       <div><div class="chart-title">Exposed boulder z-axis</div><svg id="kde-bur" role="img" aria-label="Density of exposed boulder z axis, younger against older moraine"></svg></div>
     </div>
+    <div class="conclusion">
+      <h2>Conclusion</h2>
+      <p>Crosscutting, crest shape and weathering all put the Tioga moraines after the Tahoe moraines, matching the exposure ages. Slip through the glacial deposits is oblique normal with a right-lateral component (slickensides trend 66°, plunge 40°), at ~1.77 mm/yr. Weak, unconsolidated till along the fault plane could potentially host an earthquake of M6.8.</p>
+    </div>
   </section>
 
   <footer>
-    <div class="conclusion">
-      <p>Crosscutting, crest shape and weathering all put the Tioga moraines after the Tahoe moraines, matching the exposure ages. Slip through the glacial deposits is oblique normal with a right-lateral component (slickensides trend 66°, plunge 40°), at ~1.77 mm/yr. Weak, unconsolidated till along the fault plane could potentially host an earthquake of M6.8.</p>
-    </div>
-    <div class="refs">
-      <div>Berry (1997) Geomorphology 20, 177–195.</div>
-      <div>Blackwelder (1931) GSA Bulletin 42, 865–922.</div>
-      <div>Hildreth, Fierstein &amp; Calvert (2018) Quat. Sci. Rev. 198, 242–265.</div>
-      <div>Rood, Burbank &amp; Finkel (2011) Quat. Sci. Rev. 30, 646–661.</div>
-      <div>Unruh, Humphrey &amp; Barron (2003) Geology 31, 327–330.</div>
-      <div>Wahrhaftig et al. (2019) USGS SIM 3414.</div>
-    </div>
+    <div>Berry (1997) Geomorphology 20, 177–195.</div>
+    <div>Blackwelder (1931) GSA Bulletin 42, 865–922.</div>
+    <div>Hildreth, Fierstein &amp; Calvert (2018) Quat. Sci. Rev. 198, 242–265.</div>
+    <div>Rood, Burbank &amp; Finkel (2011) Quat. Sci. Rev. 30, 646–661.</div>
+    <div>Unruh, Humphrey &amp; Barron (2003) Geology 31, 327–330.</div>
+    <div>Wahrhaftig et al. (2019) USGS SIM 3414.</div>
   </footer>
 </article>
 </div></div>
@@ -206,7 +219,7 @@ var C = { ink: css.getPropertyValue('--ink').trim(), muted: css.getPropertyValue
 
 /* ---- A-A' profile ---- */
 (function () {
-  var c = lineChart({ svg: document.getElementById('profile'), w: 620, h: 172, m: { t: 30, r: 10, b: 34, l: 52 },
+  var c = lineChart({ svg: document.getElementById('profile'), w: 620, h: 300, m: { t: 30, r: 10, b: 34, l: 52 },
     x: [0, 1820], y: [2200, 2410], xticks: [0, 500, 1000, 1500], yticks: [2250, 2300, 2350, 2400],
     xlabel: 'distance along A–A′ (m)', ylabel: 'elevation (m)', ink: C.ink,
     series: [{ pts: PROFILE, color: C.ink, width: 2 }] });
@@ -238,7 +251,7 @@ var C = { ink: css.getPropertyValue('--ink').trim(), muted: css.getPropertyValue
 
 /* ---- KDEs ---- */
 function kde(id, data, x, y, xl, yt, yfmt) {
-  lineChart({ svg: document.getElementById(id), w: 243, h: 205, m: { t: 10, r: 6, b: 34, l: 42 },
+  lineChart({ svg: document.getElementById(id), w: 243, h: 250, m: { t: 10, r: 6, b: 34, l: 42 },
     x: x, y: y, xticks: xl, yticks: yt, yfmt: yfmt, xlabel: 'cm', ink: C.ink,
     series: [{ pts: smooth(data.older, 2), color: C.tahoe, width: 2.6 }, { pts: smooth(data.younger, 2), color: C.tioga, width: 2.6 }] });
 }

@@ -6,11 +6,12 @@
     var inner = document.querySelector('.stage-inner');
     var poster = document.querySelector('.poster');
     if (!stage || !inner || !poster) return;
+    var W = poster.offsetWidth, H = poster.offsetHeight;
     var avail = stage.clientWidth - 40;
-    var s = Math.min(1, avail / 1800);
+    var s = Math.min(1, avail / W);
     poster.style.transform = 'scale(' + s + ')';
-    inner.style.width = (1800 * s) + 'px';
-    inner.style.height = (1200 * s) + 'px';
+    inner.style.width = (W * s) + 'px';
+    inner.style.height = (H * s) + 'px';
   }
   window.addEventListener('resize', fit);
   document.addEventListener('DOMContentLoaded', fit);

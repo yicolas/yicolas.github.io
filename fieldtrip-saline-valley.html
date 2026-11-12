@@ -6,34 +6,49 @@
     <title>Winter 2026 — Saline Valley — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .pdf-container {
-            width: 100%;
-            height: calc(100vh - 80px);
-            background: #f0f0f0;
-            margin: 0;
-            padding: 0 2rem 1rem 2rem;
-        }
-        .pdf-container iframe {
-            width: 100%;
-            height: 100%;
-            border: 1px solid #000;
-        }
-        .project-detail-header {
-            padding: 1rem 2rem 0.5rem 2rem;
-            margin-bottom: 0.5rem;
+        html, body { height: 100%; }
+        body { overflow: hidden; display: flex; flex-direction: column; }
+        .project-detail-header { padding: 0.5rem 1.5rem; border-bottom: 1px solid #000; display: flex; align-items: baseline; gap: 1.25rem; flex-shrink: 0; }
+        .project-detail-header h1 { font-size: 1.1em; font-weight: normal; margin-right: auto; }
+        .project-detail-header a:hover { text-transform: none; }
+        .guide { flex: 1; min-height: 0; display: grid; grid-template-columns: 200px 1fr; }
+        .toc { overflow-y: auto; padding: 1rem 1rem 2rem 1.5rem; border-right: 1px solid rgba(0,0,0,.12); font-size: 11px; line-height: 1.35; }
+        .toc b { display: block; font-size: 11px; margin-bottom: .6rem; }
+        .toc .yr { color: rgba(0,0,0,.45); margin: .9rem 0 .3rem; }
+        .toc .yr:first-of-type { margin-top: 0; }
+        .toc a { display: block; padding: .3rem 0 .3rem .6rem; border-left: 2px solid transparent; color: rgba(0,0,0,.75); }
+        .toc a span { display: block; color: rgba(0,0,0,.45); font-size: 10px; }
+        .toc a:hover { color: #0000EE; text-transform: none; }
+        .toc a[aria-current="page"] { border-left-color: #0000EE; color: #0000EE; }
+        .pdf { background: #f0f0f0; padding: 0.75rem 1rem 1rem; min-width: 0; }
+        .pdf iframe { width: 100%; height: 100%; border: 1px solid #000; background: #fff; }
+        @media (max-width: 700px) {
+            body { overflow: auto; }
+            .guide { grid-template-columns: 1fr; grid-template-rows: auto 75vh; }
+            .toc { border-right: 0; border-bottom: 1px solid rgba(0,0,0,.12); }
         }
     </style>
 </head>
 <body>
-    <div class="site-container">
-        <main class="main-content" style="margin-right: 0; max-width: 100%;">
-            <div class="project-detail-header">
-                <h1>WINTER 2026 — SALINE VALLEY</h1>
-            </div>
-            <div class="pdf-container">
-                <iframe src="https://archive.org/download/ge-136-b-winter-2026-saline-valley_202604/GE136B_Winter_2026_Saline_Valley.pdf" allow="autoplay"></iframe>
-            </div>
-        </main>
+    <div class="project-detail-header">
+        <h1>WINTER 2026 — SALINE VALLEY</h1>
+        <a href="https://archive.org/download/ge-136-b-winter-2026-saline-valley_202604/GE136B_Winter_2026_Saline_Valley.pdf" target="_blank">Open PDF</a>
+    </div>
+    <div class="guide">
+        <nav class="toc" aria-label="Field guides">
+            <b>Ge 136 field guides</b>
+            <div class="yr">2026–27</div>
+            <a href="fieldtrip-dv-alumni.html">Death Valley Alumni<span>Ge 136A · Fall 2026</span></a>
+            <div class="yr">2025–26</div>
+            <a href="fieldtrip-sierras-1.html">Lower Sierras<span>Ge 136C · Spring 2026</span></a>
+            <a href="fieldtrip-saline-valley.html" aria-current="page">Saline Valley<span>Ge 136B · Winter 2026</span></a>
+            <a href="fieldtrip-san-bernardino.html">San Bernardino<span>Ge 136A · Fall 2025</span></a>
+            <div class="yr">2024–25</div>
+            <a href="fieldtrip-central-arizona.html">Central Arizona<span>Ge 136C · Spring 2025</span></a>
+            <a href="fieldtrip-san-diego.html">San Diego &amp; Salton Sea<span>Ge 136B · Winter 2025</span></a>
+            <a href="fieldtrip-owens-valley.html">Owens Valley<span>Ge 136A · Fall 2024</span></a>
+        </nav>
+        <div class="pdf"><iframe src="https://archive.org/download/ge-136-b-winter-2026-saline-valley_202604/GE136B_Winter_2026_Saline_Valley.pdf" title="Winter 2026 Saline Valley field guide"></iframe></div>
     </div>
 </body>
 </html>
