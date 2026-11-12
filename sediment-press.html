@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pellet Press — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
     <style>
         body { overflow: hidden; }
         .press-container {
@@ -36,11 +36,22 @@
         .model-viewer-container model-viewer { width: 100%; height: 100%; }
         .model-hint {
             position: absolute;
-            bottom: 6px;
-            right: 8px;
+            bottom: 8px;
+            left: 10px;
             font-size: 9px;
-            color: rgba(255,255,255,0.4);
+            color: rgba(255,255,255,0.45);
+            pointer-events: none;
         }
+        .model-tools { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; align-items: center; }
+        .model-tools .spacer { flex: 1; }
+        .model-tools button {
+            font: 10px 'Helvetica Neue', Helvetica, Arial, sans-serif; color: rgba(255,255,255,.8);
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+            padding: 4px 9px; cursor: pointer; border-radius: 2px;
+        }
+        .model-tools button:hover { color: #fff; border-color: rgba(255,255,255,.5); }
+        .model-tools button[aria-pressed="true"] { background: #fff; color: #0f1214; border-color: #fff; }
+        .model-tools button:focus-visible { outline: 2px solid #7f9cff; outline-offset: 1px; }
         .download-card {
             background: #f0f4ff;
             padding: 0.5rem 0.75rem;
@@ -165,29 +176,42 @@
             <div class="press-container">
                 <div class="model-col">
                     <div class="model-viewer-container">
-                        <model-viewer 
+                        <model-viewer
                             id="press-model"
-                            src="caulk_pill_press_v5.glb" 
-                            alt="Pellet press 3D model"
+                            src="caulk_pill_press_v5.glb"
+                            alt="Pellet press 3D model, all printable parts laid out on the print bed"
                             camera-controls
                             auto-rotate
-                            shadow-intensity="1"
+                            auto-rotate-delay="4000"
+                            rotation-per-second="18deg"
+                            interaction-prompt="none"
+                            touch-action="pan-y"
+                            camera-orbit="30deg 62deg auto"
+                            camera-target="auto auto auto"
+                            field-of-view="24deg"
+                            min-camera-orbit="auto 0deg auto"
+                            max-camera-orbit="auto 100deg auto"
+                            interpolation-decay="120"
+                            shadow-intensity="0.7"
                             exposure="1"
-                            camera-orbit="45deg 55deg 2.5m"
-                            min-camera-orbit="auto auto 0.5m"
-                            max-camera-orbit="auto auto 10m"
                             environment-image="neutral"
-                            skybox-image=""
                             style="width: 100%; height: 100%; background-color: #1a1f22;">
                         </model-viewer>
-                        <div class="model-hint">Drag to rotate · Scroll to zoom</div>
+                        <div class="model-tools">
+                            <button type="button" class="ver" data-ver="v5" aria-pressed="true">v5 · 25 mm</button>
+                            <button type="button" class="ver" data-ver="27x2" aria-pressed="false">27 × 2 mm</button>
+                            <span class="spacer"></span>
+                            <button type="button" id="spin-btn" aria-pressed="true">Spin</button>
+                            <button type="button" id="reset-btn">Reset view</button>
+                        </div>
+                        <div class="model-hint">Drag to rotate · scroll to zoom · right-drag to pan</div>
                     </div>
                     <div class="download-card">
                         <div class="download-info">
                             <div class="download-title">Download STL</div>
-                            <div class="download-meta">caulk_pill_press_v5.stl · 3D printable</div>
+                            <div class="download-meta" id="dl-meta">caulk_pill_press_v5.stl · 3D printable</div>
                         </div>
-                        <a href="caulk_pill_press_v5.stl" download class="download-btn">Download ↓</a>
+                        <a href="caulk_pill_press_v5.stl" download class="download-btn" id="dl-btn">Download ↓</a>
                     </div>
                     <div class="press-images">
                         <img src="pill_press.png" alt="Pressed pellet">
@@ -231,7 +255,7 @@
                         </div>
                         <div class="spec-chip">
                             <div class="spec-chip-label">Pellet</div>
-                            <div class="spec-chip-value">25mm</div>
+                            <div class="spec-chip-value" id="pellet-size">25mm</div>
                         </div>
                         <div class="spec-chip">
                             <div class="spec-chip-label">Weight</div>
@@ -257,5 +281,39 @@
             </div>
         </main>
     </div>
+
+<script>
+(function () {
+    var mv = document.getElementById('press-model');
+    var VERS = {
+        'v5':   { glb: 'caulk_pill_press_v5.glb', stl: 'caulk_pill_press_v5.stl', pellet: '25mm' },
+        '27x2': { glb: 'pill_press_27x2mm.glb',   stl: 'pill_press_27x2mm.stl',   pellet: '27 × 2 mm' }
+    };
+    function resetView() {
+        mv.cameraOrbit = '30deg 62deg auto';
+        mv.cameraTarget = 'auto auto auto';
+        mv.fieldOfView = '24deg';
+        if (mv.jumpCameraToGoal) mv.jumpCameraToGoal();
+    }
+    mv.addEventListener('load', resetView);
+    document.getElementById('reset-btn').addEventListener('click', resetView);
+    var spin = document.getElementById('spin-btn');
+    spin.addEventListener('click', function () {
+        var on = !mv.hasAttribute('auto-rotate');
+        if (on) mv.setAttribute('auto-rotate', ''); else mv.removeAttribute('auto-rotate');
+        spin.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.ver').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var v = VERS[b.dataset.ver];
+            document.querySelectorAll('.ver').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+            mv.src = v.glb;
+            document.getElementById('dl-btn').setAttribute('href', v.stl);
+            document.getElementById('dl-meta').textContent = v.stl + ' · 3D printable';
+            document.getElementById('pellet-size').textContent = v.pellet;
+        });
+    });
+})();
+</script>
 </body>
 </html>

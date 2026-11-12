@@ -3,214 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geologic Maps & Cross Sections — Nick Anderson</title>
+    <title>Geologic Maps &amp; Cross Sections — Nick Anderson</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { overflow-y: auto; }
-        .project-detail-header {
-            padding: 0.5rem 1.5rem;
-            border-bottom: 1px solid #000;
-            margin-bottom: 0;
-        }
+        body { overflow-y: auto; background: #fff; }
+        .project-detail-header { padding: 0.5rem 1.5rem; border-bottom: 1px solid #000; }
         .project-detail-header h1 { font-size: 1.1em; font-weight: normal; }
-        
-        .gallery-container {
-            padding: 1.5rem 2rem;
-            width: 100%;
-            max-width: none;
+
+        .gallery { padding: 1.25rem 1.5rem 3rem; }
+        .gallery section + section { margin-top: 2.25rem; }
+        .gallery h2 {
+            font-size: 15px; font-weight: 600; margin-bottom: 0.25rem;
         }
-        
-        .gallery-section {
-            margin-bottom: 2rem;
+        .gallery .lede { font-size: 12px; color: rgba(0,0,0,.55); margin-bottom: 0.9rem; max-width: 60ch; }
+
+        .grid { display: grid; gap: 1.25rem 1.25rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+        .grid.wide { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+
+        .card { display: flex; flex-direction: column; color: #000; text-decoration: none; }
+        .card:hover { text-decoration: none; text-transform: none; color: #000; }
+        .card .thumb {
+            aspect-ratio: 3 / 2; background: #eef0ef; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 1px solid rgba(0,0,0,.12); padding: 10px;
         }
-        
-        .gallery-section h2 {
-            font-size: 0.9em;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .gallery-item {
-            border: 1px solid #e0e0e0;
-            background: #fafafa;
-            overflow: hidden;
-        }
-        
-        .gallery-item a {
-            display: block;
-            text-decoration: none;
-            color: inherit;
-        }
-        
-        .gallery-item .preview {
-            width: 100%;
-            height: 200px;
-            background: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .gallery-item .preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .gallery-item .preview.pdf-preview {
-            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-        }
-        
-        .gallery-item .preview.pdf-preview::after {
-            content: 'PDF';
-            font-size: 1.5em;
-            font-weight: 600;
-            color: #999;
-        }
-        
-        .gallery-item .info {
-            padding: 0.75rem 1rem;
-        }
-        
-        .gallery-item .info h3 {
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        
-        .gallery-item .info p {
-            font-size: 0.75em;
-            color: #666;
-            margin: 0;
-        }
-        
-        .gallery-item:hover {
-            border-color: #0000EE;
-        }
-        
-        .gallery-item:hover .info h3 {
-            color: #0000EE;
-        }
+        .card .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+            box-shadow: 0 1px 2px rgba(0,0,0,.15); background: #fff; transition: transform .25s ease; }
+        .card:hover .thumb { border-color: #0000EE; }
+        .card:hover .thumb img { transform: scale(1.02); }
+        .card:focus-visible { outline: 2px solid #0000EE; outline-offset: 3px; }
+        .card .t { margin-top: 0.5rem; font-size: 13px; font-weight: 600; line-height: 1.25; }
+        .card:hover .t { color: #0000EE; }
+        .card .d { font-size: 11.5px; color: rgba(0,0,0,.6); line-height: 1.35; margin-top: 2px; }
+        .card .f { font-size: 10px; color: rgba(0,0,0,.45); margin-top: 3px; }
+        @media (prefers-reduced-motion: reduce) { .card .thumb img { transition: none; } }
     </style>
 </head>
 <body>
-    <div class="site-container">
-        <main class="main-content" style="margin-right: 0; max-width: 100%;">
-            <div class="project-detail-header">
-                <h1>GEOLOGIC MAPS & CROSS SECTIONS</h1>
-            </div>
+    <div class="project-detail-header">
+        <h1>GEOLOGIC MAPS &amp; CROSS SECTIONS</h1>
+    </div>
 
-            <div class="gallery-container">
-                <div class="gallery-section">
-                    <h2>Geologic Maps</h2>
-                    <div class="gallery-grid">
-                        <div class="gallery-item">
-                            <a href="DV_Regional_Geologic_Map.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Death Valley Regional Geologic Map</h3>
-                                    <p>Regional overview map</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="DV w CA Inset.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Death Valley with California Inset</h3>
-                                    <p>Location context map</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Alexander _Hills _Geologic _Map.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Alexander Hills Geologic Map</h3>
-                                    <p>Detailed mapping</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Saratoga_Springs_Geologic_Map.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Saratoga Springs Geologic Map</h3>
-                                    <p>Detailed mapping</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Warm_Springs_Geologic_Map.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Warm Springs Geologic Map</h3>
-                                    <p>Detailed mapping</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Central_Ibex_Geologic_Map.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Central Ibex Geologic Map</h3>
-                                    <p>Detailed mapping</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Mud_Hills_map2.png" target="_blank">
-                                <div class="preview">
-                                    <img src="Mud_Hills_map2.png" alt="Mud Hills Map">
-                                </div>
-                                <div class="info">
-                                    <h3>Mud Hills Geologic Map</h3>
-                                    <p>Barstow Formation mapping</p>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="gallery-section">
-                    <h2>Stratigraphic Columns & Cross Sections</h2>
-                    <div class="gallery-grid">
-                        <div class="gallery-item">
-                            <a href="Crystal Springs Strat.pdf" target="_blank">
-                                <div class="preview pdf-preview"></div>
-                                <div class="info">
-                                    <h3>Crystal Springs Stratigraphy</h3>
-                                    <p>Stratigraphic column</p>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="gallery-item">
-                            <a href="Fence_MudHills.png" target="_blank">
-                                <div class="preview">
-                                    <img src="Fence_MudHills.png" alt="Mud Hills Fence Diagram">
-                                </div>
-                                <div class="info">
-                                    <h3>Mud Hills Fence Diagram</h3>
-                                    <p>Cross section correlation</p>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+    <div class="gallery">
+        <section>
+            <h2>Field posters</h2>
+            <p class="lede">One-page summaries of field projects. Each opens as a zoomable page with a PDF download.</p>
+            <div class="grid wide">
+                <a class="card" href="mudhills-poster.html">
+                    <div class="thumb"><img src="posters/thumbs/mudhills.jpg" alt="Mud Hills geology poster" loading="lazy"></div>
+                    <div class="t">Barstow Formation, Mud Hills</div>
+                    <div class="d">Stratigraphy, structure and October 2026 lithium-bearing mudstone samples, with A–A′ and B–B′ sections.</div>
+                    <div class="f">Poster, 48 × 36 in</div>
+                </a>
+                <a class="card" href="mcgee-creek-report.html">
+                    <div class="thumb"><img src="posters/thumbs/mcgee.jpg" alt="McGee Creek poster" loading="lazy"></div>
+                    <div class="t">Faulted moraines of McGee Creek</div>
+                    <div class="d">Slip on the Hilton Creek Fault and the relative ages of the Tioga and Tahoe moraines.</div>
+                    <div class="f">Poster, 2022 field report</div>
+                </a>
+                <a class="card" href="panum-report.html">
+                    <div class="thumb"><img src="posters/thumbs/panum.jpg" alt="Panum Crater poster" loading="lazy"></div>
+                    <div class="t">Panum Crater</div>
+                    <div class="d">Dome sequence, degassing textures and a hybrid effusive–explosive eruption.</div>
+                    <div class="f">Poster, 2022 field report</div>
+                </a>
             </div>
-        </main>
+        </section>
+
+        <section>
+            <h2>Geologic maps</h2>
+            <div class="grid wide">
+                <a class="card" href="Mud_Hills_map2.png" target="_blank">
+                    <div class="thumb"><img src="posters/thumbs/mudhills-map.jpg" alt="Mud Hills geologic map" loading="lazy"></div>
+                    <div class="t">Mud Hills</div>
+                    <div class="d">Barstow Formation members, faults, the syncline and sample locations.</div>
+                    <div class="f">PNG</div>
+                </a>
+                <a class="card" href="DV_Regional_Geologic_Map.pdf" target="_blank">
+                    <div class="thumb"><img src="posters/thumbs/dv-regional.jpg" alt="Death Valley regional geologic map" loading="lazy"></div>
+                    <div class="t">Death Valley, regional</div>
+                    <div class="d">Pahrump Group, Johnnie Formation and intrusions, with diabase sample locations.</div>
+                    <div class="f">PDF</div>
+                </a>
+                <a class="card" href="Warm_Springs_Geologic_Map.pdf" target="_blank">
+                    <div class="thumb"><img src="posters/thumbs/warm-springs.jpg" alt="Warm Springs geologic map" loading="lazy"></div>
+                    <div class="t">Warm Springs</div>
+                    <div class="d">Detailed mapping of the Crystal Springs members and diabase intrusions.</div>
+                    <div class="f">PDF</div>
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <h2>Columns and cross sections</h2>
+            <div class="grid">
+                <a class="card" href="Crystal Springs Strat.pdf" target="_blank">
+                    <div class="thumb"><img src="posters/thumbs/crystal-springs.jpg" alt="Crystal Springs stratigraphic column" loading="lazy"></div>
+                    <div class="t">Crystal Springs Formation</div>
+                    <div class="d">Stratigraphic column with the 1098 Ma diabase sills.</div>
+                    <div class="f">PDF</div>
+                </a>
+                <a class="card" href="Fence_MudHills.png" target="_blank">
+                    <div class="thumb"><img src="posters/thumbs/mudhills-fence.jpg" alt="Mud Hills fence diagram" loading="lazy"></div>
+                    <div class="t">Mud Hills fence diagram</div>
+                    <div class="d">Carnivore, Steep and Owl Canyon sections correlated.</div>
+                    <div class="f">PNG, very large</div>
+                </a>
+            </div>
+        </section>
     </div>
 </body>
 </html>

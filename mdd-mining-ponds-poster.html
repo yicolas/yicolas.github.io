@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Madre de Dios Mining Ponds Poster — Nick Anderson</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { height: 100%; }
+  body { overflow: hidden; display: flex; flex-direction: column; }
+  .project-detail-header { padding: 0.5rem 1.5rem; border-bottom: 1px solid #000; display: flex; align-items: baseline; gap: 1.25rem; }
+  .project-detail-header h1 { font-size: 1.1em; font-weight: normal; margin-right: auto; }
+  .project-detail-header a:hover { text-transform: none; }
+  .meta { padding: 0.4rem 1.5rem; font-size: 11px; color: rgba(0,0,0,.6); border-bottom: 1px solid rgba(0,0,0,.1); }
+  .viewer { position: relative; flex: 1; min-height: 0; background: #e4e4e2; overflow: hidden; cursor: grab; touch-action: none; }
+  .viewer.dragging { cursor: grabbing; }
+  .viewer img { position: absolute; top: 0; left: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 10px 30px rgba(0,0,0,.12); background: #fff; }
+  .zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; }
+  .zoom button { font: 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; border: 1px solid rgba(0,0,0,.25);
+    min-width: 30px; height: 28px; padding: 0 8px; cursor: pointer; }
+  .zoom button:hover { border-color: #0000EE; color: #0000EE; }
+  .zoom button:focus-visible { outline: 2px solid #0000EE; outline-offset: 1px; }
+  .hint { position: absolute; left: 12px; bottom: 14px; font-size: 10px; color: rgba(0,0,0,.45); }
+</style>
+</head>
+<body>
+  <div class="project-detail-header">
+    <h1>MADRE DE DIOS MINING PONDS POSTER</h1>
+    <a href="posters/pdf/MdD_mining_ponds_poster_2026.pdf" target="_blank">Open full-resolution PDF</a>
+  </div>
+  <div class="meta">A growing methylmercury liability: satellites track a decade of artisanal gold mining pond growth in Madre de Dios, Peru. FY26 JPL President and Director’s Research and Development Fund poster, with E. Podest, J. Tejada and I. Aguilar.</div>
+  <div class="viewer" id="viewer">
+    <img id="img" src="posters/pdf/mdd-mining-ponds-full.jpg" alt="Poster: a growing methylmercury liability, satellites track a decade of artisanal gold mining pond growth in Madre de Dios, Peru" draggable="false">
+    <div class="hint">Scroll or pinch to zoom · drag to pan · double-click to zoom in</div>
+    <div class="zoom">
+      <button type="button" id="zin" aria-label="Zoom in">+</button>
+      <button type="button" id="zout" aria-label="Zoom out">−</button>
+      <button type="button" id="zfit">Fit</button>
+    </div>
+  </div>
+<script>
+(function () {
+  var v = document.getElementById('viewer'), img = document.getElementById('img');
+  var s = 1, x = 0, y = 0, fitS = 1, maxS = 1;
+  function apply() { img.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')'; }
+  function clamp() {
+    var W = v.clientWidth, H = v.clientHeight, w = img.naturalWidth * s, h = img.naturalHeight * s;
+    x = w <= W ? (W - w) / 2 : Math.min(0, Math.max(W - w, x));
+    y = h <= H ? (H - h) / 2 : Math.min(0, Math.max(H - h, y));
+  }
+  function fit() {
+    var pad = 16, W = v.clientWidth - 2 * pad, H = v.clientHeight - 2 * pad;
+    fitS = Math.min(W / img.naturalWidth, H / img.naturalHeight); maxS = Math.max(fitS * 8, 1.5);
+    s = fitS; clamp(); apply();
+  }
+  function zoomAt(f, cx, cy) {
+    var ns = Math.min(maxS, Math.max(fitS, s * f)); if (ns === s) return;
+    x = cx - (cx - x) * ns / s; y = cy - (cy - y) * ns / s; s = ns; clamp(); apply();
+  }
+  function center() { return [v.clientWidth / 2, v.clientHeight / 2]; }
+  if (img.complete) fit(); else img.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+  v.addEventListener('wheel', function (e) {
+    e.preventDefault(); var r = v.getBoundingClientRect();
+    zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  v.addEventListener('dblclick', function (e) {
+    var r = v.getBoundingClientRect(); zoomAt(s > fitS * 1.5 ? 1e-3 : 3, e.clientX - r.left, e.clientY - r.top);
+  });
+  var pts = {}, last = null, pinch = null;
+  v.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.zoom')) return;
+    v.setPointerCapture(e.pointerId); pts[e.pointerId] = [e.clientX, e.clientY]; v.classList.add('dragging');
+    last = [e.clientX, e.clientY];
+  });
+  v.addEventListener('pointermove', function (e) {
+    if (!pts[e.pointerId]) return;
+    pts[e.pointerId] = [e.clientX, e.clientY];
+    var ids = Object.keys(pts);
+    if (ids.length === 2) {
+      var a = pts[ids[0]], b = pts[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      var r = v.getBoundingClientRect(), cx = (a[0] + b[0]) / 2 - r.left, cy = (a[1] + b[1]) / 2 - r.top;
+      if (pinch) zoomAt(d / pinch, cx, cy); pinch = d; return;
+    }
+    x += e.clientX - last[0]; y += e.clientY - last[1]; last = [e.clientX, e.clientY]; clamp(); apply();
+  });
+  function up(e) { delete pts[e.pointerId]; pinch = null; var k = Object.keys(pts); last = k.length ? pts[k[0]] : null; if (!k.length) v.classList.remove('dragging'); }
+  v.addEventListener('pointerup', up); v.addEventListener('pointercancel', up);
+  document.getElementById('zin').onclick = function () { var c = center(); zoomAt(1.6, c[0], c[1]); };
+  document.getElementById('zout').onclick = function () { var c = center(); zoomAt(1 / 1.6, c[0], c[1]); };
+  document.getElementById('zfit').onclick = fit;
+  window.addEventListener('keydown', function (e) {
+    var c = center();
+    if (e.key === '+' || e.key === '=') zoomAt(1.6, c[0], c[1]);
+    else if (e.key === '-') zoomAt(1 / 1.6, c[0], c[1]);
+    else if (e.key === '0') fit();
+  });
+})();
+</script>
+</body>
+</html>
