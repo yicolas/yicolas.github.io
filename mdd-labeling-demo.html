@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>River, Pond or Tailings?</title>
+<meta name="description" content="A 48-site demo of the Sentinel-2 labelling game used to separate gold-mining ponds from river water in Madre de Dios, Peru.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f1416; --panel:#161c1f; --panel-2:#1c2327; --ink:#e8e4d8; --ink-dim:#9aa0a0; --ink-mute:#5f6668; --line:#2a3236;
+    --accent:#d8a24a; --accent-2:#6fb2a8; --accent-3:#c46f5a; --good:#5fae7f; --bad:#e27d5f;
+    --c-river:#3f86d6; --c-bar:#cfae4a; --c-cutbank:#6f9fd4; --c-pond:#d6528f; --c-tailings:#c4672e; --c-oxbow:#2fae84; --c-vegetation:#4d8f4f; --c-other:#8a7fa6;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--ink); }
+  body { font-family:"Fraunces",Georgia,serif; font-variant-numeric:tabular-nums;
+    background:radial-gradient(1200px 600px at 90% -10%,rgba(216,162,74,.07),transparent 60%),
+               radial-gradient(900px 500px at -10% 20%,rgba(111,178,168,.05),transparent 60%),var(--bg); }
+  .mono { font-family:"JetBrains Mono",ui-monospace,monospace; }
+  .wrap { max-width:1280px; margin:0 auto; padding:18px 16px 40px; }
+  header { border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:14px; display:flex; flex-wrap:wrap; gap:10px 24px; align-items:flex-end; }
+  h1 { font-size:26px; font-weight:600; margin:0; letter-spacing:.2px; }
+  h1 em { color:var(--accent); font-style:italic; font-weight:400; }
+  .sub { color:var(--ink-dim); font-size:14px; max-width:720px; margin:6px 0 0; line-height:1.5; }
+  .hud { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .pill { background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font:500 12.5px "JetBrains Mono",monospace; white-space:nowrap; }
+  .pill b { color:var(--accent); font-weight:600; }
+  .bar { height:4px; background:var(--panel-2); border-radius:3px; overflow:hidden; margin:0 0 14px; }
+  #fill { height:100%; width:0; background:linear-gradient(90deg,var(--accent-2),var(--accent)); transition:width .25s; }
+  .grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; }
+  @media (max-width:980px) { .grid { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .tag { font:500 12px "JetBrains Mono",monospace; border-radius:999px; padding:3px 10px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink-dim); }
+  .tag.year { color:#bcd5f3; border-color:#244a75; }
+  .tag.tricky { color:var(--accent); border-color:#6b5320; }
+  .imgwrap { position:relative; }
+  #img { cursor:zoom-in; width:100%; display:block; border-radius:8px; background:#0b0f10; aspect-ratio:968/429; }
+  .caps { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; font:400 11.5px "JetBrains Mono",monospace; color:var(--ink-mute); text-align:center; margin:5px 0 2px; }
+  .caps2 { font:400 11.5px "JetBrains Mono",monospace; color:var(--ink-mute); text-align:center; }
+  .q { font-size:17px; margin:12px 0 8px; }
+  .btns { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  @media (max-width:640px) { .btns { grid-template-columns:repeat(2,1fr); } .caps { font-size:10px; } }
+  button { font:600 14px "Fraunces",Georgia,serif; color:#fff; border:0; border-radius:9px; padding:11px 8px; cursor:pointer; text-align:left; line-height:1.2; }
+  button kbd { float:right; font:500 11px "JetBrains Mono",monospace; background:rgba(0,0,0,.25); border-radius:4px; padding:1px 5px; }
+  button:active { transform:translateY(1px); }
+  button[disabled] { opacity:.45; cursor:default; }
+  button.picked { outline:2px solid #fff; outline-offset:1px; }
+  button.correct { box-shadow:0 0 0 3px var(--good); opacity:1; }
+  .ghost { background:var(--panel-2); color:var(--ink); border:1px solid var(--line); font-weight:500; text-align:center; }
+  #reveal { display:none; margin-top:12px; border-radius:10px; padding:12px 14px; background:var(--panel-2); border:1px solid var(--line); line-height:1.5; font-size:14.5px; }
+  #reveal.good { border-color:#2f6b49; background:#14241b; }
+  #reveal.close { border-color:#6b5320; background:#241e12; }
+  #reveal.bad { border-color:#6b3324; background:#24160f; }
+  #reveal h3 { margin:0 0 4px; font-size:16px; }
+  #reveal .why { color:#cfcabd; }
+  #reveal .note { color:var(--accent); font-style:italic; }
+  #reveal .model { color:var(--ink-dim); font:400 12.5px "JetBrains Mono",monospace; margin-top:6px; }
+  .nav { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .nav button { flex:0 0 auto; }
+  .side h2 { font-size:15px; margin:0 0 8px; font-weight:600; }
+  .key { display:grid; grid-template-columns:12px 1fr; gap:4px 8px; font-size:13px; line-height:1.4; color:#cfcabd; margin-bottom:8px; }
+  .key i { width:12px; height:12px; border-radius:3px; margin-top:4px; }
+  .key b { color:var(--ink); font-weight:600; }
+  .side p { font-size:13px; color:var(--ink-dim); line-height:1.5; margin:8px 0; }
+  .score { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+  .stat { background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:8px 10px; font:400 12px "JetBrains Mono",monospace; color:var(--ink-dim); }
+  .stat b { display:block; font:600 20px "Fraunces",Georgia,serif; color:var(--accent); }
+  table.conf { width:100%; border-collapse:collapse; font:400 12px "JetBrains Mono",monospace; margin-top:6px; }
+  table.conf td { padding:3px 4px; border-top:1px solid var(--line); }
+  table.conf td:last-child { text-align:right; color:var(--ink); }
+  #done { display:none; }
+  #done h2 { font-size:22px; margin:4px 0 8px; color:var(--accent); }
+  input[type=text] { width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:8px 10px; font:14px "Fraunces",Georgia,serif; }
+  details summary { cursor:pointer; color:var(--ink-dim); font-size:13px; }
+  a { color:var(--accent-2); }
+  #pop { position:fixed; left:50%; top:16%; transform:translate(-50%,-50%) scale(.9); background:#2b2611; color:var(--accent); border:1px solid #6b5320;
+         padding:10px 18px; border-radius:10px; font-weight:600; opacity:0; pointer-events:none; transition:all .3s; z-index:9; }
+  #pop.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>River, pond or <em>tailings?</em></h1>
+      <p class="sub">Gold mining in Madre de Dios, Peru, leaves thousands of dug ponds right next to the rivers. To map them we train a classifier on hand-labelled Sentinel-2 pixels. This demo has 48 of those sites: label the pixel under the crosshair, then see what I called it.</p>
+    </div>
+    <div class="hud">
+      <span class="pill">site <b id="pos">1</b>/<span id="tot">48</span></span>
+      <span class="pill">score <b id="sc">0</b></span>
+      <span class="pill">streak <b id="st">0</b></span>
+    </div>
+  </header>
+  <div class="bar"><div id="fill"></div></div>
+
+  <div class="grid">
+    <div>
+      <div class="card" id="card">
+        <div class="meta">
+          <span class="tag year" id="myear"></span>
+          <span class="tag" id="mzone"></span>
+          <span class="tag" id="mid"></span>
+          <span class="tag tricky" id="mtricky" style="display:none">tricky</span>
+        </div>
+        <div class="imgwrap"><a id="imga" target="_blank" title="open full size"><img id="img" alt="Sentinel-2 image chips of the site"></a></div>
+        <div class="caps"><span>true colour ±400 m</span><span>false colour ±400 m</span><span>true colour ±3 km (yellow box = left)</span></div>
+        <div class="caps2">the same ±400 m every dry season, 2017 → 2025 (white frame = the year to label)</div>
+        <div class="q">What is the pixel under the green crosshair, in the framed year?</div>
+        <div class="btns" id="btns"></div>
+        <div id="reveal"></div>
+        <div class="nav">
+          <button class="ghost" onclick="go(-1)">← back</button>
+          <button class="ghost" id="nextb" onclick="go(1)">next → <kbd>enter</kbd></button>
+          <button class="ghost" onclick="restart()">start over</button>
+        </div>
+      </div>
+      <div class="card" id="done">
+        <h2>Done — all 48 sites</h2>
+        <div class="score" id="fstats"></div>
+        <p class="sub">Per class: how often you matched my label.</p>
+        <table class="conf" id="conf"></table>
+        <p class="sub" style="margin-top:14px">Want to help? Put your name below and download your answers. Every independent label tells us how reproducible these calls are.</p>
+        <input type="text" id="who" placeholder="your name (optional)">
+        <div class="nav"><button class="ghost" onclick="exportCSV()">download my answers (CSV)</button>
+          <button class="ghost" onclick="review()">review the sites</button><button class="ghost" onclick="restart()">play again</button></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card" style="margin-bottom:16px">
+        <h2>The eight classes</h2>
+        <div id="key"></div>
+        <details><summary>Reading the images</summary>
+          <p>All imagery is Sentinel-2 at 10 m: cloud-screened medians of the June–October dry season. In the false-colour panel (near-infrared, shortwave infrared, red) water is dark purple, vegetation orange, and bare sand or tailings pale grey-green.</p>
+          <p>The strip along the bottom is the best clue. Rivers move and bars reshape every year, while ponds appear suddenly in a field of tailings and then fill in. Forest regrows slowly over abandoned mining ground.</p>
+        </details>
+      </div>
+      <div class="card">
+        <h2>Your score</h2>
+        <div class="score" id="sstats"></div>
+        <p>Exact match = 2 points. Same family (river / bar / cut bank all count as river) = 1 point. Sites tagged <span style="color:var(--accent)">tricky</span> are mixed pixels where even I hesitated.</p>
+        <p>Labels are mine (Nick Anderson, Caltech) from several rounds of this game. The full study maps ponds across five mining zones from 2017 to 2025. Your answers stay in your browser unless you download them.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="pop"></div>
+<script>
+const SITES=[{"id":"s01","year":2024,"zone":"Mazuko","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s02","year":2022,"zone":"Las Hormigas","answer":"other","note":"","model":null,"tricky":false},{"id":"s03","year":2022,"zone":"Boca Colorado","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s04","year":2025,"zone":"Las Hormigas","answer":"pond","note":"","model":0.01,"tricky":false},{"id":"s05","year":2023,"zone":"Boca Colorado","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s06","year":2018,"zone":"Mazuko","answer":"bar","note":"Mixed pixel: forest and point bar.","model":null,"tricky":true},{"id":"s07","year":2024,"zone":"Las Hormigas","answer":"pond","note":"","model":0.01,"tricky":false},{"id":"s08","year":2024,"zone":"Mazuko","answer":"tailings","note":"","model":null,"tricky":false},{"id":"s09","year":2025,"zone":"Madre de Dios floodplain","answer":"vegetation","note":"","model":null,"tricky":false},{"id":"s10","year":2025,"zone":"Boca Colorado","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s11","year":2024,"zone":"Las Hormigas","answer":"tailings","note":"Mixed pixel: river water and mining ground.","model":null,"tricky":true},{"id":"s12","year":2025,"zone":"outside the mining zones","answer":"bar","note":"Mixed pixel: point bar and forest.","model":null,"tricky":true},{"id":"s13","year":2020,"zone":"Las Hormigas","answer":"bar","note":"Mixed pixel: shallow water over a point bar.","model":null,"tricky":true},{"id":"s14","year":2024,"zone":"Madre de Dios floodplain","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s15","year":2020,"zone":"Las Hormigas","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s16","year":2023,"zone":"R\u00edo Pariamanu","answer":"tailings","note":"","model":null,"tricky":false},{"id":"s17","year":2025,"zone":"Madre de Dios floodplain","answer":"oxbow","note":"","model":null,"tricky":false},{"id":"s18","year":2025,"zone":"Las Hormigas","answer":"tailings","note":"Mixed pixel: mining ground worked into a point bar, next to vegetation.","model":null,"tricky":true},{"id":"s19","year":2022,"zone":"Mazuko","answer":"tailings","note":"","model":null,"tricky":false},{"id":"s20","year":2025,"zone":"Madre de Dios floodplain","answer":"vegetation","note":"","model":null,"tricky":false},{"id":"s21","year":2022,"zone":"Boca Colorado","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s22","year":2020,"zone":"Mazuko","answer":"pond","note":"","model":0.02,"tricky":false},{"id":"s23","year":2020,"zone":"Madre de Dios floodplain","answer":"tailings","note":"Mixed pixel: mining ground worked into a point bar.","model":null,"tricky":true},{"id":"s24","year":2024,"zone":"Boca Colorado","answer":"bar","note":"Mixed pixel: wet point bar in the river.","model":null,"tricky":true},{"id":"s25","year":2021,"zone":"Madre de Dios floodplain","answer":"oxbow","note":"","model":null,"tricky":false},{"id":"s26","year":2025,"zone":"R\u00edo Pariamanu","answer":"vegetation","note":"","model":null,"tricky":false},{"id":"s27","year":2022,"zone":"Madre de Dios floodplain","answer":"tailings","note":"","model":null,"tricky":false},{"id":"s28","year":2021,"zone":"Madre de Dios floodplain","answer":"bar","note":"Mixed pixel: point bar and river.","model":null,"tricky":true},{"id":"s29","year":2021,"zone":"R\u00edo Pariamanu","answer":"river","note":"","model":1.0,"tricky":false},{"id":"s30","year":2019,"zone":"R\u00edo Pariamanu","answer":"vegetation","note":"","model":null,"tricky":false},{"id":"s31","year":2019,"zone":"Madre de Dios floodplain","answer":"oxbow","note":"","model":null,"tricky":false},{"id":"s32","year":2017,"zone":"Las Hormigas","answer":"river","note":"","model":0.97,"tricky":false},{"id":"s33","year":2020,"zone":"Mazuko","answer":"pond","note":"","model":0.01,"tricky":false},{"id":"s34","year":2021,"zone":"outside the mining zones","answer":"cutbank","note":"","model":null,"tricky":true},{"id":"s35","year":2017,"zone":"Boca Colorado","answer":"oxbow","note":"","model":null,"tricky":false},{"id":"s36","year":2017,"zone":"Madre de Dios floodplain","answer":"tailings","note":"Mining ground on a point bar: the river deposited the sand, the miners dug it.","model":null,"tricky":true},{"id":"s37","year":2025,"zone":"Las Hormigas","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s38","year":2018,"zone":"Las Hormigas","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s39","year":2020,"zone":"Madre de Dios floodplain","answer":"oxbow","note":"","model":null,"tricky":false},{"id":"s40","year":2017,"zone":"Las Hormigas","answer":"bar","note":"Mixed pixel: point bar and forest.","model":null,"tricky":true},{"id":"s41","year":2024,"zone":"Las Hormigas","answer":"cutbank","note":"","model":null,"tricky":true},{"id":"s42","year":2019,"zone":"Las Hormigas","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s43","year":2020,"zone":"Las Hormigas","answer":"pond","note":"","model":0.03,"tricky":false},{"id":"s44","year":2024,"zone":"Madre de Dios floodplain","answer":"tailings","note":"","model":null,"tricky":false},{"id":"s45","year":2025,"zone":"Las Hormigas","answer":"cutbank","note":"","model":null,"tricky":true},{"id":"s46","year":2023,"zone":"Las Hormigas","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s47","year":2021,"zone":"Boca Colorado","answer":"pond","note":"","model":0.0,"tricky":false},{"id":"s48","year":2019,"zone":"Madre de Dios floodplain","answer":"other","note":"","model":null,"tricky":false}];
+const CLS={
+ river:['River channel','#3f86d6','Active channel: muddy, continuous for kilometres, shifts a little every year.'],
+ bar:['Point bar / river sand','#cfae4a','Sand or gravel the river laid down, usually inside a bend; smooth, curved, reshaped each year.'],
+ cutbank:['River edge / cut bank','#6f9fd4','The eroding outer bank of a bend: a 10-m pixel that is half river, half forest.'],
+ pond:['Mining pond','#d6528f','Dug or dredged standing water: blocky or ragged, clustered among tailings, appears suddenly, often a different colour from the river.'],
+ tailings:['Tailings / mining ground','#c4672e','Bare, pitted spoil and worked sand between ponds: rough texture, sharp edges, stays bare or greens slowly.'],
+ oxbow:['Oxbow lake','#2fae84','A cut-off meander: crescent-shaped, dark, ringed by forest, steady for years.'],
+ vegetation:['Forest / regrowth','#4d8f4f','Green this year: intact forest, scrub, or plants recolonising old tailings.'],
+ other:['Farm, pasture or town','#8a7fa6','Fields with straight edges and regular texture, roads, settlements.']};
+const ORDER=['river','bar','cutbank','pond','tailings','oxbow','vegetation','other'];
+const fam=c=>(c==='river'||c==='bar'||c==='cutbank')?'river':c;
+const KEY='mdd_demo_v1';
+let st={ans:{},i:0}; try{const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s&&s.ans)st=s;}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+const pts=(a,c)=>a===c?2:(fam(a)===fam(c)?1:0);
+function totals(){let s=0,n=0,ex=0;for(const x of SITES){const a=st.ans[x.id];if(a){n++;s+=pts(a,x.answer);if(a===x.answer)ex++}}return {s,n,ex}}
+function streak(){let k=0;for(const x of SITES){const a=st.ans[x.id];if(!a)break;k=a===x.answer?k+1:0}return k}
+document.getElementById('tot').textContent=SITES.length;
+document.getElementById('key').innerHTML=ORDER.map((c,j)=>`<div class="key"><i style="background:${CLS[c][1]}"></i><div><b>${j+1} · ${CLS[c][0]}</b> — ${CLS[c][2]}</div></div>`).join('');
+document.getElementById('btns').innerHTML=ORDER.map((c,j)=>`<button id="b_${c}" style="background:${CLS[c][1]}" onclick="answer('${c}')">${CLS[c][0]}<kbd>${j+1}</kbd></button>`).join('');
+function pop(t){const e=document.getElementById('pop');e.textContent=t;e.classList.add('show');clearTimeout(pop.t);pop.t=setTimeout(()=>e.classList.remove('show'),1200)}
+function hud(){const t=totals();
+  document.getElementById('pos').textContent=Math.min(st.i+1,SITES.length);
+  document.getElementById('sc').textContent=t.s; document.getElementById('st').textContent=streak();
+  document.getElementById('fill').style.width=(100*t.n/SITES.length)+'%';
+  const stats=[['answered',t.n+'/'+SITES.length],['exact matches',t.n?Math.round(100*t.ex/t.n)+'%':'–'],['points',t.s+'/'+2*SITES.length],['best class',best()]];
+  document.getElementById('sstats').innerHTML=stats.map(s=>`<div class="stat"><b>${s[1]}</b>${s[0]}</div>`).join('');}
+function best(){let b='–',bv=-1;for(const c of ORDER){const xs=SITES.filter(x=>x.answer===c&&st.ans[x.id]);if(xs.length>=2){const v=xs.filter(x=>st.ans[x.id]===c).length/xs.length;if(v>bv){bv=v;b=CLS[c][0].split(' ')[0].toLowerCase()}}}return b}
+function show(){
+  const x=SITES[st.i];
+  document.getElementById('myear').textContent=x.year;
+  document.getElementById('mzone').textContent=x.zone;
+  document.getElementById('mid').textContent='site '+x.id.slice(1);
+  document.getElementById('mtricky').style.display=x.tricky?'':'none';
+  const img=document.getElementById('img'); img.src='mdd-labeling-demo/img/'+x.id+'.jpg'; document.getElementById('imga').href=img.src;
+  for(let k=1;k<=2;k++)if(SITES[st.i+k])(new Image()).src='mdd-labeling-demo/img/'+SITES[st.i+k].id+'.jpg';
+  const a=st.ans[x.id];
+  for(const c of ORDER){const b=document.getElementById('b_'+c);b.disabled=!!a&&c!==a&&c!==x.answer;b.classList.toggle('picked',a===c);b.classList.toggle('correct',!!a&&c===x.answer);}
+  reveal(x,a); hud();
+}
+function reveal(x,a){
+  const R=document.getElementById('reveal');
+  if(!a){R.style.display='none';return}
+  const p=pts(a,x.answer); R.className=p===2?'good':p===1?'close':'bad'; R.style.display='block';
+  const head=p===2?'Match — '+CLS[x.answer][0]:p===1?'Close — I called it '+CLS[x.answer][0]+' (same family)':'I called it '+CLS[x.answer][0];
+  let m='';
+  if(x.model!==null&&['river','bar','cutbank','pond'].includes(x.answer))m=`<div class="model">10-m river-vs-pond classifier: ${Math.round(100*x.model)}% river system → ${x.model>=0.5?'river':'pond'}</div>`;
+  R.innerHTML=`<h3>${head}</h3><div class="why">${CLS[x.answer][2]}</div>`+(x.note?`<div class="note">My note: ${x.note}</div>`:'')+m;
+}
+function answer(c){
+  const x=SITES[st.i]; if(st.ans[x.id])return;
+  st.ans[x.id]=c; save(); show();
+  const k=streak(); if(k&&k%5===0)pop(k+' in a row!');
+  if(totals().n===SITES.length)setTimeout(finish,900);
+}
+function go(d){st.i=Math.max(0,Math.min(SITES.length-1,st.i+d));save();
+  document.getElementById('card').style.display='';document.getElementById('done').style.display='none';show();window.scrollTo({top:0,behavior:'smooth'})}
+function finish(){
+  document.getElementById('card').style.display='none'; document.getElementById('done').style.display='block'; hud();
+  const t=totals();
+  document.getElementById('fstats').innerHTML=[['points',t.s+'/'+2*SITES.length],['exact matches',Math.round(100*t.ex/SITES.length)+'%'],
+    ['river vs pond right',Math.round(100*SITES.filter(x=>fam(st.ans[x.id])===fam(x.answer)).length/SITES.length)+'%'],['tricky sites matched',SITES.filter(x=>x.tricky&&st.ans[x.id]===x.answer).length+'/'+SITES.filter(x=>x.tricky).length]]
+    .map(s=>`<div class="stat"><b>${s[1]}</b>${s[0]}</div>`).join('');
+  document.getElementById('conf').innerHTML=ORDER.map(c=>{const xs=SITES.filter(x=>x.answer===c);const ok=xs.filter(x=>st.ans[x.id]===c).length;
+    return `<tr><td><span style="color:${CLS[c][1]}">■</span> ${CLS[c][0]}</td><td>${ok} / ${xs.length}</td></tr>`}).join('');
+}
+function review(){st.i=0;go(0)}
+function restart(){if(totals().n&&!confirm('Clear your answers and start over?'))return;st={ans:{},i:0};save();go(0)}
+function exportCSV(){
+  const who=(document.getElementById('who').value||'').replace(/[",\n]/g,' ');
+  let csv='labeler,site,year,your_label,nick_label\n';
+  for(const x of SITES)if(st.ans[x.id])csv+=`${who},${x.id},${x.year},${st.ans[x.id]},${x.answer}\n`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='mdd_labels_'+(who||'anon').replace(/\s+/g,'_')+'.csv';a.click();
+}
+document.addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return; if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const n=parseInt(e.key,10);
+  if(n>=1&&n<=8&&document.getElementById('card').style.display!=='none')answer(ORDER[n-1]);
+  else if(e.key==='Enter'||e.key==='ArrowRight')go(1); else if(e.key==='ArrowLeft')go(-1);
+});
+if(totals().n===SITES.length)finish(); else show();
+</script>
+</body>
+</html>
